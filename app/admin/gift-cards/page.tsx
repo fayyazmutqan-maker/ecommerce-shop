@@ -14,7 +14,8 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { CreditCard, Plus, Loader2, Copy, DollarSign, Ban, CheckCircle } from "lucide-react";
+import { CreditCard, Plus, Loader2, Copy, SaudiRiyal, Ban, CheckCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatCurrency } from "@/lib/helpers";
 
 interface GiftCard {
@@ -207,7 +208,7 @@ export default function GiftCardsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <DollarSign className="h-8 w-8 text-muted-foreground" />
+              <SaudiRiyal className="h-8 w-8 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">SAR {totalValue.toFixed(2)}</p>
                 <p className="text-sm text-muted-foreground">Outstanding Balance</p>
@@ -221,7 +222,20 @@ export default function GiftCardsPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[12%]" />
+                  <Skeleton className="h-4 w-[12%]" />
+                  <Skeleton className="h-4 w-[8%]" />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="overflow-x-auto">
             <Table>

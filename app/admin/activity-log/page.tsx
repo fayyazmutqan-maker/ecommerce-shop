@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Activity, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/helpers";
 
 interface LogEntry {
@@ -89,7 +90,17 @@ export default function ActivityLogPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[18%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[30%]" />
+                </div>
+              ))}
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">

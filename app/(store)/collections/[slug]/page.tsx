@@ -58,8 +58,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Collection Not Found" };
   }
 
-  const title = category.seoTitle || category.name;
-  const description = category.seoDescription || category.description || `Browse ${category.name} collection`;
+  const title = category.name;
+  const description = category.description || `Browse ${category.name} collection`;
 
   return {
     title,

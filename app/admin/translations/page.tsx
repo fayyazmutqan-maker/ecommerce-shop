@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -216,8 +217,14 @@ export default function TranslationsPage() {
           <TabsContent key={tab.value} value={tab.value} className="mt-0">
             {loading ? (
               <Card>
-                <CardContent className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <CardContent className="space-y-4 py-6">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-[30%]" />
+                      <Skeleton className="h-4 w-[50%]" />
+                      <Skeleton className="h-4 w-[15%]" />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             ) : filtered.length === 0 ? (
@@ -435,8 +442,10 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
 
   if (loading) {
     return (
-      <div className="px-4 py-8 flex items-center justify-center border-t bg-accent/20">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      <div className="px-4 py-8 border-t bg-accent/20 space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (<div key={i} className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" /></div>))}
+        </div>
       </div>
     );
   }

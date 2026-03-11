@@ -30,13 +30,13 @@ export function DashboardChart({ data }: { data?: ChartData[] }) {
       <BarChart data={chartData}>
         <XAxis
           dataKey="name"
-          stroke="hsl(var(--muted-foreground))"
+          stroke="#000000"
           fontSize={12}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="#000000"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -48,13 +48,14 @@ export function DashboardChart({ data }: { data?: ChartData[] }) {
             border: "1px solid hsl(var(--border))",
             borderRadius: "var(--radius)",
           }}
+          itemStyle={{ color: "var(--foreground)" }}
+          labelStyle={{ color: "var(--foreground)" }}
           formatter={(value: number) => [`SAR ${value.toFixed(2)}`, "Revenue"]}
         />
         <Bar
           dataKey="revenue"
-          fill="currentColor"
+          fill="var(--chart-1)"
           radius={[4, 4, 0, 0]}
-          className="fill-primary"
         />
       </BarChart>
     </ResponsiveContainer>

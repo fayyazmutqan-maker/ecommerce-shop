@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Search,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,8 +144,9 @@ export default function AdminReturnsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div><Skeleton className="h-8 w-32" /><Skeleton className="h-4 w-48 mt-2" /></div>
+        <Card><CardContent className="pt-6"><div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[10%]" /></div>))}</div></CardContent></Card>
       </div>
     );
   }

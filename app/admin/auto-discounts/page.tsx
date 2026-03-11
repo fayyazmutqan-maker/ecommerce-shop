@@ -12,6 +12,7 @@ import {
   Users,
   ShoppingCart,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -258,8 +259,12 @@ export default function AutoDiscountsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div><Skeleton className="h-8 w-56" /><Skeleton className="h-4 w-80 mt-2" /></div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <Card><CardContent className="pt-6"><div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[25%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[15%]" /></div>))}</div></CardContent></Card>
       </div>
     );
   }

@@ -152,6 +152,10 @@ export async function PUT(req: Request) {
         await tx.update(templates).set({ isDefault: false }).where(eq(templates.isDefault, true));
       }
 
+      if (data.isActive) {
+        await tx.update(templates).set({ isActive: false }).where(eq(templates.isActive, true));
+      }
+
       await tx.update(templates).set({
         name: data.name,
         slug: data.slug,

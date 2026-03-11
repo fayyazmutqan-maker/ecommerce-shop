@@ -11,6 +11,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -228,8 +229,16 @@ export default function StaffPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 w-[25%]" />
+                  <Skeleton className="h-4 w-[30%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                </div>
+              ))}
             </div>
           ) : staff.length === 0 ? (
             <div className="text-center py-8">

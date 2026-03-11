@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Save,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,8 +172,14 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div><Skeleton className="h-8 w-40" /><Skeleton className="h-4 w-32 mt-2" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-6 w-16" /><Skeleton className="h-3 w-24 mt-1" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6"><div className="space-y-3">{Array.from({ length: 8 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[30%]" /><Skeleton className="h-4 w-[10%]" /><Skeleton className="h-4 w-[10%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[15%]" /></div>))}</div></CardContent></Card>
       </div>
     );
   }

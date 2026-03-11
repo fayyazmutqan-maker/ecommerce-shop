@@ -85,7 +85,7 @@ export async function POST(req: Request) {
  * DELETE /api/upload — Delete an image from S3.
  * Body: { url: string } or { key: string }
  */
-const ALLOWED_KEY_PREFIXES = ["products/", "uploads/", "categories/", "settings/"];
+const ALLOWED_KEY_PREFIXES = ["products/", "uploads/", "categories/", "settings/", "templates/"];
 
 export async function DELETE(req: Request) {
   try {

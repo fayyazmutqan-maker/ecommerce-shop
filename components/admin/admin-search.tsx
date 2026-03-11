@@ -12,11 +12,15 @@ export function AdminSearch({ placeholder = "Search..." }: { placeholder?: strin
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      const currentQ = searchParams.get("q") || "";
+      if (query === currentQ) return;
       const params = new URLSearchParams(searchParams.toString());
       if (query) {
         params.set("q", query);
+        params.delete("page");
       } else {
         params.delete("q");
+        params.delete("page");
       }
       router.replace(`?${params.toString()}`);
     }, 300);

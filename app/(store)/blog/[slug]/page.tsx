@@ -105,11 +105,10 @@ export default async function BlogPostPage({ params }: Props) {
         )}
 
         {/* Content */}
-        <div className="prose prose-lg max-w-none dark:prose-invert">
-          {post.content?.split("\n").map((paragraph, i) => (
-            paragraph.trim() ? <p key={i}>{paragraph}</p> : <br key={i} />
-          ))}
-        </div>
+        <div
+          className="prose prose-lg max-w-none dark:prose-invert"
+          dangerouslySetInnerHTML={{ __html: post.content || "" }}
+        />
       </article>
 
       {/* Related Posts */}

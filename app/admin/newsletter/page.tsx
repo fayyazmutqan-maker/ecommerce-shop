@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Loader2, Download, Mail, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Subscriber {
   id: string;
@@ -113,7 +114,16 @@ export default function NewsletterPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[35%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                </div>
+              ))}
+            </div>
           ) : !data?.subscribers.length ? (
             <div className="text-center py-20 text-muted-foreground">No subscribers found</div>
           ) : (

@@ -48,6 +48,9 @@ export async function GET(req: Request) {
       currentCustomers,
       previousCustomers,
       topProductsData,
+      onlineTopProducts,
+      posTopProducts,
+      channelTimeSeries,
       abandonedData,
       refundsData,
       allCustomersCount,
@@ -96,10 +99,52 @@ export async function GET(req: Request) {
         .orderBy(sql`SUM(CAST(${orderItems.totalPrice} AS NUMERIC)) DESC`)
         .limit(10),
 
+      // Top products by channel (Online)
+      db.select({
+        productId: orderItems.productId,
+        name: orderItems.name,
+        totalRevenue: sql<string>`SUM(CAST(${orderItems.totalPrice} AS NUMERIC))`,
+        totalQuantity: sql<number>`SUM(${orderItems.quantity})`,
+        orderCount: count(),
+      })
+        .from(orderItems)
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to), eq(orders.source, "ONLINE")))
+        .groupBy(orderItems.productId, orderItems.name)
+        .orderBy(sql`SUM(CAST(${orderItems.totalPrice} AS NUMERIC)) DESC`)
+        .limit(10),
+
+      // Top products by channel (POS)
+      db.select({
+        productId: orderItems.productId,
+        name: orderItems.name,
+        totalRevenue: sql<string>`SUM(CAST(${orderItems.totalPrice} AS NUMERIC))`,
+        totalQuantity: sql<number>`SUM(${orderItems.quantity})`,
+        orderCount: count(),
+      })
+        .from(orderItems)
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to), eq(orders.source, "POS")))
+        .groupBy(orderItems.productId, orderItems.name)
+        .orderBy(sql`SUM(CAST(${orderItems.totalPrice} AS NUMERIC)) DESC`)
+        .limit(10),
+
+      // Revenue time series by channel
+      db.select({
+        date: sql<string>`DATE(${orders.createdAt})`,
+        source: orders.source,
+        revenue: sql<string>`SUM(CAST(${orders.totalAmount} AS NUMERIC))`,
+        orderCount: count(),
+      })
+        .from(orders)
+        .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to)))
+        .groupBy(sql`DATE(${orders.createdAt})`, orders.source)
+        .orderBy(sql`DATE(${orders.createdAt})`),
+
       // Abandoned carts in period
       db.query.abandonedCarts.findMany({
         where: and(gte(abandonedCarts.createdAt, from), lte(abandonedCarts.createdAt, to)),
-        columns: { id: true, status: true, subtotal: true, createdAt: true },
+        columns: { id: true, status: true, subtotal: true, createdAt: true, email: true, phone: true, items: true },
       }),
 
       // Refunds in period
@@ -148,6 +193,39 @@ export async function GET(req: Request) {
     const onlineRevenue = onlineOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
     const posRevenue = posOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
 
+    // Per-channel payment methods
+    const onlinePaymentMethods: Record<string, { count: number; revenue: number }> = {};
+    for (const o of onlineOrders) {
+      const method = o.paymentMethod || "unknown";
+      if (!onlinePaymentMethods[method]) onlinePaymentMethods[method] = { count: 0, revenue: 0 };
+      onlinePaymentMethods[method].count++;
+      onlinePaymentMethods[method].revenue += Number(o.totalAmount);
+    }
+    const posPaymentMethods: Record<string, { count: number; revenue: number }> = {};
+    for (const o of posOrders) {
+      const method = o.paymentMethod || "unknown";
+      if (!posPaymentMethods[method]) posPaymentMethods[method] = { count: 0, revenue: 0 };
+      posPaymentMethods[method].count++;
+      posPaymentMethods[method].revenue += Number(o.totalAmount);
+    }
+
+    // Channel time series (merge into single array with online/pos columns)
+    const channelTimeMap: Record<string, { onlineRevenue: number; posRevenue: number; onlineOrders: number; posOrders: number }> = {};
+    for (const row of channelTimeSeries) {
+      const key = row.date;
+      if (!channelTimeMap[key]) channelTimeMap[key] = { onlineRevenue: 0, posRevenue: 0, onlineOrders: 0, posOrders: 0 };
+      if (row.source === "ONLINE") {
+        channelTimeMap[key].onlineRevenue = Number(row.revenue);
+        channelTimeMap[key].onlineOrders = row.orderCount;
+      } else {
+        channelTimeMap[key].posRevenue = Number(row.revenue);
+        channelTimeMap[key].posOrders = row.orderCount;
+      }
+    }
+    const channelTimeSeriesFormatted = Object.entries(channelTimeMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, d]) => ({ date, ...d }));
+
     // Payment methods
     const paymentMethods: Record<string, { count: number; revenue: number }> = {};
     for (const o of currentOrders) {
@@ -163,16 +241,45 @@ export async function GET(req: Request) {
       statusDistribution[o.status] = (statusDistribution[o.status] || 0) + 1;
     }
 
-    // Returning vs new customers
-    const uniqueCustomerEmails = new Set(currentOrders.map((o) => o.email));
-    const returningCustomers = currentOrders.filter((o) => {
-      const firstOrder = currentOrders
-        .filter((oo) => oo.email === o.email)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
-      return firstOrder && firstOrder.id !== o.id;
-    });
-    const newCustomerOrders = currentOrderCount - returningCustomers.length;
-    const returningCustomerOrders = returningCustomers.length;
+    // Returning vs new customers — build detailed lists (online only, exclude POS)
+    const onlineOnlyOrders = currentOrders.filter((o) => o.source !== "POS");
+    const uniqueCustomerEmails = new Set(onlineOnlyOrders.map((o) => o.email));
+    const customerOrderMap: Record<string, { email: string; userId: string | null; orders: number; revenue: number; firstOrderDate: Date; lastOrderDate: Date }> = {};
+    for (const o of onlineOnlyOrders) {
+      if (!customerOrderMap[o.email]) {
+        customerOrderMap[o.email] = {
+          email: o.email,
+          userId: o.userId,
+          orders: 0,
+          revenue: 0,
+          firstOrderDate: o.createdAt,
+          lastOrderDate: o.createdAt,
+        };
+      }
+      const c = customerOrderMap[o.email];
+      c.orders++;
+      c.revenue += Number(o.totalAmount);
+      if (o.createdAt < c.firstOrderDate) c.firstOrderDate = o.createdAt;
+      if (o.createdAt > c.lastOrderDate) c.lastOrderDate = o.createdAt;
+    }
+    const customerList = Object.values(customerOrderMap);
+    const newCustomerList = customerList.filter((c) => c.orders === 1);
+    const returningCustomerList = customerList.filter((c) => c.orders > 1);
+    const newCustomerOrders = newCustomerList.reduce((s, c) => s + c.orders, 0);
+    const returningCustomerOrders = returningCustomerList.reduce((s, c) => s + c.orders, 0);
+
+    // Fetch user names for customer lists
+    const customerEmails = customerList.map((c) => c.email);
+    const customerUsers = customerEmails.length > 0
+      ? await db.query.users.findMany({
+          where: sql`${users.email} IN (${sql.join(customerEmails.map(e => sql`${e}`), sql`, `)})`,
+          columns: { email: true, name: true },
+        })
+      : [];
+    const emailToName: Record<string, string> = {};
+    for (const u of customerUsers) {
+      if (u.name) emailToName[u.email] = u.name;
+    }
 
     // Abandoned cart metrics
     const abandonedCount = abandonedData.filter((c) => c.status === "ABANDONED").length;
@@ -253,6 +360,36 @@ export async function GET(req: Request) {
         pos: { orders: posOrders.length, revenue: posRevenue },
       },
 
+      channelDetails: {
+        online: {
+          orders: onlineOrders.length,
+          revenue: onlineRevenue,
+          avgOrderValue: onlineOrders.length ? onlineRevenue / onlineOrders.length : 0,
+          topProducts: onlineTopProducts.map((p) => ({
+            productId: p.productId,
+            name: p.name,
+            revenue: Number(p.totalRevenue),
+            quantity: p.totalQuantity,
+            orders: p.orderCount,
+          })),
+          paymentMethods: onlinePaymentMethods,
+        },
+        pos: {
+          orders: posOrders.length,
+          revenue: posRevenue,
+          avgOrderValue: posOrders.length ? posRevenue / posOrders.length : 0,
+          topProducts: posTopProducts.map((p) => ({
+            productId: p.productId,
+            name: p.name,
+            revenue: Number(p.totalRevenue),
+            quantity: p.totalQuantity,
+            orders: p.orderCount,
+          })),
+          paymentMethods: posPaymentMethods,
+        },
+        timeSeries: channelTimeSeriesFormatted,
+      },
+
       paymentMethods,
       orderStatusDistribution: statusDistribution,
 
@@ -263,6 +400,26 @@ export async function GET(req: Request) {
         returningRate: currentOrderCount
           ? (returningCustomerOrders / currentOrderCount) * 100
           : 0,
+        newCustomers: newCustomerList
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 50)
+          .map((c) => ({
+            email: c.email,
+            name: emailToName[c.email] || null,
+            orders: c.orders,
+            revenue: c.revenue,
+            lastOrderDate: c.lastOrderDate.toISOString(),
+          })),
+        returningCustomers: returningCustomerList
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 50)
+          .map((c) => ({
+            email: c.email,
+            name: emailToName[c.email] || null,
+            orders: c.orders,
+            revenue: c.revenue,
+            lastOrderDate: c.lastOrderDate.toISOString(),
+          })),
       },
 
       abandonedCarts: {
@@ -272,6 +429,22 @@ export async function GET(req: Request) {
         recovered: recoveredCount,
         abandonedValue,
         recoveryRate,
+        carts: abandonedData
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 50)
+          .map((c) => {
+            let items: Array<{ name: string; price: number; quantity: number; image?: string }> = [];
+            try { items = JSON.parse(c.items); } catch {}
+            return {
+              id: c.id,
+              email: c.email,
+              phone: c.phone,
+              status: c.status,
+              subtotal: Number(c.subtotal),
+              items,
+              createdAt: c.createdAt.toISOString(),
+            };
+          }),
       },
 
       topProducts: topProductsData.map((p) => ({

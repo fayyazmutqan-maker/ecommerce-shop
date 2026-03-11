@@ -131,7 +131,6 @@ export default function PosPage() {
   const [amountTendered, setAmountTendered] = useState("");
   const [splitCash, setSplitCash] = useState("");
   const [splitCard, setSplitCard] = useState("");
-  const [processing, setProcessing] = useState(false);
 
   // ── Customer ──
   const [customerEmail, setCustomerEmail] = useState("");
@@ -294,35 +293,32 @@ export default function PosPage() {
     getPendingCount().then(setPendingOrderCount).catch(() => {});
   }, [isOnline]);
 
+  // ── Background sync: flush pending queue to server ──
+  const syncQueueRef = useRef(false);
+  const flushPendingQueue = useCallback(async () => {
+    if (syncQueueRef.current || !navigator.onLine) return;
+    syncQueueRef.current = true;
+    setSyncing(true);
+    try {
+      const result = await syncPendingOrders();
+      const remaining = await getPendingCount().catch(() => 0);
+      setPendingOrderCount(remaining);
+      if (result.failed > 0) {
+        toast.error(`${result.failed} order${result.failed > 1 ? "s" : ""} failed to sync — will retry`);
+      }
+    } catch {
+      // Sync will retry on next sale or when online status changes
+    } finally {
+      syncQueueRef.current = false;
+      setSyncing(false);
+    }
+  }, []);
+
   // Auto-sync when coming back online
   useEffect(() => {
     if (!isOnline) return;
-    let cancelled = false;
-
-    async function attemptSync() {
-      const count = await getPendingCount().catch(() => 0);
-      if (count === 0 || cancelled) return;
-      setSyncing(true);
-      const result = await syncPendingOrders(
-        () => { if (soundEnabled) playSound("success"); },
-        () => { if (soundEnabled) playSound("error"); }
-      );
-      if (!cancelled) {
-        setSyncing(false);
-        const remaining = await getPendingCount().catch(() => 0);
-        setPendingOrderCount(remaining);
-        if (result.synced > 0) {
-          toast.success(`Synced ${result.synced} offline order${result.synced > 1 ? "s" : ""}`);
-        }
-        if (result.failed > 0) {
-          toast.error(`${result.failed} order${result.failed > 1 ? "s" : ""} failed to sync`);
-        }
-      }
-    }
-
-    attemptSync();
-    return () => { cancelled = true; };
-  }, [isOnline, soundEnabled]);
+    flushPendingQueue();
+  }, [isOnline, flushPendingQueue]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Barcode Scanner Hook
@@ -540,13 +536,15 @@ export default function PosPage() {
         if (soundEnabled) playSound("drawer");
         toast.success("Cash drawer opened");
       }
+      if (e.key === "F10" && receiptData) { e.preventDefault(); setReceiptData(null); }
       if (e.key === "F11") { e.preventDefault(); toggleFullscreen(); }
+      if (e.key === "F12" && receiptData) { e.preventDefault(); printer.printReceipt(receiptData); }
       if (e.key === "Escape" && search) { setSearch(""); }
     }
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.length, search, soundEnabled]);
+  }, [cart.length, search, soundEnabled, receiptData]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Customer Search
@@ -764,183 +762,161 @@ export default function PosPage() {
 
   async function handleCheckout() {
     if (cart.length === 0) return;
-    setProcessing(true);
-    try {
-      const orderItems = cart
-        .filter((item) => !item.product.id.startsWith("custom-"))
-        .map((item) => ({
-          productId: item.product.id,
-          variantId: item.variant?.id || undefined,
-          quantity: item.quantity,
-        }));
 
-      const customItems = cart.filter((item) => item.product.id.startsWith("custom-"));
-      const customNote = customItems.length
-        ? `Custom items: ${customItems.map((i) => `${i.product.name} x${i.quantity} ${curr} ${i.product.price}`).join(", ")}`
-        : "";
+    const orderItems = cart
+      .filter((item) => !item.product.id.startsWith("custom-"))
+      .map((item) => ({
+        productId: item.product.id,
+        variantId: item.variant?.id || undefined,
+        quantity: item.quantity,
+      }));
 
-      let paymentDesc = "";
-      const payments: Array<{ method: string; amount: number }> = [];
-      if (paymentMethod === "split") {
-        const cashAmt = parseFloat(splitCash) || 0;
-        const cardAmt = parseFloat(splitCard) || 0;
-        paymentDesc = `Split: Cash ${curr} ${cashAmt.toFixed(2)} + Card ${curr} ${cardAmt.toFixed(2)}`;
-        payments.push({ method: "Cash", amount: cashAmt });
-        payments.push({ method: "Card", amount: cardAmt });
-      } else {
-        paymentDesc = paymentMethod === "cash" ? "Cash" : "Card";
-        payments.push({ method: paymentDesc, amount: total });
-      }
+    const customItems = cart.filter((item) => item.product.id.startsWith("custom-"));
+    const customNote = customItems.length
+      ? `Custom items: ${customItems.map((i) => `${i.product.name} x${i.quantity} ${curr} ${i.product.price}`).join(", ")}`
+      : "";
 
-      const payNotes = [
-        `POS Sale — ${paymentDesc}`,
-        posSession ? `Session: ${posSession.id}` : "",
-        discount > 0 ? `(${discount}% discount)` : "",
-        giftCardDeduction > 0 ? `Gift Card: -${curr} ${giftCardDeduction.toFixed(2)}` : "",
-        storeCreditDeduction > 0 ? `Store Credit: -${curr} ${storeCreditDeduction.toFixed(2)}` : "",
-        customNote,
-      ].filter(Boolean).join(" | ");
-
-      if (orderItems.length === 0 && customItems.length > 0) {
-        toast.error("Cannot create POS order with only custom items");
-        setProcessing(false);
-        return;
-      }
-
-      const orderPayload = {
-        email: customerEmail || "pos@store.local",
-        items: orderItems,
-        shippingAddress: {
-          firstName: selectedCustomer?.name?.split(" ")[0] || "POS",
-          lastName: selectedCustomer?.name?.split(" ").slice(1).join(" ") || "Customer",
-          address1: "In-Store",
-          city: "Riyadh",
-          postalCode: "00000",
-          country: "Saudi Arabia",
-        },
-        paymentMethod: paymentMethod === "cash" || paymentMethod === "split" ? "cod" : "tap",
-        notes: payNotes,
-        ...(giftCardCode && giftCardDeduction > 0 ? { giftCardCode } : {}),
-      };
-
-      // Generate ZATCA QR code for Saudi e-invoicing compliance
-      const zatcaQr = storeConfig.vatNumber
-        ? generateZatcaQR({
-            sellerName: storeConfig.storeName,
-            vatNumber: storeConfig.vatNumber,
-            timestamp: new Date(),
-            totalWithVat: total,
-            vatAmount: tax,
-          })
-        : undefined;
-
-      // Build receipt data (used by both online and offline paths)
-      const receiptItems = cart.map((item) => {
-        const unitPrice = item.variant ? item.variant.price : item.product.price;
-        return {
-          name: item.product.name,
-          variant: item.variant?.name,
-          quantity: item.quantity,
-          unitPrice,
-          lineTotal: unitPrice * item.quantity,
-          discount: item.discount || undefined,
-        };
-      });
-
-      let orderRef = "";
-
-      if (!isOnline) {
-        // ── Offline: queue order for later sync ──
-        const offlineId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        await savePendingOrder({
-          id: offlineId,
-          payload: orderPayload,
-          receiptData: {},
-          createdAt: Date.now(),
-          retries: 0,
-        });
-        const count = await getPendingCount();
-        setPendingOrderCount(count);
-        orderRef = offlineId;
-        toast.info("Offline — order saved locally and will sync when internet returns", {
-          description: `${curr} ${total.toFixed(2)}`,
-        });
-      } else {
-        // ── Online: submit immediately ──
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderPayload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || "Failed to create order");
-        }
-
-        const order = await res.json();
-        orderRef = order.orderNumber || order.id;
-
-        toast.success("Transaction completed!", {
-          description: `Order ${orderRef} — ${curr} ${total.toFixed(2)}`,
-        });
-      }
-
-      const receipt: ReceiptData = {
-        storeName: storeConfig.storeName,
-        storeAddress: storeConfig.storeAddress || undefined,
-        storePhone: storeConfig.storePhone || undefined,
-        vatNumber: storeConfig.vatNumber || undefined,
-        orderNumber: orderRef,
-        date: new Date(),
-        cashier: posSession?.staffName || "Staff",
-        items: receiptItems,
-        subtotal,
-        discount: discountAmount + giftCardDeduction + storeCreditDeduction,
-        taxRate,
-        taxAmount: tax,
-        total,
-        paymentMethod: paymentDesc,
-        payments: payments.length > 1 ? payments : undefined,
-        amountTendered: paymentMethod === "cash" ? parseFloat(amountTendered) || total : undefined,
-        change: paymentMethod === "cash" ? Math.max(0, change) : undefined,
-        giftCardUsed: giftCardDeduction > 0 ? giftCardDeduction : undefined,
-        storeCreditUsed: storeCreditDeduction > 0 ? storeCreditDeduction : undefined,
-        currency: curr,
-        zatcaQrData: zatcaQr,
-        footerMessage: "Thank you for your purchase!",
-      };
-
-      setReceiptData(receipt);
-
-      if (autoPrint) {
-        printer.printReceipt(receipt);
-      }
-
-      if (paymentMethod === "cash" || paymentMethod === "split") {
-        printer.openCashDrawer();
-        if (soundEnabled) playSound("drawer");
-      }
-
-      if (soundEnabled) playSound("success");
-
-      setCart([]);
-      setPaymentOpen(false);
-      setAmountTendered("");
-      setSplitCash("");
-      setSplitCard("");
-      setDiscount(0);
-      setCustomerEmail("");
-      setSelectedCustomer(null);
-      setGiftCardCode("");
-      setGiftCardBalance(null);
-      setUseStoreCredit(false);
-    } catch (error: unknown) {
-      if (soundEnabled) playSound("error");
-      toast.error(error instanceof Error ? error.message : "Transaction failed");
-    } finally {
-      setProcessing(false);
+    let paymentDesc = "";
+    const payments: Array<{ method: string; amount: number }> = [];
+    if (paymentMethod === "split") {
+      const cashAmt = parseFloat(splitCash) || 0;
+      const cardAmt = parseFloat(splitCard) || 0;
+      paymentDesc = `Split: Cash ${curr} ${cashAmt.toFixed(2)} + Card ${curr} ${cardAmt.toFixed(2)}`;
+      payments.push({ method: "Cash", amount: cashAmt });
+      payments.push({ method: "Card", amount: cardAmt });
+    } else {
+      paymentDesc = paymentMethod === "cash" ? "Cash" : "Card";
+      payments.push({ method: paymentDesc, amount: total });
     }
+
+    const payNotes = [
+      `POS Sale — ${paymentDesc}`,
+      posSession ? `Session: ${posSession.id}` : "",
+      discount > 0 ? `(${discount}% discount)` : "",
+      giftCardDeduction > 0 ? `Gift Card: -${curr} ${giftCardDeduction.toFixed(2)}` : "",
+      storeCreditDeduction > 0 ? `Store Credit: -${curr} ${storeCreditDeduction.toFixed(2)}` : "",
+      customNote,
+    ].filter(Boolean).join(" | ");
+
+    if (orderItems.length === 0 && customItems.length > 0) {
+      toast.error("Cannot create POS order with only custom items");
+      return;
+    }
+
+    const orderPayload = {
+      email: customerEmail || "pos@store.local",
+      items: orderItems,
+      source: "POS" as const,
+      shippingAddress: {
+        firstName: selectedCustomer?.name?.split(" ")[0] || "POS",
+        lastName: selectedCustomer?.name?.split(" ").slice(1).join(" ") || "Customer",
+        address1: "In-Store",
+        city: "Riyadh",
+        postalCode: "00000",
+        country: "Saudi Arabia",
+      },
+      paymentMethod: paymentMethod === "cash" || paymentMethod === "split" ? "cod" : "tap",
+      notes: payNotes,
+      ...(giftCardCode && giftCardDeduction > 0 ? { giftCardCode } : {}),
+    };
+
+    // Generate ZATCA QR code for Saudi e-invoicing compliance
+    const zatcaQr = storeConfig.vatNumber
+      ? generateZatcaQR({
+          sellerName: storeConfig.storeName,
+          vatNumber: storeConfig.vatNumber,
+          timestamp: new Date(),
+          totalWithVat: total,
+          vatAmount: tax,
+        })
+      : undefined;
+
+    // Build receipt data
+    const receiptItems = cart.map((item) => {
+      const unitPrice = item.variant ? item.variant.price : item.product.price;
+      return {
+        name: item.product.name,
+        variant: item.variant?.name,
+        quantity: item.quantity,
+        unitPrice,
+        lineTotal: unitPrice * item.quantity,
+        discount: item.discount || undefined,
+      };
+    });
+
+    // ── Optimistic: queue order locally & complete sale instantly ──
+    const localId = `pos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      await savePendingOrder({
+        id: localId,
+        payload: orderPayload,
+        receiptData: {},
+        createdAt: Date.now(),
+        retries: 0,
+      });
+      const count = await getPendingCount();
+      setPendingOrderCount(count);
+    } catch {
+      // IndexedDB failed — fall through, we still show success to cashier
+    }
+
+    // ── Immediate UI: receipt, sounds, reset — no waiting for server ──
+    const receipt: ReceiptData = {
+      storeName: storeConfig.storeName,
+      storeAddress: storeConfig.storeAddress || undefined,
+      storePhone: storeConfig.storePhone || undefined,
+      vatNumber: storeConfig.vatNumber || undefined,
+      orderNumber: localId,
+      date: new Date(),
+      cashier: posSession?.staffName || "Staff",
+      items: receiptItems,
+      subtotal,
+      discount: discountAmount + giftCardDeduction + storeCreditDeduction,
+      taxRate,
+      taxAmount: tax,
+      total,
+      paymentMethod: paymentDesc,
+      payments: payments.length > 1 ? payments : undefined,
+      amountTendered: paymentMethod === "cash" ? parseFloat(amountTendered) || total : undefined,
+      change: paymentMethod === "cash" ? Math.max(0, change) : undefined,
+      giftCardUsed: giftCardDeduction > 0 ? giftCardDeduction : undefined,
+      storeCreditUsed: storeCreditDeduction > 0 ? storeCreditDeduction : undefined,
+      currency: curr,
+      zatcaQrData: zatcaQr,
+      footerMessage: "Thank you for your purchase!",
+    };
+
+    setReceiptData(receipt);
+
+    if (autoPrint) {
+      printer.printReceipt(receipt);
+    }
+
+    if (paymentMethod === "cash" || paymentMethod === "split") {
+      printer.openCashDrawer();
+      if (soundEnabled) playSound("drawer");
+    }
+
+    if (soundEnabled) playSound("success");
+
+    toast.success("Sale completed!", {
+      description: `${curr} ${total.toFixed(2)} — syncing in background`,
+    });
+
+    setCart([]);
+    setPaymentOpen(false);
+    setAmountTendered("");
+    setSplitCash("");
+    setSplitCard("");
+    setDiscount(0);
+    setCustomerEmail("");
+    setSelectedCustomer(null);
+    setGiftCardCode("");
+    setGiftCardBalance(null);
+    setUseStoreCredit(false);
+
+    // ── Background: flush the queue to server (non-blocking) ──
+    flushPendingQueue();
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1145,7 +1121,7 @@ export default function PosPage() {
                     key={cat}
                     variant={categoryFilter === cat ? "default" : "outline"}
                     size="sm"
-                    className="text-xs h-7 shrink-0"
+                    className="text-xs h-9 shrink-0"
                     onClick={() => setCategoryFilter(cat)}
                   >
                     {cat === "ALL" ? "All Products" : cat}
@@ -1269,8 +1245,8 @@ export default function PosPage() {
                     <p className="text-[10px] text-green-600">Credit: {curr} {selectedCustomer.storeCredit.toFixed(2)}</p>
                   )}
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setSelectedCustomer(null); setCustomerEmail(""); }}>
-                  <X className="h-3 w-3" />
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setSelectedCustomer(null); setCustomerEmail(""); }}>
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
@@ -1284,7 +1260,7 @@ export default function PosPage() {
                 {customerResults.length > 0 && (
                   <div className="absolute top-full left-0 right-0 z-10 bg-card border rounded-md shadow-lg mt-1">
                     {customerResults.map((c) => (
-                      <button key={c.id} className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex justify-between" onClick={() => selectCustomer(c)}>
+                      <button key={c.id} className="w-full text-left px-3 py-3 hover:bg-accent active:bg-accent text-sm flex justify-between" onClick={() => selectCustomer(c)}>
                         <span>{c.name || c.email}</span>
                         <span className="text-muted-foreground text-xs">{c.email}</span>
                       </button>
@@ -1322,17 +1298,17 @@ export default function PosPage() {
                         <p className="text-xs text-muted-foreground">{curr} {unitPrice.toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCartQty(item.id, item.quantity - 1)}>
-                          <Minus className="h-3 w-3" />
+                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCartQty(item.id, item.quantity - 1)}>
+                          <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCartQty(item.id, item.quantity + 1)}>
-                          <Plus className="h-3 w-3" />
+                        <span className="w-7 text-center text-sm font-medium">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCartQty(item.id, item.quantity + 1)}>
+                          <Plus className="h-4 w-4" />
                         </Button>
                       </div>
                       <span className="text-sm font-semibold w-16 text-right">{curr} {(lineTotal - lineDisc).toFixed(2)}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeFromCart(item.id)}>
-                        <X className="h-3 w-3" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => removeFromCart(item.id)}>
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                     {item.discount > 0 && (
@@ -1340,8 +1316,8 @@ export default function PosPage() {
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1 text-muted-foreground">
-                          <ChevronDown className="h-2.5 w-2.5 mr-0.5" /> Options
+                        <Button variant="ghost" size="sm" className="h-8 text-xs px-2 text-muted-foreground">
+                          <ChevronDown className="h-3 w-3 mr-0.5" /> Options
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
@@ -1365,8 +1341,8 @@ export default function PosPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Gift className="h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Gift card code" className="h-7 text-xs flex-1" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value)} />
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={checkGiftCard}>Apply</Button>
+                <Input placeholder="Gift card code" className="h-9 text-sm flex-1" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value)} />
+                <Button size="sm" variant="outline" className="h-9 text-xs" onClick={checkGiftCard}>Apply</Button>
               </div>
               {selectedCustomer && selectedCustomer.storeCredit > 0 && (
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
@@ -1376,7 +1352,7 @@ export default function PosPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Input type="number" placeholder="Discount %" className="h-8 text-sm w-24" value={discount || ""} onChange={(e) => setDiscount(Math.min(100, Math.max(0, +e.target.value)))} />
+              <Input type="number" inputMode="numeric" placeholder="Discount %" className="h-9 text-sm w-24" value={discount || ""} onChange={(e) => setDiscount(Math.min(100, Math.max(0, +e.target.value)))} />
               <span className="text-xs text-muted-foreground">% off entire order</span>
             </div>
             <div className="space-y-1 text-sm">
@@ -1459,15 +1435,15 @@ export default function PosPage() {
                         <p className="text-xs font-semibold mt-0.5">{curr} {(item.variant?.price ?? item.product.price).toFixed(2)} × {item.quantity}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQty(item.id, item.quantity - 1)}>
-                          <Minus className="h-3 w-3" />
+                        <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => updateCartQty(item.id, item.quantity - 1)}>
+                          <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="text-sm w-6 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQty(item.id, item.quantity + 1)}>
-                          <Plus className="h-3 w-3" />
+                        <span className="text-sm w-7 text-center">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => updateCartQty(item.id, item.quantity + 1)}>
+                          <Plus className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.id)}>
-                          <Trash2 className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive" onClick={() => removeFromCart(item.id)}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -1544,7 +1520,7 @@ export default function PosPage() {
                 <div className="space-y-1.5">
                   <Label>Amount Tendered</Label>
                   <Input
-                    type="number" step="0.01" value={amountTendered}
+                    type="number" step="0.01" inputMode="decimal" value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
                     placeholder="0.00" className="text-lg" autoFocus
                     onKeyDown={(e) => { if (e.key === "Enter" && parseFloat(amountTendered) >= total) handleCheckout(); }}
@@ -1586,11 +1562,11 @@ export default function PosPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" /> Cash Amount</Label>
-                    <Input type="number" step="0.01" value={splitCash} onChange={(e) => { setSplitCash(e.target.value); setSplitCard(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" autoFocus />
+                    <Input type="number" step="0.01" inputMode="decimal" value={splitCash} onChange={(e) => { setSplitCash(e.target.value); setSplitCard(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" autoFocus />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card Amount</Label>
-                    <Input type="number" step="0.01" value={splitCard} onChange={(e) => { setSplitCard(e.target.value); setSplitCash(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" />
+                    <Input type="number" step="0.01" inputMode="decimal" value={splitCard} onChange={(e) => { setSplitCard(e.target.value); setSplitCash(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" />
                   </div>
                 </div>
                 {(() => {
@@ -1604,16 +1580,15 @@ export default function PosPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentOpen(false)} disabled={processing}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPaymentOpen(false)}>Cancel</Button>
             <Button
               onClick={handleCheckout}
               disabled={
-                processing ||
                 (paymentMethod === "cash" && (!amountTendered || parseFloat(amountTendered) < total)) ||
                 (paymentMethod === "split" && Math.abs(((parseFloat(splitCash) || 0) + (parseFloat(splitCard) || 0)) - total) > 0.01)
               }
             >
-              {processing ? "Processing..." : "Complete Sale"}
+              Complete Sale
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1739,7 +1714,7 @@ export default function PosPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Actual Cash Count ({curr})</Label>
-                  <Input type="number" step="0.01" value={closingBalance} onChange={(e) => setClosingBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
+                  <Input type="number" step="0.01" inputMode="decimal" value={closingBalance} onChange={(e) => setClosingBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
                   {closingBalance && (() => {
                     const expected = Number(posSession.openingBalance) + Number(posSession.totalSales);
                     const actual = parseFloat(closingBalance) || 0;
@@ -1755,7 +1730,7 @@ export default function PosPage() {
             ) : (
               <div className="space-y-1.5">
                 <Label>Opening Cash Float ({curr})</Label>
-                <Input type="number" step="0.01" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
+                <Input type="number" step="0.01" inputMode="decimal" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
                 <p className="text-xs text-muted-foreground mt-1">Count the cash in your drawer before starting</p>
               </div>
             )}
@@ -1804,9 +1779,11 @@ export default function PosPage() {
             )}
           </div>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setReceiptData(null)}>New Sale</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setReceiptData(null)}>
+              New Sale <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted border text-[9px] text-muted-foreground">F10</kbd>
+            </Button>
             <Button className="flex-1" onClick={() => receiptData && printer.printReceipt(receiptData)}>
-              <Printer className="h-4 w-4 mr-1.5" /> Print
+              <Printer className="h-4 w-4 mr-1.5" /> Print <kbd className="ml-1.5 px-1 py-0.5 rounded bg-primary-foreground/20 border border-primary-foreground/30 text-[9px]">F12</kbd>
             </Button>
           </DialogFooter>
         </DialogContent>

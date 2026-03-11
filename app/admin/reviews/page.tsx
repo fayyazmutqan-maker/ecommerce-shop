@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Star, Check, X, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -98,7 +99,19 @@ export default function ReviewsPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[25%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[12%]" />
+                  <Skeleton className="h-4 w-[8%]" />
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">No reviews found</div>
           ) : (

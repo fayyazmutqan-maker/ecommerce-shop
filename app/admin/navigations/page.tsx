@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NavItem {
   title: string;
@@ -192,7 +193,17 @@ export default function NavigationsPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[30%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[10%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                </div>
+              ))}
+            </div>
           ) : menus.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <p className="mb-2">No navigation menus yet</p>

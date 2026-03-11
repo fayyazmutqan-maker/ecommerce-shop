@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Loader2, Check, CheckCheck, Trash2, Package, Users, AlertTriangle, Star, RotateCcw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/helpers";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -93,7 +94,20 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 flex items-start gap-4">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-[60%]" />
+                  <Skeleton className="h-3 w-[40%]" />
+                </div>
+                <Skeleton className="h-3 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : notifications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

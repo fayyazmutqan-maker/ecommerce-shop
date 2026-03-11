@@ -31,6 +31,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, Plus, Wallet, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Customer {
   id: string;
@@ -160,7 +161,16 @@ export default function StoreCreditAdminPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <div className="space-y-3 p-6">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[25%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[20%]" />
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">No customers found</div>
           ) : (
@@ -215,7 +225,7 @@ export default function StoreCreditAdminPage() {
               <Button variant="ghost" size="sm" onClick={() => setTxCustomer(null)}>Close</Button>
             </div>
             {txLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+              <div className="space-y-3 py-4">{Array.from({ length: 3 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[30%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[15%]" /></div>))}</div>
             ) : transactions.length === 0 ? (
               <p className="text-muted-foreground text-center py-6">No transactions</p>
             ) : (

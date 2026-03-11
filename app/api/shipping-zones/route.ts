@@ -35,11 +35,13 @@ export async function GET() {
       orderBy: asc(shippingZones.sortOrder),
     });
 
-    return NextResponse.json(zones.map((z) => ({
-      ...z,
-      countries: JSON.parse(z.countries),
-      regions: z.regions ? JSON.parse(z.regions) : [],
-    })));
+    return NextResponse.json(zones.map((z) => {
+      let countries: string[];
+      try { countries = JSON.parse(z.countries); } catch { countries = z.countries ? z.countries.split(",").map((c) => c.trim()) : []; }
+      let regions: string[];
+      try { regions = z.regions ? JSON.parse(z.regions) : []; } catch { regions = z.regions ? z.regions.split(",").map((r) => r.trim()) : []; }
+      return { ...z, countries, regions };
+    }));
   } catch (error) {
     console.error("Shipping zones GET error:", error);
     return NextResponse.json({ error: "Failed to fetch shipping zones" }, { status: 500 });

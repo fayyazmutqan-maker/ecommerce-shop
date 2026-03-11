@@ -1011,6 +1011,22 @@ export const giftCardTransactionsRelations = relations(giftCardTransactions, ({ 
 // BLOG
 // ============================================================
 
+export const blogCategories = pgTable("BlogCategory", {
+  id: cuid(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  parentId: text("parentId"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const blogPostCategories = pgTable("BlogPostCategory", {
+  postId: text("postId").notNull().references(() => blogPosts.id, { onDelete: "cascade" }),
+  categoryId: text("categoryId").notNull().references(() => blogCategories.id, { onDelete: "cascade" }),
+}, (t) => [
+  primaryKey({ columns: [t.postId, t.categoryId] }),
+]);
+
 export const blogPosts = pgTable("BlogPost", {
   id: cuid(),
   title: text("title").notNull(),
@@ -1031,8 +1047,20 @@ export const blogPosts = pgTable("BlogPost", {
   index("BlogPost_publishedAt_idx").on(t.publishedAt),
 ]);
 
-export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+export const blogCategoriesRelations = relations(blogCategories, ({ one, many }) => ({
+  parent: one(blogCategories, { fields: [blogCategories.parentId], references: [blogCategories.id], relationName: "blogCategoryParent" }),
+  children: many(blogCategories, { relationName: "blogCategoryParent" }),
+  postCategories: many(blogPostCategories),
+}));
+
+export const blogPostCategoriesRelations = relations(blogPostCategories, ({ one }) => ({
+  post: one(blogPosts, { fields: [blogPostCategories.postId], references: [blogPosts.id] }),
+  category: one(blogCategories, { fields: [blogPostCategories.categoryId], references: [blogCategories.id] }),
+}));
+
+export const blogPostsRelations = relations(blogPosts, ({ one, many }) => ({
   author: one(users, { fields: [blogPosts.authorId], references: [users.id] }),
+  postCategories: many(blogPostCategories),
 }));
 
 // ============================================================

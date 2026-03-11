@@ -18,6 +18,10 @@ interface ProductCardProps {
   images: string[];
   category?: string | null;
   isNew?: boolean;
+  cardRatio?: "square" | "portrait" | "landscape" | "wide";
+  showAddToCart?: boolean;
+  showWishlist?: boolean;
+  showBadges?: boolean;
 }
 
 export function ProductCard({
@@ -29,6 +33,10 @@ export function ProductCard({
   images,
   category,
   isNew,
+  cardRatio = "portrait",
+  showAddToCart = true,
+  showWishlist = true,
+  showBadges = true,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const discount =
@@ -72,10 +80,17 @@ export function ProductCard({
     }
   };
 
+  const RATIO_CLASS: Record<string, string> = {
+    square: "aspect-square",
+    portrait: "aspect-[4/5]",
+    landscape: "aspect-[5/4]",
+    wide: "aspect-[16/9]",
+  };
+
   return (
     <Card className="group overflow-hidden border hover:border-foreground/20 shadow-none hover:shadow-lg transition-all duration-300 rounded-xl">
       <Link href={`/products/${slug}`}>
-        <div className="relative aspect-[4/5] overflow-hidden bg-accent/50">
+        <div className={`relative ${RATIO_CLASS[cardRatio] || RATIO_CLASS.portrait} overflow-hidden bg-accent/50`}>
           {images[0] ? (
             <Image
               src={images[0]}
@@ -90,6 +105,7 @@ export function ProductCard({
             </div>
           )}
           {/* Badges */}
+          {showBadges && (
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {isNew && (
               <Badge className="bg-foreground text-background text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 hover:bg-foreground">
@@ -102,7 +118,9 @@ export function ProductCard({
               </Badge>
             )}
           </div>
+          )}
           {/* Wishlist */}
+          {showWishlist && (
           <div className="absolute top-3 right-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 translate-y-0 lg:translate-y-1 lg:group-hover:translate-y-0">
             <Button
               variant="secondary"
@@ -113,7 +131,9 @@ export function ProductCard({
               <Heart className="h-4 w-4" />
             </Button>
           </div>
+          )}
           {/* Quick Add */}
+          {showAddToCart && (
           <div className="absolute bottom-0 left-0 right-0 p-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 translate-y-0 lg:translate-y-2 lg:group-hover:translate-y-0">
             <Button
               className="w-full h-10 text-sm font-medium shadow-lg"
@@ -123,6 +143,7 @@ export function ProductCard({
               Add to Cart
             </Button>
           </div>
+          )}
         </div>
       </Link>
       <CardContent className="p-4 space-y-1.5">

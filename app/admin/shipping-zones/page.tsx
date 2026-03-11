@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Loader2,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -233,8 +234,12 @@ export default function ShippingZonesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-72 mt-2" /></div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card><CardContent className="pt-6"><div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[25%]" /><Skeleton className="h-4 w-[25%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[10%]" /></div>))}</div></CardContent></Card>
       </div>
     );
   }
@@ -316,7 +321,7 @@ export default function ShippingZonesPage() {
                         <TableRow key={rate.id}>
                           <TableCell className="font-medium">{rate.name}</TableCell>
                           <TableCell><Badge variant="outline">{rateTypeLabel(rate.type)}</Badge></TableCell>
-                          <TableCell>{rate.type === "FREE" ? "Free" : `SAR ${rate.price.toFixed(2)}`}</TableCell>
+                          <TableCell>{rate.type === "FREE" ? "Free" : `SAR ${Number(rate.price).toFixed(2)}`}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">
                             {rate.type === "WEIGHT_BASED" && `${rate.minWeight || 0}–${rate.maxWeight || "∞"} kg`}
                             {rate.type === "PRICE_BASED" && `SAR ${rate.minOrderAmount || 0}–${rate.maxOrderAmount || "∞"}`}

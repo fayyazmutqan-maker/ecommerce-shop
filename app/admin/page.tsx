@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   Activity,
 } from "lucide-react";
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { orders, users, products, productImages, orderItems } from "@/lib/schema";
 import { eq, count, gte, lt, and, desc, asc, sql } from "drizzle-orm";
@@ -237,9 +238,18 @@ export default async function AdminDashboard() {
       {/* Charts and Recent Orders */}
       <div className="grid gap-6 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Monthly revenue for the current year</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Revenue Overview</CardTitle>
+              <CardDescription>Monthly revenue for the current year</CardDescription>
+            </div>
+            <Link
+              href="/admin/analytics"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              View Analytics
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
           </CardHeader>
           <CardContent>
             <DashboardChart data={chartData} />

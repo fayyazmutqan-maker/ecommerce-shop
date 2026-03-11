@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, FolderKanban, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SmartCollectionRule {
   field: string;
@@ -113,7 +114,13 @@ export default function SmartCollectionsPage() {
     try {
       const res = await fetch("/api/smart-collections");
       if (res.ok) {
-        setCollections(await res.json());
+        const data = await res.json();
+        setCollections(
+          data.map((c: any) => ({
+            ...c,
+            rules: typeof c.rules === "string" ? JSON.parse(c.rules) : c.rules,
+          }))
+        );
       }
     } catch {
       toast.error("Failed to load smart collections");
@@ -365,7 +372,16 @@ export default function SmartCollectionsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground py-8 text-center">Loading...</p>
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[30%]" />
+                  <Skeleton className="h-4 w-[35%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                  <Skeleton className="h-4 w-[15%]" />
+                </div>
+              ))}
+            </div>
           ) : collections.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No smart collections yet. Create one to get started.</p>
           ) : (

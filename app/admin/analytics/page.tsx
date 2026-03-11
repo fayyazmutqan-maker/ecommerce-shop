@@ -7,6 +7,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -51,6 +54,23 @@ interface AnalyticsData {
     online: { orders: number; revenue: number };
     pos: { orders: number; revenue: number };
   };
+  channelDetails: {
+    online: {
+      orders: number;
+      revenue: number;
+      avgOrderValue: number;
+      topProducts: Array<{ productId: string; name: string; revenue: number; quantity: number; orders: number }>;
+      paymentMethods: Record<string, { count: number; revenue: number }>;
+    };
+    pos: {
+      orders: number;
+      revenue: number;
+      avgOrderValue: number;
+      topProducts: Array<{ productId: string; name: string; revenue: number; quantity: number; orders: number }>;
+      paymentMethods: Record<string, { count: number; revenue: number }>;
+    };
+    timeSeries: Array<{ date: string; onlineRevenue: number; posRevenue: number; onlineOrders: number; posOrders: number }>;
+  };
   paymentMethods: Record<string, { count: number; revenue: number }>;
   orderStatusDistribution: Record<string, number>;
   customerInsights: {
@@ -58,6 +78,8 @@ interface AnalyticsData {
     newCustomerOrders: number;
     returningCustomerOrders: number;
     returningRate: number;
+    newCustomers: Array<{ email: string; name: string | null; orders: number; revenue: number; lastOrderDate: string }>;
+    returningCustomers: Array<{ email: string; name: string | null; orders: number; revenue: number; lastOrderDate: string }>;
   };
   abandonedCarts: {
     total: number;
@@ -66,6 +88,15 @@ interface AnalyticsData {
     recovered: number;
     abandonedValue: number;
     recoveryRate: number;
+    carts: Array<{
+      id: string;
+      email: string | null;
+      phone: string | null;
+      status: string;
+      subtotal: number;
+      items: Array<{ name: string; price: number; quantity: number; image?: string }>;
+      createdAt: string;
+    }>;
   };
   topProducts: Array<{
     productId: string;
@@ -142,6 +173,8 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("30d");
+  const [customerDialog, setCustomerDialog] = useState<"new" | "returning" | null>(null);
+  const [selectedCart, setSelectedCart] = useState<AnalyticsData["abandonedCarts"]["carts"][number] | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -288,6 +321,7 @@ export default function AnalyticsPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
           <TabsTrigger value="financials">Financials</TabsTrigger>
           <TabsTrigger value="products">Top Products</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
@@ -315,7 +349,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       dataKey="date"
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="#000000"
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
@@ -328,7 +362,7 @@ export default function AnalyticsPage() {
                     />
                     <YAxis
                       yAxisId="revenue"
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="#000000"
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
@@ -337,7 +371,7 @@ export default function AnalyticsPage() {
                     <YAxis
                       yAxisId="orders"
                       orientation="right"
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="#000000"
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
@@ -348,13 +382,19 @@ export default function AnalyticsPage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "var(--radius)",
                       }}
+                      itemStyle={{ color: "var(--foreground)" }}
+                      labelStyle={{ color: "var(--foreground)" }}
                       formatter={(value: number, name: string) => [
                         name === "revenue" ? formatCurrency(value) : value,
                         name === "revenue" ? "Revenue" : "Orders",
                       ]}
+                      labelFormatter={(label) => {
+                        const d = new Date(label);
+                        return d.toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric" });
+                      }}
                     />
-                    <Bar yAxisId="revenue" dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="orders" type="monotone" dataKey="orders" stroke="#ea580c" strokeWidth={2} dot={false} />
+                    <Bar yAxisId="revenue" dataKey="revenue" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="orders" type="monotone" dataKey="orders" stroke="var(--chart-5)" strokeWidth={2} dot={false} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -425,7 +465,15 @@ export default function AnalyticsPage() {
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        itemStyle={{ color: "var(--foreground)" }}
+                        labelStyle={{ color: "var(--foreground)" }}
+                      />
                     </RePieChart>
                   </ResponsiveContainer>
                 )}
@@ -463,6 +511,253 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ══ Channels Tab ══ */}
+        <TabsContent value="channels" className="space-y-4">
+          {/* Channel Overview Cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Online Card */}
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Monitor className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Online Store</CardTitle>
+                    <CardDescription>Website & mobile orders</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.online.revenue)}</p>
+                    <p className="text-xs text-muted-foreground">Revenue</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{data.channelDetails.online.orders}</p>
+                    <p className="text-xs text-muted-foreground">Orders</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.online.avgOrderValue)}</p>
+                    <p className="text-xs text-muted-foreground">Avg Order</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* POS Card */}
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Smartphone className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Point of Sale</CardTitle>
+                    <CardDescription>In-store transactions</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.pos.revenue)}</p>
+                    <p className="text-xs text-muted-foreground">Revenue</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{data.channelDetails.pos.orders}</p>
+                    <p className="text-xs text-muted-foreground">Orders</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.pos.avgOrderValue)}</p>
+                    <p className="text-xs text-muted-foreground">Avg Order</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Channel Revenue Comparison Chart */}
+          {data.channelDetails.timeSeries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Channel</CardTitle>
+                <CardDescription>Online vs POS revenue over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={data.channelDetails.timeSeries}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#000000"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => {
+                        const d = new Date(v);
+                        return d.toLocaleDateString("en-SA", { month: "short", day: "numeric" });
+                      }}
+                    />
+                    <YAxis
+                      stroke="#000000"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "var(--radius)",
+                      }}
+                      itemStyle={{ color: "var(--foreground)" }}
+                      labelStyle={{ color: "var(--foreground)" }}
+                      formatter={(value: number, name: string) => [
+                        formatCurrency(value),
+                        name === "onlineRevenue" ? "Online" : "POS",
+                      ]}
+                      labelFormatter={(label) => {
+                        const d = new Date(label);
+                        return d.toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric" });
+                      }}
+                    />
+                    <Legend formatter={(value) => (value === "onlineRevenue" ? "Online" : "POS")} />
+                    <Bar dataKey="onlineRevenue" fill="var(--chart-4)" radius={[4, 4, 0, 0]} stackId="revenue" />
+                    <Bar dataKey="posRevenue" fill="var(--chart-5)" radius={[4, 4, 0, 0]} stackId="revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top Products by Channel */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Monitor className="h-4 w-4 text-blue-600" />
+                  Top Online Products
+                </CardTitle>
+                <CardDescription>Best sellers on your online store</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data.channelDetails.online.topProducts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No online sales data</p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.channelDetails.online.topProducts.map((product, idx) => (
+                      <div key={`${product.productId}-${idx}`} className="flex items-center gap-3">
+                        <Badge variant={idx < 3 ? "default" : "secondary"} className="text-xs shrink-0 w-6 h-6 p-0 flex items-center justify-center">
+                          {idx + 1}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.quantity} sold · {product.orders} orders</p>
+                        </div>
+                        <span className="font-bold text-sm shrink-0">{formatCurrency(product.revenue)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Smartphone className="h-4 w-4 text-orange-600" />
+                  Top POS Products
+                </CardTitle>
+                <CardDescription>Best sellers at point of sale</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data.channelDetails.pos.topProducts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No POS sales data</p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.channelDetails.pos.topProducts.map((product, idx) => (
+                      <div key={`${product.productId}-${idx}`} className="flex items-center gap-3">
+                        <Badge variant={idx < 3 ? "default" : "secondary"} className="text-xs shrink-0 w-6 h-6 p-0 flex items-center justify-center">
+                          {idx + 1}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.quantity} sold · {product.orders} orders</p>
+                        </div>
+                        <span className="font-bold text-sm shrink-0">{formatCurrency(product.revenue)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Payment Methods by Channel */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Monitor className="h-4 w-4 text-blue-600" />
+                  Online Payment Methods
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(data.channelDetails.online.paymentMethods).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No data</p>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(data.channelDetails.online.paymentMethods).map(([method, info]) => (
+                      <div key={method} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center gap-2">
+                          {method === "cod" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
+                          <div>
+                            <p className="text-sm font-medium">{method === "cod" ? "Cash on Delivery" : method === "tap" ? "Card (Tap)" : method}</p>
+                            <p className="text-xs text-muted-foreground">{info.count} transactions</p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-sm">{formatCurrency(info.revenue)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Smartphone className="h-4 w-4 text-orange-600" />
+                  POS Payment Methods
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(data.channelDetails.pos.paymentMethods).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No data</p>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(data.channelDetails.pos.paymentMethods).map(([method, info]) => (
+                      <div key={method} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center gap-2">
+                          {method === "cod" || method === "cash" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
+                          <div>
+                            <p className="text-sm font-medium">{method === "cod" || method === "cash" ? "Cash" : method === "tap" ? "Card (Tap)" : method}</p>
+                            <p className="text-xs text-muted-foreground">{info.count} transactions</p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-sm">{formatCurrency(info.revenue)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ══ Financials Tab ══ */}
@@ -553,7 +848,7 @@ export default function AnalyticsPage() {
                     <div className="col-span-2 text-right">Orders</div>
                   </div>
                   {data.topProducts.map((product, idx) => (
-                    <div key={product.productId} className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center">
+                    <div key={`${product.productId}-${idx}`} className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center">
                       <div className="col-span-1">
                         <Badge variant={idx < 3 ? "default" : "secondary"} className="text-xs">
                           {idx + 1}
@@ -588,14 +883,14 @@ export default function AnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       type="number"
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="#000000"
                       fontSize={11}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                     />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="#000000"
                       fontSize={11}
                       width={110}
                       tickFormatter={(v) => v.length > 15 ? v.slice(0, 15) + "..." : v}
@@ -606,6 +901,8 @@ export default function AnalyticsPage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "var(--radius)",
                       }}
+                      itemStyle={{ color: "var(--foreground)" }}
+                      labelStyle={{ color: "var(--foreground)" }}
                       formatter={(value: number) => [formatCurrency(value), "Revenue"]}
                     />
                     <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
@@ -652,22 +949,79 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>New vs Returning Customers</CardTitle>
+              <CardDescription>Click a card to see customer details</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="text-center p-6 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <button
+                  type="button"
+                  onClick={() => setCustomerDialog("new")}
+                  className="text-center p-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:ring-2 hover:ring-blue-400 transition-all cursor-pointer"
+                >
                   <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                   <p className="text-3xl font-bold text-blue-600">{data.customerInsights.newCustomerOrders}</p>
                   <p className="text-sm text-muted-foreground mt-1">New Customer Orders</p>
-                </div>
-                <div className="text-center p-6 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <p className="text-xs text-blue-600 mt-2 font-medium">View customers →</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerDialog("returning")}
+                  className="text-center p-6 rounded-lg bg-green-50 dark:bg-green-900/20 hover:ring-2 hover:ring-green-400 transition-all cursor-pointer"
+                >
                   <RotateCcw className="h-8 w-8 mx-auto mb-2 text-green-600" />
                   <p className="text-3xl font-bold text-green-600">{data.customerInsights.returningCustomerOrders}</p>
                   <p className="text-sm text-muted-foreground mt-1">Returning Customer Orders</p>
-                </div>
+                  <p className="text-xs text-green-600 mt-2 font-medium">View customers →</p>
+                </button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Customer Details Dialog */}
+          <Dialog open={customerDialog !== null} onOpenChange={(open) => !open && setCustomerDialog(null)}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {customerDialog === "new" ? "New Customers" : "Returning Customers"}
+                </DialogTitle>
+                <DialogDescription>
+                  {customerDialog === "new"
+                    ? `${data.customerInsights.newCustomers.length} customers with their first order in this period`
+                    : `${data.customerInsights.returningCustomers.length} customers with multiple orders in this period`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-1 mt-2">
+                <div className="grid grid-cols-12 gap-2 py-2 text-xs font-medium text-muted-foreground border-b">
+                  <div className="col-span-5">Customer</div>
+                  <div className="col-span-2 text-right">Orders</div>
+                  <div className="col-span-3 text-right">Revenue</div>
+                  <div className="col-span-2 text-right">Last Order</div>
+                </div>
+                {(customerDialog === "new"
+                  ? data.customerInsights.newCustomers
+                  : data.customerInsights.returningCustomers
+                ).map((customer, idx) => (
+                  <div key={`${customer.email}-${idx}`} className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center">
+                    <div className="col-span-5 min-w-0">
+                      <p className="text-sm font-medium truncate">{customer.name || "Guest"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
+                    </div>
+                    <div className="col-span-2 text-right text-sm">{customer.orders}</div>
+                    <div className="col-span-3 text-right text-sm font-bold">{formatCurrency(customer.revenue)}</div>
+                    <div className="col-span-2 text-right text-xs text-muted-foreground">
+                      {new Date(customer.lastOrderDate).toLocaleDateString("en-SA", { month: "short", day: "numeric" })}
+                    </div>
+                  </div>
+                ))}
+                {(customerDialog === "new"
+                  ? data.customerInsights.newCustomers
+                  : data.customerInsights.returningCustomers
+                ).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No customers found</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* ══ Abandoned Carts Tab ══ */}
@@ -735,6 +1089,107 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Abandoned Carts List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Abandoned Carts</CardTitle>
+              <CardDescription>Click a cart to see the items left behind</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data.abandonedCarts.carts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No abandoned carts in this period</p>
+              ) : (
+                <div className="space-y-1">
+                  <div className="grid grid-cols-12 gap-2 py-2 text-xs font-medium text-muted-foreground border-b">
+                    <div className="col-span-4">Customer</div>
+                    <div className="col-span-2 text-right">Items</div>
+                    <div className="col-span-2 text-right">Value</div>
+                    <div className="col-span-2 text-center">Status</div>
+                    <div className="col-span-2 text-right">Date</div>
+                  </div>
+                  {data.abandonedCarts.carts.map((cart) => (
+                    <button
+                      key={cart.id}
+                      type="button"
+                      onClick={() => setSelectedCart(cart)}
+                      className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center w-full text-left hover:bg-muted/50 rounded-md px-1 transition-colors cursor-pointer"
+                    >
+                      <div className="col-span-4 min-w-0">
+                        <p className="text-sm font-medium truncate">{cart.email || "Guest"}</p>
+                        {cart.phone && <p className="text-xs text-muted-foreground">{cart.phone}</p>}
+                      </div>
+                      <div className="col-span-2 text-right text-sm">
+                        {cart.items.reduce((s, i) => s + i.quantity, 0)} items
+                      </div>
+                      <div className="col-span-2 text-right text-sm font-bold">
+                        {formatCurrency(cart.subtotal)}
+                      </div>
+                      <div className="col-span-2 text-center">
+                        <Badge variant={cart.status === "RECOVERED" ? "default" : cart.status === "EMAIL_SENT" ? "secondary" : "destructive"} className="text-xs">
+                          {cart.status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 text-right text-xs text-muted-foreground">
+                        {new Date(cart.createdAt).toLocaleDateString("en-SA", { month: "short", day: "numeric" })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Abandoned Cart Detail Dialog */}
+          <Dialog open={selectedCart !== null} onOpenChange={(open) => !open && setSelectedCart(null)}>
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+              {selectedCart && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Abandoned Cart</DialogTitle>
+                    <DialogDescription>
+                      {selectedCart.email || "Guest"} · {new Date(selectedCart.createdAt).toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-2">
+                    <div className="flex items-center gap-4 text-sm">
+                      <Badge variant={selectedCart.status === "RECOVERED" ? "default" : selectedCart.status === "EMAIL_SENT" ? "secondary" : "destructive"}>
+                        {selectedCart.status.replace(/_/g, " ")}
+                      </Badge>
+                      {selectedCart.phone && (
+                        <span className="text-muted-foreground">Phone: {selectedCart.phone}</span>
+                      )}
+                    </div>
+                    <Separator />
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">Items in cart ({selectedCart.items.length})</p>
+                      {selectedCart.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-12 h-12 rounded-md object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+                              <Package className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                          </div>
+                          <span className="font-bold text-sm">{formatCurrency(item.price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center font-bold text-lg">
+                      <span>Total</span>
+                      <span>{formatCurrency(selectedCart.subtotal)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
