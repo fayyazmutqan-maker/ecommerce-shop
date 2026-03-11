@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { formatCurrency, formatDateTime } from "@/lib/helpers";
+import { formatCurrency, formatDateTime, getStatusColor } from "@/lib/helpers";
 
 interface Order {
   id: string;
@@ -147,25 +147,6 @@ interface Fulfillment {
   deliveredAt: string | null;
   createdAt: string;
   items: { id: string; orderItemId: string; quantity: number; orderItem: { name: string; sku: string | null } }[];
-}
-
-function getStatusColor(status: string): "default" | "secondary" | "destructive" | "outline" {
-  switch (status) {
-    case "DELIVERED":
-    case "PAID":
-    case "FULFILLED":
-      return "default";
-    case "PENDING":
-    case "PROCESSING":
-    case "PARTIALLY_FULFILLED":
-      return "secondary";
-    case "CANCELLED":
-    case "REFUNDED":
-    case "FAILED":
-      return "destructive";
-    default:
-      return "outline";
-  }
 }
 
 export default function OrderDetailPage() {
@@ -522,7 +503,7 @@ export default function OrderDetailPage() {
                       })}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Carrier</Label>
                       <Input

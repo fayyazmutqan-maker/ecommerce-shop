@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { reviews, products } from "@/lib/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { formLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const reviewSchema = z.object({
   productId: z.string().min(1),
@@ -17,12 +18,30 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("productId");
     const admin = searchParams.get("admin") === "true";
+    const mine = searchParams.get("mine") === "true";
 
     if (admin) {
       const session = await auth();
       if (!session?.user || session.user.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
+    }
+
+    if (mine) {
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json({ error: "Please sign in" }, { status: 401 });
+      }
+
+      const result = await db.query.reviews.findMany({
+        where: eq(reviews.userId, session.user.id),
+        orderBy: desc(reviews.createdAt),
+        with: {
+          product: { columns: { id: true, name: true, slug: true } },
+        },
+      });
+
+      return NextResponse.json(result);
     }
 
     const conditions = [];
@@ -48,6 +67,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    // Rate limit review submissions
+    const ip = getClientIp(req);
+    const rlResponse = await rateLimitResponse(formLimiter, ip);
+    if (rlResponse) return rlResponse;
+
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Please sign in to leave a review" }, { status: 401 });

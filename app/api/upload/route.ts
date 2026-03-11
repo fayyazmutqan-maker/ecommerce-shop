@@ -7,6 +7,7 @@ import {
   generateImageKey,
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_SIZE,
+  validateImageMagicBytes,
 } from "@/lib/s3";
 
 /**
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     const errors: string[] = [];
 
     for (const file of files) {
-      // Validate type
+      // Validate type (client-provided header)
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
         errors.push(`${file.name}: Unsupported file type (${file.type})`);
         continue;
@@ -51,9 +52,18 @@ export async function POST(req: Request) {
         continue;
       }
 
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Validate magic bytes — prevents MIME type spoofing
+      const detectedType = validateImageMagicBytes(arrayBuffer);
+      if (!detectedType) {
+        errors.push(`${file.name}: File content does not match any allowed image type`);
+        continue;
+      }
+
       const key = generateImageKey(folder, file.name);
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const url = await uploadToS3(key, buffer, file.type);
+      const buffer = Buffer.from(arrayBuffer);
+      const url = await uploadToS3(key, buffer, detectedType);
 
       results.push({ url, key, name: file.name });
     }

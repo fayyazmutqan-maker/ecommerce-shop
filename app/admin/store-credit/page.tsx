@@ -139,10 +139,10 @@ export default function StoreCreditAdminPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Store Credit</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Store Credit</h1>
           <p className="text-muted-foreground">Manage customer store credit balances</p>
         </div>
       </div>
@@ -164,6 +164,7 @@ export default function StoreCreditAdminPage() {
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">No customers found</div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -197,6 +198,7 @@ export default function StoreCreditAdminPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -217,6 +219,7 @@ export default function StoreCreditAdminPage() {
             ) : transactions.length === 0 ? (
               <p className="text-muted-foreground text-center py-6">No transactions</p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -243,6 +246,7 @@ export default function StoreCreditAdminPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

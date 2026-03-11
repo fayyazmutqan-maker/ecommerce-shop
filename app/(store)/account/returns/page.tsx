@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -193,13 +194,10 @@ export default function ReturnsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link href="/account" className="hover:text-foreground transition-colors">Account</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Returns</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "Account", href: "/account" },
+        { label: "Returns" },
+      ]} />
 
       <div className="flex items-center gap-4 mb-6">
         <Button variant="outline" size="icon" asChild>
@@ -324,7 +322,7 @@ export default function ReturnsPage() {
                         </div>
                         {si?.selected && (
                           <div className="ml-8 grid grid-cols-3 gap-3">
-                            <div>
+                            <div className="space-y-1.5">
                               <Label className="text-xs">Qty</Label>
                               <Input
                                 type="number"
@@ -343,7 +341,7 @@ export default function ReturnsPage() {
                                 className="h-8"
                               />
                             </div>
-                            <div>
+                            <div className="space-y-1.5">
                               <Label className="text-xs">Condition</Label>
                               <Select
                                 value={si.condition}
@@ -364,7 +362,7 @@ export default function ReturnsPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div>
+                            <div className="space-y-1.5">
                               <Label className="text-xs">Reason (optional)</Label>
                               <Input
                                 value={si.reason}

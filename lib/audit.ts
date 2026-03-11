@@ -13,6 +13,8 @@ export type AuditAction =
   | "AUTH_REGISTER"
   | "AUTH_LOGOUT"
   | "AUTH_PASSWORD_CHANGE"
+  | "AUTH_PASSWORD_RESET"
+  | "AUTH_EMAIL_VERIFIED"
   | "ORDER_CREATE"
   | "ORDER_UPDATE"
   | "ORDER_CANCEL"
@@ -30,7 +32,9 @@ export type AuditAction =
   | "CSRF_BLOCKED"
   | "COUPON_VALIDATE"
   | "CUSTOMER_UPDATE"
-  | "IMPORT_EXPORT";
+  | "IMPORT_EXPORT"
+  | "POS_SESSION_OPENED"
+  | "POS_SESSION_CLOSED";
 
 export interface AuditEntry {
   action: AuditAction;

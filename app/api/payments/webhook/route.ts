@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { retrieveTapCharge, mapTapStatus, verifyTapWebhookSignature } from "@/lib/tap";
 import { orders, storeSettings, transactions, orderTimeline } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
+import { webhookLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { audit } from "@/lib/audit";
 
 /**
  * POST /api/payments/webhook
@@ -12,6 +14,15 @@ import { eq, and } from "drizzle-orm";
  * Tap sends POST requests with charge data when payment status changes.
  */
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+
+  // Rate-limit webhooks to prevent abuse
+  const rlResponse = await rateLimitResponse(webhookLimiter, ip);
+  if (rlResponse) {
+    audit({ action: "RATE_LIMIT_HIT", ip, resource: "payment-webhook", success: false });
+    return rlResponse;
+  }
+
   try {
     // Read the raw body for HMAC verification before parsing JSON
     const rawBody = await req.text();
@@ -203,9 +214,19 @@ export async function POST(req: Request) {
 
     console.log(`Webhook: Order ${order.orderNumber} payment status → ${paymentStatus}`);
 
+    audit({
+      action: "PAYMENT_WEBHOOK",
+      ip,
+      resource: "payment",
+      resourceId: chargeId as string,
+      details: { orderId, orderNumber: order.orderNumber, paymentStatus, amount: charge.amount, currency: charge.currency },
+      success: true,
+    });
+
     return NextResponse.json({ status: "ok" });
   } catch (error) {
     console.error("Webhook error:", error);
+    audit({ action: "PAYMENT_WEBHOOK", ip, success: false, error: String(error) });
     // Return 500 for recoverable errors so Tap will retry
     return NextResponse.json({ status: "error" }, { status: 500 });
   }

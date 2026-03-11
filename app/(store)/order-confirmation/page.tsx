@@ -87,11 +87,11 @@ export default async function OrderConfirmationPage({ searchParams }: Props) {
             Your order has been saved. You can retry payment or contact support.
           </p>
         </div>
-        <div className="flex items-center justify-center gap-4">
-          <Button className="h-12 px-8" asChild>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Button className="h-12 px-8 w-full sm:w-auto" asChild>
             <Link href="/products">Continue Shopping</Link>
           </Button>
-          <Button variant="outline" className="h-12 px-8" asChild>
+          <Button variant="outline" className="h-12 px-8 w-full sm:w-auto" asChild>
             <Link href="/account/orders">My Orders</Link>
           </Button>
         </div>

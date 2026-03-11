@@ -67,13 +67,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch("/api/settings")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
       .then((data) => {
         if (data && data.id) {
           setSettings((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Failed to load settings");
+      });
   }, []);
 
   async function handleSave() {
@@ -116,7 +121,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="payments">Payments & Tax</TabsTrigger>
           <TabsTrigger value="shipping">Shipping</TabsTrigger>

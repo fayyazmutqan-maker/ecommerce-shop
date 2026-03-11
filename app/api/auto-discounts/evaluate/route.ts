@@ -4,15 +4,21 @@ import { auth } from "@/lib/auth";
 import { toNumber } from "@/lib/decimal";
 import { eq, desc, inArray } from "drizzle-orm";
 import { autoDiscounts, productCategories } from "@/lib/schema";
+import { z } from "zod";
 
-interface CartItem {
-  productId: string;
-  variantId?: string | null;
-  name: string;
-  price: number;
-  quantity: number;
-  categoryIds?: string[];
-}
+const cartItemSchema = z.object({
+  productId: z.string().min(1),
+  variantId: z.string().nullable().optional(),
+  name: z.string().min(1),
+  price: z.number().min(0),
+  quantity: z.number().int().min(1),
+  categoryIds: z.array(z.string()).optional(),
+});
+
+const evaluateSchema = z.object({
+  items: z.array(cartItemSchema).min(1),
+  orderAmount: z.number().min(0),
+});
 
 interface AppliedDiscount {
   id: string;
@@ -29,11 +35,12 @@ interface AppliedDiscount {
  */
 export async function POST(req: Request) {
   try {
-    const { items, orderAmount } = await req.json() as { items: CartItem[]; orderAmount: number };
-
-    if (!items || items.length === 0) {
+    const body = await req.json();
+    const parsed = evaluateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json({ discounts: [], totalSaved: 0 });
     }
+    const { items, orderAmount } = parsed.data;
 
     const session = await auth();
     const userId = session?.user?.id || null;

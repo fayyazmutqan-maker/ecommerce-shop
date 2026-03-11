@@ -408,7 +408,7 @@ export function ProductFilters(props: ProductFiltersProps) {
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[320px] overflow-y-auto">
+          <SheetContent side="left" className="w-[min(320px,85vw)] overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4" /> Filters

@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   images: {
@@ -38,11 +43,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdnjs.cloudflare.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://*.s3.*.amazonaws.com https://placehold.co https://lh3.googleusercontent.com",
+              "img-src 'self' data: blob: https://*.amazonaws.com https://placehold.co https://lh3.googleusercontent.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com",
+              `connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
               "frame-src 'self' https://goSellJSLib.b-cdn.net",
               "object-src 'none'",
               "base-uri 'self'",
@@ -56,4 +61,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

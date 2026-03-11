@@ -180,10 +180,10 @@ export default function NavigationsPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Navigation Menus</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Navigation Menus</h1>
           <p className="text-muted-foreground">Manage your store&apos;s navigation menus</p>
         </div>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Menu</Button>
@@ -199,6 +199,7 @@ export default function NavigationsPage() {
               <Button variant="outline" onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create your first menu</Button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -226,6 +227,7 @@ export default function NavigationsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -236,7 +238,7 @@ export default function NavigationsPage() {
             <DialogTitle>{editing ? "Edit" : "Create"} Navigation Menu</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Title</Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Main Menu" required />
@@ -255,23 +257,25 @@ export default function NavigationsPage() {
               {items.map((item, i) => (
                 <Card key={i} className="p-0">
                   <CardContent className="p-3 space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                       {item.children && item.children.length > 0 && (
                         <button type="button" onClick={() => toggleExpanded(i)} className="text-muted-foreground hover:text-foreground">
                           {expandedItems.has(i) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       )}
-                      <Input value={item.title} onChange={(e) => updateItem(i, "title", e.target.value)} placeholder="Link title" className="flex-1" />
-                      <Input value={item.url} onChange={(e) => updateItem(i, "url", e.target.value)} placeholder="/page-url" className="flex-1" />
-                      <Button type="button" variant="ghost" size="sm" onClick={() => addChild(i)} className="text-xs shrink-0">+ Sub</Button>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="shrink-0 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Input value={item.title} onChange={(e) => updateItem(i, "title", e.target.value)} placeholder="Link title" className="flex-1 min-w-[120px]" />
+                      <Input value={item.url} onChange={(e) => updateItem(i, "url", e.target.value)} placeholder="/page-url" className="flex-1 min-w-[120px]" />
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => addChild(i)} className="text-xs shrink-0">+ Sub</Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="shrink-0 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
                     </div>
                     {expandedItems.has(i) && item.children?.map((child, ci) => (
-                      <div key={ci} className="flex items-center gap-2 ml-10">
+                      <div key={ci} className="flex flex-wrap items-center gap-2 ml-4 sm:ml-10">
                         <span className="text-xs text-muted-foreground w-4">↳</span>
-                        <Input value={child.title} onChange={(e) => updateChild(i, ci, "title", e.target.value)} placeholder="Sub-link title" className="flex-1" />
-                        <Input value={child.url} onChange={(e) => updateChild(i, ci, "url", e.target.value)} placeholder="/sub-url" className="flex-1" />
+                        <Input value={child.title} onChange={(e) => updateChild(i, ci, "title", e.target.value)} placeholder="Sub-link title" className="flex-1 min-w-[120px]" />
+                        <Input value={child.url} onChange={(e) => updateChild(i, ci, "url", e.target.value)} placeholder="/sub-url" className="flex-1 min-w-[120px]" />
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeChild(i, ci)} className="shrink-0 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     ))}

@@ -254,9 +254,9 @@ export default function SmartCollectionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Smart Collections</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Smart Collections</h1>
           <p className="text-muted-foreground">
             Auto-populate collections based on product rules
           </p>
@@ -275,7 +275,7 @@ export default function SmartCollectionsPage() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Name *</Label>
                   <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Summer Sale" />
@@ -298,9 +298,9 @@ export default function SmartCollectionsPage() {
                   </Button>
                 </div>
                 {form.rules.map((rule, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                  <div key={idx} className="flex flex-wrap items-center gap-2">
                     <Select value={rule.field} onValueChange={(v) => updateRule(idx, "field", v)}>
-                      <SelectTrigger className="w-[160px]">
+                      <SelectTrigger className="w-full sm:w-[160px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -310,7 +310,7 @@ export default function SmartCollectionsPage() {
                       </SelectContent>
                     </Select>
                     <Select value={rule.operator} onValueChange={(v) => updateRule(idx, "operator", v)}>
-                      <SelectTrigger className="w-[160px]">
+                      <SelectTrigger className="w-full sm:w-[160px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -323,7 +323,7 @@ export default function SmartCollectionsPage() {
                       value={rule.value}
                       onChange={(e) => updateRule(idx, "value", e.target.value)}
                       placeholder="Value"
-                      className="flex-1"
+                      className="flex-1 min-w-[120px]"
                     />
                     {form.rules.length > 1 && (
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeRule(idx)}>
@@ -337,7 +337,7 @@ export default function SmartCollectionsPage() {
                 <Switch checked={form.isActive} onCheckedChange={(v) => setForm((f) => ({ ...f, isActive: v }))} />
                 <Label>Active</Label>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SEO Title</Label>
                   <Input value={form.seoTitle} onChange={(e) => setForm((f) => ({ ...f, seoTitle: e.target.value }))} />
@@ -369,6 +369,7 @@ export default function SmartCollectionsPage() {
           ) : collections.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No smart collections yet. Create one to get started.</p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -415,6 +416,7 @@ export default function SmartCollectionsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

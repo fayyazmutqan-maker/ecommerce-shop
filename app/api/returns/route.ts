@@ -5,6 +5,7 @@ import { z } from "zod";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { returns, returnItems, orders, orderItems, orderTimeline } from "@/lib/schema";
 import { serializeDecimal } from "@/lib/decimal";
+import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 function generateReturnNumber(): string {
   const date = new Date();
@@ -112,6 +113,11 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
+    // Rate limit return requests
+    const ip = getClientIp(req);
+    const rlResponse = await rateLimitResponse(checkoutLimiter, ip);
+    if (rlResponse) return rlResponse;
+
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

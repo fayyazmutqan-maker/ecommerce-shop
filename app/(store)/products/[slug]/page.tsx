@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { products, productImages, productVariants, productCategories, reviews, productBundles } from "@/lib/schema";
 import { eq, desc, asc, and, inArray } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslations, applyTranslationsBatch } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +48,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${title} | ShopFlow`,
     description,
+    alternates: {
+      canonical: `/products/${slug}`,
+    },
     openGraph: {
       title,
       description,
@@ -91,7 +96,7 @@ export default async function ProductDetailPage({ params }: Props) {
     notFound();
   }
 
-  const product = {
+  const productBase = {
     ...rawProduct,
     price: Number(rawProduct.price),
     compareAtPrice: rawProduct.compareAtPrice ? Number(rawProduct.compareAtPrice) : null,
@@ -103,16 +108,16 @@ export default async function ProductDetailPage({ params }: Props) {
   };
 
   // Get related products from same categories
-  const categoryIds = product.categories.map((c) => c.categoryId);
+  const categoryIds = productBase.categories.map((c) => c.categoryId);
   const relatedIds = categoryIds.length > 0
     ? await db
         .select({ id: productCategories.productId })
         .from(productCategories)
         .where(inArray(productCategories.categoryId, categoryIds))
     : [];
-  const uniqueIds = [...new Set(relatedIds.map((r) => r.id))].filter((id) => id !== product.id);
+  const uniqueIds = [...new Set(relatedIds.map((r) => r.id))].filter((id) => id !== productBase.id);
 
-  const relatedProducts = uniqueIds.length > 0
+  const relatedRaw = uniqueIds.length > 0
     ? await db.query.products.findMany({
         where: and(
           eq(products.status, "ACTIVE"),
@@ -122,6 +127,15 @@ export default async function ProductDetailPage({ params }: Props) {
         limit: 4,
       })
     : [];
+
+  // Apply locale translations to dynamic content
+  const locale = await getLocale();
+  const product = await applyTranslations("product", productBase, locale);
+  const relatedProducts = await applyTranslationsBatch(
+    "product",
+    relatedRaw.map((p) => ({ ...p, price: Number(p.price), compareAtPrice: p.compareAtPrice ? Number(p.compareAtPrice) : null })),
+    locale
+  );
 
   const avgRating =
     product.reviews.length > 0

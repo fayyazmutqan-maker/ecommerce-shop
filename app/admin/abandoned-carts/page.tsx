@@ -179,7 +179,7 @@ export default function AbandonedCartsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -253,6 +253,7 @@ export default function AbandonedCartsPage() {
       {/* Table */}
       <Card>
         <CardContent className="pt-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -317,6 +318,7 @@ export default function AbandonedCartsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -329,7 +331,7 @@ export default function AbandonedCartsPage() {
 
           {selectedCart && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Email</p>
                   <p className="font-medium">{selectedCart.email || "—"}</p>

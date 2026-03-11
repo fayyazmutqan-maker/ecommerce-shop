@@ -117,6 +117,7 @@ export default function DraftOrdersPage() {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
       const res = await fetch(`/api/draft-orders?${params}`);
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setDrafts(Array.isArray(data) ? data : []);
     } catch {
@@ -134,7 +135,8 @@ export default function DraftOrdersPage() {
 
     setSearchingProducts(true);
     try {
-      const res = await fetch(`/api/products?q=${encodeURIComponent(query)}&limit=10&status=ACTIVE`);
+      const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setProductResults(data.products || []);
     } catch {
@@ -300,7 +302,7 @@ export default function DraftOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Draft Orders</h1>
           <p className="text-muted-foreground">Create orders on behalf of customers (phone, email, in-person)</p>
@@ -324,6 +326,7 @@ export default function DraftOrdersPage() {
       {/* Table */}
       <Card>
         <CardContent className="pt-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -392,6 +395,7 @@ export default function DraftOrdersPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -486,6 +490,7 @@ export default function DraftOrdersPage() {
 
               {/* Item List */}
               {formItems.length > 0 ? (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -519,6 +524,7 @@ export default function DraftOrdersPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="flex items-center justify-center py-8 border-2 border-dashed rounded-lg">
                   <p className="text-sm text-muted-foreground">Search and add products above</p>

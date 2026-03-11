@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +28,10 @@ export default async function StoreCreditPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link href="/account" className="hover:text-foreground transition-colors">Account</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Store Credit</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "Account", href: "/account" },
+        { label: "Store Credit" },
+      ]} />
 
       <div className="flex items-center gap-4 mb-8">
         <Button variant="outline" size="icon" asChild>

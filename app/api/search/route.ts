@@ -4,6 +4,8 @@ import { searchLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit"
 import { serializeDecimal } from "@/lib/decimal";
 import { products } from "@/lib/schema";
 import { and, or, eq, ilike, count, desc } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslationsBatch } from "@/lib/translations";
 
 export async function GET(req: Request) {
   const rlResponse = await rateLimitResponse(searchLimiter, getClientIp(req));
@@ -52,7 +54,10 @@ export async function GET(req: Request) {
       db.select({ value: count() }).from(products).where(where),
     ]);
 
-    return NextResponse.json(serializeDecimal({ products: productRows, total: totalRow.value }));
+    return NextResponse.json(serializeDecimal({
+      products: await applyTranslationsBatch("product", productRows as Record<string, unknown>[], await getLocale()),
+      total: totalRow.value,
+    }));
   } catch (error) {
     console.error("Search error:", error);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });

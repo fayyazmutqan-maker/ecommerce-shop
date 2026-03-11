@@ -84,6 +84,24 @@ export async function PUT(req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Return not found" }, { status: 404 });
     }
 
+    // Validate status transitions (state machine)
+    if (data.status && data.status !== existing.status) {
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        REQUESTED: ["APPROVED", "REJECTED"],
+        APPROVED: ["RECEIVED", "REJECTED"],
+        RECEIVED: ["COMPLETED", "REJECTED"],
+        COMPLETED: [],
+        REJECTED: [],
+      };
+      const allowed = VALID_TRANSITIONS[existing.status] || [];
+      if (!allowed.includes(data.status)) {
+        return NextResponse.json(
+          { error: `Cannot transition return from ${existing.status} to ${data.status}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const result = await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(returns)

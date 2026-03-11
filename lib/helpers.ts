@@ -65,8 +65,11 @@ export function truncate(text: string, length: number): string {
  * Get initials from name
  */
 export function getInitials(name: string): string {
+  if (!name || !name.trim()) return "";
   return name
+    .trim()
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase()
@@ -98,11 +101,17 @@ export function getStatusColor(
     DELIVERED: "default",
     PAID: "default",
     FULFILLED: "default",
+    COMPLETED: "default",
+    APPROVED: "secondary",
+    RECEIVED: "secondary",
+    PARTIALLY_FULFILLED: "secondary",
     DRAFT: "secondary",
     PENDING: "outline",
     UNFULFILLED: "outline",
+    REQUESTED: "outline",
     CANCELLED: "destructive",
     REFUNDED: "destructive",
+    REJECTED: "destructive",
     FAILED: "destructive",
     ARCHIVED: "secondary",
   };

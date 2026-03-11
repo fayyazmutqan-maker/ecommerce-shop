@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { couponLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { sendContactFormNotification } from "@/lib/email";
+import { db } from "@/lib/db";
+import { storeSettings } from "@/lib/schema";
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
@@ -25,11 +28,22 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, subject, message } = parsed.data;
+    const { name, email, phone, subject, message } = parsed.data;
 
-    // In production, send an email or save to a support ticket system
-    // For now, log it (can be wired to the email system later)
-    console.log("Contact form submission:", { name, email, subject, message: message.substring(0, 100) });
+    // Get store email to send notification to
+    const settings = await db.query.storeSettings.findFirst();
+    const recipientEmail = settings?.storeEmail || process.env.ADMIN_EMAIL;
+
+    if (recipientEmail) {
+      await sendContactFormNotification({
+        name,
+        email,
+        phone,
+        subject: subject || "Contact Form Submission",
+        message,
+        recipientEmail,
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Message received" });
   } catch (error) {

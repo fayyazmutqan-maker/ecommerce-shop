@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { shippingZones } from "@/lib/schema";
+import { z } from "zod";
+
+const calculateSchema = z.object({
+  country: z.string().min(1, "Country is required").max(100),
+  region: z.string().max(200).optional().default(""),
+  totalWeight: z.number().min(0).max(1_000_000).optional().default(0),
+  orderAmount: z.number().min(0).max(10_000_000).optional().default(0),
+});
 
 /**
  * POST /api/shipping-zones/calculate — Calculate available shipping rates for checkout
@@ -9,11 +17,15 @@ import { shippingZones } from "@/lib/schema";
  */
 export async function POST(req: Request) {
   try {
-    const { country, region, totalWeight, orderAmount } = await req.json();
-
-    if (!country) {
-      return NextResponse.json({ error: "Country is required" }, { status: 400 });
+    const body = await req.json();
+    const parsed = calculateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid input" },
+        { status: 400 }
+      );
     }
+    const { country, region, totalWeight, orderAmount } = parsed.data;
 
     // Find matching zones
     const allZones = await db.query.shippingZones.findMany({

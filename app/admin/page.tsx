@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { orders, users, products, productImages, orderItems } from "@/lib/schema";
-import { eq, count, gte, lt, and, desc, asc } from "drizzle-orm";
+import { eq, count, gte, lt, and, desc, asc, sql } from "drizzle-orm";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/helpers";
 import { DashboardChart } from "@/components/admin/dashboard-chart";
 import { RecentOrders } from "@/components/admin/recent-orders";
@@ -112,20 +112,46 @@ async function getRecentOrders() {
 }
 
 async function getTopProducts() {
+  // Sort by actual sales volume (order item count) instead of stock quantity
+  const salesData = await db
+    .select({
+      productId: orderItems.productId,
+      totalSold: sql<number>`SUM(${orderItems.quantity})`,
+      totalRevenue: sql<string>`SUM(CAST(${orderItems.totalPrice} AS NUMERIC))`,
+    })
+    .from(orderItems)
+    .groupBy(orderItems.productId)
+    .orderBy(sql`SUM(${orderItems.quantity}) DESC`)
+    .limit(5);
+
+  const productIds = salesData.map((s) => s.productId);
+
+  if (productIds.length === 0) {
+    return [];
+  }
+
   const result = await db.query.products.findMany({
-    limit: 5,
     where: eq(products.status, "ACTIVE"),
-    orderBy: [desc(products.quantity)],
     with: {
       images: true,
       orderItems: true,
     },
   });
-  return result.map((p) => ({
-    ...p,
-    images: p.images.filter((img) => img.isPrimary).slice(0, 1),
-    _count: { orderItems: p.orderItems.length },
-  }));
+
+  // Sort by sales volume and limit to top 5
+  return result
+    .map((p) => {
+      const sales = salesData.find((s) => s.productId === p.id);
+      return {
+        ...p,
+        images: p.images.filter((img) => img.isPrimary).slice(0, 1),
+        _count: { orderItems: p.orderItems.length },
+        _totalSold: sales ? Number(sales.totalSold) : 0,
+        _totalRevenue: sales ? Number(sales.totalRevenue) : 0,
+      };
+    })
+    .sort((a, b) => b._totalSold - a._totalSold)
+    .slice(0, 5);
 }
 
 export default async function AdminDashboard() {
@@ -177,7 +203,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -14,13 +14,15 @@ import { NewsletterForm } from "@/components/store/newsletter-form";
 import { db } from "@/lib/db";
 import { products, categories as categoriesTable, storeSettings, productImages } from "@/lib/schema";
 import { eq, desc, asc, and, isNull } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslationsBatch } from "@/lib/translations";
 import { ProductCardGrid } from "@/components/store/product-card-grid";
 import { CategoryCarousel } from "@/components/store/category-carousel";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [featuredProducts, categories, settings] = await Promise.all([
+  const [rawFeatured, rawCategories, settings] = await Promise.all([
     db.query.products.findMany({
       where: and(eq(products.status, "ACTIVE"), eq(products.isFeatured, true)),
       with: { images: { orderBy: [asc(productImages.position)] } },
@@ -35,12 +37,18 @@ export default async function HomePage() {
     db.query.storeSettings.findFirst(),
   ]);
 
-  const newArrivals = await db.query.products.findMany({
+  const rawNewArrivals = await db.query.products.findMany({
     where: eq(products.status, "ACTIVE"),
     with: { images: { orderBy: [asc(productImages.position)] } },
     limit: 4,
     orderBy: [desc(products.createdAt)],
   });
+
+  // Apply locale translations
+  const locale = await getLocale();
+  const featuredProducts = await applyTranslationsBatch("product", rawFeatured as Record<string, unknown>[], locale) as typeof rawFeatured;
+  const categories = await applyTranslationsBatch("category", rawCategories as Record<string, unknown>[], locale) as typeof rawCategories;
+  const newArrivals = await applyTranslationsBatch("product", rawNewArrivals as Record<string, unknown>[], locale) as typeof rawNewArrivals;
 
   const storeName = settings?.storeName || "ShopFlow";
 
@@ -91,6 +99,7 @@ export default async function HomePage() {
       <section className="border-y bg-card">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4">
+            {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
             {[
               {
                 icon: Truck,
@@ -112,12 +121,10 @@ export default async function HomePage() {
                 title: "24/7 Support",
                 desc: "Dedicated help center",
               },
-            ].map((feature, index) => (
+            ].map((feature) => (
               <div
                 key={feature.title}
-                className={`flex items-center gap-4 py-6 px-6 ${
-                  index > 0 ? "border-l" : ""
-                }`}
+                className="flex items-center gap-4 py-4 px-3 sm:py-6 sm:px-6 border-b lg:border-b-0 lg:border-l lg:first:border-l-0"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                   <feature.icon className="h-5 w-5 text-foreground" />
@@ -274,9 +281,9 @@ export default async function HomePage() {
               Subscribe for exclusive deals, early access to new arrivals, and
               insider-only discounts.
             </p>
-            <form className="flex gap-3 mt-8 max-w-md mx-auto">
+            <div className="flex gap-3 mt-8 max-w-md mx-auto">
               <NewsletterForm />
-            </form>
+            </div>
             <p className="text-xs text-muted-foreground mt-4">
               No spam, unsubscribe at any time.
             </p>

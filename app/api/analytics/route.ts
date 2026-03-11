@@ -1,0 +1,291 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { serializeDecimal } from "@/lib/decimal";
+import { eq, and, gte, lte, desc, count, sql } from "drizzle-orm";
+import {
+  orders,
+  orderItems,
+  products,
+  users,
+  abandonedCarts,
+  refunds,
+} from "@/lib/schema";
+
+/**
+ * GET /api/analytics — Comprehensive analytics data
+ * Query params:
+ * - from: ISO date (start of range)
+ * - to: ISO date (end of range)
+ * - granularity: "day" | "week" | "month" (default: "day")
+ */
+export async function GET(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user || !["ADMIN", "STAFF"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const now = new Date();
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+    const granularity = searchParams.get("granularity") || "day";
+
+    // Default: last 30 days
+    const from = fromParam ? new Date(fromParam) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const to = toParam ? new Date(toParam) : now;
+
+    // Previous period for comparison (same duration before `from`)
+    const duration = to.getTime() - from.getTime();
+    const prevFrom = new Date(from.getTime() - duration);
+    const prevTo = from;
+
+    // ── Parallel data fetches ──
+    const [
+      currentOrders,
+      previousOrders,
+      currentCustomers,
+      previousCustomers,
+      topProductsData,
+      abandonedData,
+      refundsData,
+      allCustomersCount,
+      activeProductsCount,
+      revenueTimeSeries,
+    ] = await Promise.all([
+      // Current period orders
+      db.query.orders.findMany({
+        where: and(gte(orders.createdAt, from), lte(orders.createdAt, to)),
+        columns: {
+          id: true, totalAmount: true, subtotal: true, taxAmount: true,
+          shippingAmount: true, discountAmount: true, status: true,
+          source: true, paymentStatus: true, email: true, userId: true,
+          createdAt: true, paymentMethod: true,
+        },
+      }),
+
+      // Previous period orders (for comparison)
+      db.query.orders.findMany({
+        where: and(gte(orders.createdAt, prevFrom), lte(orders.createdAt, prevTo)),
+        columns: { id: true, totalAmount: true, status: true, source: true, createdAt: true },
+      }),
+
+      // New customers in current period
+      db.select({ value: count() }).from(users).where(
+        and(eq(users.role, "CUSTOMER"), gte(users.createdAt, from), lte(users.createdAt, to))
+      ),
+
+      // New customers in previous period
+      db.select({ value: count() }).from(users).where(
+        and(eq(users.role, "CUSTOMER"), gte(users.createdAt, prevFrom), lte(users.createdAt, prevTo))
+      ),
+
+      // Top products by revenue in period
+      db.select({
+        productId: orderItems.productId,
+        name: orderItems.name,
+        totalRevenue: sql<string>`SUM(CAST(${orderItems.totalPrice} AS NUMERIC))`,
+        totalQuantity: sql<number>`SUM(${orderItems.quantity})`,
+        orderCount: count(),
+      })
+        .from(orderItems)
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to)))
+        .groupBy(orderItems.productId, orderItems.name)
+        .orderBy(sql`SUM(CAST(${orderItems.totalPrice} AS NUMERIC)) DESC`)
+        .limit(10),
+
+      // Abandoned carts in period
+      db.query.abandonedCarts.findMany({
+        where: and(gte(abandonedCarts.createdAt, from), lte(abandonedCarts.createdAt, to)),
+        columns: { id: true, status: true, subtotal: true, createdAt: true },
+      }),
+
+      // Refunds in period
+      db.query.refunds.findMany({
+        where: and(gte(refunds.createdAt, from), lte(refunds.createdAt, to)),
+        columns: { id: true, amount: true, createdAt: true },
+      }),
+
+      // Total customers
+      db.select({ value: count() }).from(users).where(eq(users.role, "CUSTOMER")),
+
+      // Active products
+      db.select({ value: count() }).from(products).where(eq(products.status, "ACTIVE")),
+
+      // Revenue time series (grouped by day)
+      db.select({
+        date: sql<string>`DATE(${orders.createdAt})`,
+        revenue: sql<string>`SUM(CAST(${orders.totalAmount} AS NUMERIC))`,
+        orderCount: count(),
+      })
+        .from(orders)
+        .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to)))
+        .groupBy(sql`DATE(${orders.createdAt})`)
+        .orderBy(sql`DATE(${orders.createdAt})`),
+    ]);
+
+    // ── Compute metrics ──
+    const currentRevenue = currentOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
+    const previousRevenue = previousOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
+    const currentOrderCount = currentOrders.length;
+    const previousOrderCount = previousOrders.length;
+    const avgOrderValue = currentOrderCount ? currentRevenue / currentOrderCount : 0;
+    const prevAvgOrderValue = previousOrderCount ? previousRevenue / previousOrderCount : 0;
+
+    // Revenue breakdown
+    const grossRevenue = currentOrders.reduce((s, o) => s + Number(o.subtotal), 0);
+    const totalTax = currentOrders.reduce((s, o) => s + Number(o.taxAmount), 0);
+    const totalShipping = currentOrders.reduce((s, o) => s + Number(o.shippingAmount), 0);
+    const totalDiscounts = currentOrders.reduce((s, o) => s + Number(o.discountAmount), 0);
+    const totalRefunds = refundsData.reduce((s, r) => s + Number(r.amount), 0);
+    const netRevenue = currentRevenue - totalRefunds;
+
+    // Sales by channel
+    const onlineOrders = currentOrders.filter((o) => o.source === "ONLINE");
+    const posOrders = currentOrders.filter((o) => o.source === "POS");
+    const onlineRevenue = onlineOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
+    const posRevenue = posOrders.reduce((s, o) => s + Number(o.totalAmount), 0);
+
+    // Payment methods
+    const paymentMethods: Record<string, { count: number; revenue: number }> = {};
+    for (const o of currentOrders) {
+      const method = o.paymentMethod || "unknown";
+      if (!paymentMethods[method]) paymentMethods[method] = { count: 0, revenue: 0 };
+      paymentMethods[method].count++;
+      paymentMethods[method].revenue += Number(o.totalAmount);
+    }
+
+    // Order status distribution
+    const statusDistribution: Record<string, number> = {};
+    for (const o of currentOrders) {
+      statusDistribution[o.status] = (statusDistribution[o.status] || 0) + 1;
+    }
+
+    // Returning vs new customers
+    const uniqueCustomerEmails = new Set(currentOrders.map((o) => o.email));
+    const returningCustomers = currentOrders.filter((o) => {
+      const firstOrder = currentOrders
+        .filter((oo) => oo.email === o.email)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+      return firstOrder && firstOrder.id !== o.id;
+    });
+    const newCustomerOrders = currentOrderCount - returningCustomers.length;
+    const returningCustomerOrders = returningCustomers.length;
+
+    // Abandoned cart metrics
+    const abandonedCount = abandonedData.filter((c) => c.status === "ABANDONED").length;
+    const recoveredCount = abandonedData.filter((c) => c.status === "RECOVERED").length;
+    const emailSentCount = abandonedData.filter((c) => c.status === "EMAIL_SENT").length;
+    const abandonedValue = abandonedData
+      .filter((c) => c.status === "ABANDONED")
+      .reduce((s, c) => s + Number(c.subtotal), 0);
+    const recoveryRate = abandonedData.length ? (recoveredCount / abandonedData.length) * 100 : 0;
+
+    // % change helpers
+    const pctChange = (curr: number, prev: number) =>
+      prev > 0 ? ((curr - prev) / prev) * 100 : curr > 0 ? 100 : 0;
+
+    // Aggregate time series by granularity
+    let timeSeries = revenueTimeSeries.map((r) => ({
+      date: r.date,
+      revenue: Number(r.revenue),
+      orders: r.orderCount,
+    }));
+
+    if (granularity === "week") {
+      const weekMap: Record<string, { revenue: number; orders: number }> = {};
+      for (const point of timeSeries) {
+        const d = new Date(point.date);
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
+        const key = weekStart.toISOString().split("T")[0];
+        if (!weekMap[key]) weekMap[key] = { revenue: 0, orders: 0 };
+        weekMap[key].revenue += point.revenue;
+        weekMap[key].orders += point.orders;
+      }
+      timeSeries = Object.entries(weekMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, data]) => ({ date, ...data }));
+    } else if (granularity === "month") {
+      const monthMap: Record<string, { revenue: number; orders: number }> = {};
+      for (const point of timeSeries) {
+        const key = point.date.substring(0, 7); // YYYY-MM
+        if (!monthMap[key]) monthMap[key] = { revenue: 0, orders: 0 };
+        monthMap[key].revenue += point.revenue;
+        monthMap[key].orders += point.orders;
+      }
+      timeSeries = Object.entries(monthMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, data]) => ({ date, ...data }));
+    }
+
+    return NextResponse.json({
+      period: { from: from.toISOString(), to: to.toISOString(), granularity },
+
+      overview: {
+        totalRevenue: currentRevenue,
+        revenueChange: pctChange(currentRevenue, previousRevenue),
+        netRevenue,
+        totalOrders: currentOrderCount,
+        ordersChange: pctChange(currentOrderCount, previousOrderCount),
+        avgOrderValue,
+        avgOrderValueChange: pctChange(avgOrderValue, prevAvgOrderValue),
+        newCustomers: currentCustomers[0].value,
+        newCustomersChange: pctChange(currentCustomers[0].value, previousCustomers[0].value),
+        totalCustomers: allCustomersCount[0].value,
+        activeProducts: activeProductsCount[0].value,
+      },
+
+      financials: {
+        grossRevenue,
+        totalTax,
+        totalShipping,
+        totalDiscounts,
+        totalRefunds,
+        refundCount: refundsData.length,
+        netRevenue,
+      },
+
+      salesByChannel: {
+        online: { orders: onlineOrders.length, revenue: onlineRevenue },
+        pos: { orders: posOrders.length, revenue: posRevenue },
+      },
+
+      paymentMethods,
+      orderStatusDistribution: statusDistribution,
+
+      customerInsights: {
+        uniqueCustomers: uniqueCustomerEmails.size,
+        newCustomerOrders,
+        returningCustomerOrders,
+        returningRate: currentOrderCount
+          ? (returningCustomerOrders / currentOrderCount) * 100
+          : 0,
+      },
+
+      abandonedCarts: {
+        total: abandonedData.length,
+        abandoned: abandonedCount,
+        emailSent: emailSentCount,
+        recovered: recoveredCount,
+        abandonedValue,
+        recoveryRate,
+      },
+
+      topProducts: topProductsData.map((p) => ({
+        productId: p.productId,
+        name: p.name,
+        revenue: Number(p.totalRevenue),
+        quantity: p.totalQuantity,
+        orders: p.orderCount,
+      })),
+
+      timeSeries,
+    });
+  } catch (error) {
+    console.error("Analytics GET error:", error);
+    return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
+  }
+}

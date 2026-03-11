@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Mail, Phone, MapPin, Send, Clock } from "lucide-react";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
@@ -49,11 +50,7 @@ export default function ContactPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Contact Us</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Contact Us" }]} />
 
       <div className="mb-10">
         <h1 className="text-3xl font-bold mb-2">Contact Us</h1>

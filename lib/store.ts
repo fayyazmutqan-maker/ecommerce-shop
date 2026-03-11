@@ -43,17 +43,17 @@ export const useCartStore = create<CartStore>()(
       },
 
       removeItem: (id) => {
-        set({ items: get().items.filter((i) => i.id !== id) });
+        set({ items: get().items.filter((i) => (i.productId || i.id) !== id) });
       },
 
       updateQuantity: (id, quantity) => {
         if (quantity <= 0) {
-          set({ items: get().items.filter((i) => i.id !== id) });
+          set({ items: get().items.filter((i) => (i.productId || i.id) !== id) });
           return;
         }
         set({
           items: get().items.map((i) =>
-            i.id === id
+            (i.productId || i.id) === id
               ? { ...i, quantity: Math.min(quantity, i.maxQuantity || 9999) }
               : i
           ),

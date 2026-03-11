@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { fulfillments, orderTimeline } from "@/lib/schema";
+import { fulfillments, fulfillmentItems, orders, orderTimeline } from "@/lib/schema";
 import { serializeDecimal } from "@/lib/decimal";
 
 interface RouteParams {
@@ -66,6 +66,41 @@ export async function PUT(req: Request, { params }: RouteParams) {
           message: data.trackingNumber ? `Tracking: ${data.trackingNumber}` : null,
           type: "FULFILLMENT",
         });
+
+        // Recalculate order fulfillment status when a fulfillment changes
+        const allFulfillments = await tx.query.fulfillments.findMany({
+          where: eq(fulfillments.orderId, existing.orderId),
+          with: { items: true },
+        });
+
+        const order = await tx.query.orders.findFirst({
+          where: eq(orders.id, existing.orderId),
+          with: { items: true },
+        });
+
+        if (order) {
+          const fulfilledQty = new Map<string, number>();
+          for (const f of allFulfillments) {
+            if (f.status === "CANCELLED") continue;
+            // Use the updated status for the current fulfillment
+            const effectiveStatus = f.id === id ? data.status : f.status;
+            if (effectiveStatus === "CANCELLED") continue;
+            for (const fi of f.items) {
+              fulfilledQty.set(fi.orderItemId, (fulfilledQty.get(fi.orderItemId) || 0) + fi.quantity);
+            }
+          }
+
+          let allFulfilled = true;
+          let anyFulfilled = false;
+          for (const oi of order.items) {
+            const fulfilled = fulfilledQty.get(oi.id) || 0;
+            if (fulfilled > 0) anyFulfilled = true;
+            if (fulfilled < oi.quantity) allFulfilled = false;
+          }
+
+          const newFulfillmentStatus = allFulfilled ? "FULFILLED" : anyFulfilled ? "PARTIALLY_FULFILLED" : "UNFULFILLED";
+          await tx.update(orders).set({ fulfillmentStatus: newFulfillmentStatus }).where(eq(orders.id, existing.orderId));
+        }
       }
 
       return updated;

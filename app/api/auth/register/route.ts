@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { db } from "@/lib/db";
-import { users } from "@/lib/schema";
+import { users, verificationTokens } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendEmailVerification } from "@/lib/email";
 import { authLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit } from "@/lib/audit";
+import { createId } from "@paralleldrive/cuid2";
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -48,6 +54,9 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
+      // Perform a dummy hash to prevent timing side-channel
+      // (attacker can't distinguish existing user by response time)
+      await bcrypt.hash(password, 12);
       return NextResponse.json(
         { error: "Unable to create account. Please try again or use a different email." },
         { status: 400 }
@@ -63,15 +72,31 @@ export async function POST(req: Request) {
       role: "CUSTOMER",
     }).returning();
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail({ email, name }).catch((err) =>
-      console.error("Failed to send welcome email:", err)
+    // Generate email verification token
+    const verifyToken = createId();
+    const hashedToken = hashToken(verifyToken);
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await db.delete(verificationTokens).where(eq(verificationTokens.identifier, `verify:${email}`));
+    await db.insert(verificationTokens).values({
+      identifier: `verify:${email}`,
+      token: hashedToken,
+      expires,
+    });
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    sendEmailVerification({
+      email,
+      name,
+      verificationUrl: `${appUrl}/api/auth/verify-email?token=${verifyToken}`,
+    }).catch((err) =>
+      console.error("Failed to send verification email:", err)
     );
 
     audit({ action: "AUTH_REGISTER", email, ip, resource: "user", resourceId: user.id, success: true });
 
     return NextResponse.json(
-      { message: "User created", userId: user.id },
+      { message: "Account created successfully" },
       { status: 201 }
     );
   } catch (error) {

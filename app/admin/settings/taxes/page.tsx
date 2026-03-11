@@ -92,7 +92,7 @@ export default function TaxSettingsPage() {
             </div>
             <Switch checked={form.taxIncluded} onCheckedChange={(v) => setForm((f) => ({ ...f, taxIncluded: v }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Currency Code</Label>
               <Input value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />

@@ -5,37 +5,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --background: #fbfbf8;
+  --foreground: #05140d;
+  --card: #ffffff;
+  --card-foreground: #05140d;
+  --popover: #ffffff;
+  --popover-foreground: #05140d;
+  --primary: #16a249;
+  --primary-foreground: #fbfbf8;
+  --secondary: #facc14;
+  --secondary-foreground: #05140d;
+  --muted: #f3f1ed;
+  --muted-foreground: #5c7066;
+  --accent: #dcf9e7;
+  --accent-foreground: #12873d;
+  --destructive: #ef4343;
   --destructive-foreground: #f8fafc;
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --border: #e0ebe6;
+  --input: #e0ebe6;
+  --ring: #16a249;
+  --chart-1: #16a249;
+  --chart-2: #facc14;
+  --chart-3: #0f3d26;
+  --chart-4: #19a2e6;
+  --chart-5: #fa8938;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #16a249;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #16a249;
+  --font-sans: Outfit, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.625rem;
@@ -55,47 +57,45 @@
   --shadow-2xl: 0px 10px 30px 0px hsl(142 76% 10% / 0.25);
   --tracking-normal: -0.03em;
   --spacing: 0.25rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: #050a08;
+  --foreground: #f5f4f0;
+  --card: #0b140f;
+  --card-foreground: #f5f4f0;
+  --popover: #09110d;
+  --popover-foreground: #f5f4f0;
+  --primary: #26d968;
+  --primary-foreground: #050a08;
+  --secondary: #f4ca25;
+  --secondary-foreground: #050a08;
+  --muted: #18251f;
+  --muted-foreground: #abbab3;
+  --accent: #133921;
+  --accent-foreground: #26d968;
+  --destructive: #e61919;
   --destructive-foreground: #ffffff;
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
+  --border: #1f2e26;
+  --input: #1f2e26;
+  --ring: #26d968;
+  --chart-1: #26d968;
+  --chart-2: #f4ca25;
+  --chart-3: #47cfeb;
+  --chart-4: #bb67e4;
+  --chart-5: #f05f42;
+  --sidebar: #111111;
+  --sidebar-foreground: #f5f4f0;
+  --sidebar-primary: #26d968;
+  --sidebar-primary-foreground: #111111;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #f5f4f0;
+  --sidebar-border: #2a2a2a;
+  --sidebar-ring: #26d968;
+  --font-sans: Outfit, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
-  --radius: 1.25rem;
+  --radius: 0.625rem;
   --shadow-x: 0px;
   --shadow-y: 25px;
   --shadow-blur: 50px;
@@ -170,9 +170,6 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 @layer base {
@@ -182,5 +179,59 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
+  }
+  button,
+  a,
+  select,
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="file"],
+  [role="button"],
+  [role="tab"],
+  [role="link"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  [role="switch"],
+  [role="combobox"],
+  [role="listbox"],
+  [tabindex]:not([tabindex="-1"]),
+  [data-slot="select-trigger"],
+  [data-slot="select-item"],
+  [data-slot="select-scroll-up-button"],
+  [data-slot="select-scroll-down-button"],
+  [data-slot="dropdown-menu-trigger"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="command-item"],
+  [data-slot="dialog-trigger"],
+  [data-slot="dialog-close"],
+  [data-slot="sheet-trigger"],
+  [data-slot="sheet-close"],
+  [data-slot="popover-trigger"],
+  [data-slot="collapsible-trigger"],
+  [data-slot="tabs-trigger"],
+  [data-slot="checkbox"],
+  [data-slot="switch"],
+  [data-slot="button"],
+  [data-slot="calendar"] button,
+  .cursor-pointer {
+    cursor: pointer;
+  }
+}
+
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }

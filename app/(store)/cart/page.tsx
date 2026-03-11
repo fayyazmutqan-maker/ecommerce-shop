@@ -1,26 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart } =
+  const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart, addItem } =
     useCartStore();
+  const searchParams = useSearchParams();
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
     type: string;
     discount: number;
   } | null>(null);
+
+  useEffect(() => {
+    const recoverToken = searchParams.get("recover");
+    if (!recoverToken) return;
+
+    async function recoverCart(token: string) {
+      setRecovering(true);
+      try {
+        const res = await fetch(`/api/abandoned-carts/recover?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error || "Failed to recover cart");
+          return;
+        }
+        clearCart();
+        for (const item of data.items) {
+          addItem({
+            id: item.productId || item.id,
+            productId: item.productId,
+            variantId: item.variantId || undefined,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image || undefined,
+            variantName: item.variantName || undefined,
+          });
+        }
+        toast.success("Your cart has been recovered!");
+      } catch {
+        toast.error("Failed to recover cart");
+      } finally {
+        setRecovering(false);
+      }
+    }
+
+    recoverCart(recoverToken);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subtotal = getTotal();
 
@@ -58,6 +99,15 @@ export default function CartPage() {
 
   const displayTotal = appliedCoupon ? Math.max(0, subtotal - appliedCoupon.discount) : subtotal;
 
+  if (recovering) {
+    return (
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Recovering your cart...</p>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
@@ -80,13 +130,7 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Cart</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Cart" }]} />
 
       <h1 className="text-3xl font-bold tracking-tight mb-10">
         Shopping Cart
@@ -101,7 +145,7 @@ export default function CartPage() {
           {items.map((item) => (
             <Card key={item.id} className="shadow-none border">
               <CardContent className="p-5 flex gap-5">
-                <div className="h-28 w-28 rounded-lg bg-accent/50 overflow-hidden flex-shrink-0 relative">
+                <div className="h-20 w-20 sm:h-28 sm:w-28 rounded-lg bg-accent/50 overflow-hidden flex-shrink-0 relative">
                   {item.image && (
                     <Image
                       src={item.image}
@@ -129,6 +173,7 @@ export default function CartPage() {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-muted-foreground hover:text-destructive flex-shrink-0"
+                      aria-label={`Remove ${item.name} from cart`}
                       onClick={() => removeItem(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -140,6 +185,7 @@ export default function CartPage() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-r-none"
+                        aria-label={`Decrease quantity of ${item.name}`}
                         onClick={() =>
                           updateQuantity(item.id, item.quantity - 1)
                         }
@@ -153,6 +199,7 @@ export default function CartPage() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-l-none"
+                        aria-label={`Increase quantity of ${item.name}`}
                         onClick={() =>
                           updateQuantity(item.id, item.quantity + 1)
                         }

@@ -118,6 +118,7 @@ export default function ShippingZonesPage() {
   const fetchZones = useCallback(async () => {
     try {
       const res = await fetch("/api/shipping-zones");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setZones(Array.isArray(data) ? data : []);
     } catch {
@@ -240,7 +241,7 @@ export default function ShippingZonesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Shipping Zones</h1>
           <p className="text-muted-foreground">Configure shipping zones and rates by region</p>
@@ -298,6 +299,7 @@ export default function ShippingZonesPage() {
               </CardHeader>
               {expandedZone === zone.id && (
                 <CardContent className="pt-0">
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -336,6 +338,7 @@ export default function ShippingZonesPage() {
                       )}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               )}
             </Card>

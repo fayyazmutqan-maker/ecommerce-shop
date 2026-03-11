@@ -14,6 +14,7 @@ const loginSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   adapter: DrizzleAdapter(db),
   session: {
     strategy: "jwt",
@@ -65,7 +66,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as { role?: string }).role || "CUSTOMER";
         token.id = user.id;
+        token.roleCheckedAt = Date.now();
       }
+
+      // Re-validate role from DB every 5 minutes to catch role changes / deactivation
+      const ROLE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+      const lastChecked = (token.roleCheckedAt as number) || 0;
+      if (token.id && Date.now() - lastChecked > ROLE_CHECK_INTERVAL) {
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+            columns: { role: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          } else {
+            // User deleted — invalidate token
+            token.role = "CUSTOMER";
+          }
+          token.roleCheckedAt = Date.now();
+        } catch {
+          // DB error — keep existing role, retry next time
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

@@ -51,10 +51,9 @@ export default function GiftCardsPage() {
   async function fetchCards() {
     try {
       const res = await fetch("/api/gift-cards?admin=true");
-      if (res.ok) {
-        const data = await res.json();
-        setCards(data);
-      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCards(data);
     } catch {
       toast.error("Failed to fetch gift cards");
     } finally {
@@ -103,10 +102,9 @@ export default function GiftCardsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: card.id, isActive: !card.isActive }),
       });
-      if (res.ok) {
-        toast.success(card.isActive ? "Gift card disabled" : "Gift card enabled");
-        fetchCards();
-      }
+      if (!res.ok) throw new Error();
+      toast.success(card.isActive ? "Gift card disabled" : "Gift card enabled");
+      fetchCards();
     } catch {
       toast.error("Failed to update gift card");
     }
@@ -122,7 +120,7 @@ export default function GiftCardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gift Cards</h1>
           <p className="text-muted-foreground">Create and manage gift cards</p>
@@ -143,7 +141,7 @@ export default function GiftCardsPage() {
                   <Input type="number" min="1" step="0.01" required value={form.initialBalance}
                     onChange={(e) => setForm((p) => ({ ...p, initialBalance: e.target.value }))} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Recipient Name</Label>
                     <Input value={form.recipientName}
@@ -185,7 +183,7 @@ export default function GiftCardsPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <CreditCard className="h-8 w-8 text-muted-foreground" />
               <div>
@@ -196,7 +194,7 @@ export default function GiftCardsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
@@ -207,7 +205,7 @@ export default function GiftCardsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <DollarSign className="h-8 w-8 text-muted-foreground" />
               <div>
@@ -225,6 +223,7 @@ export default function GiftCardsPage() {
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -277,6 +276,7 @@ export default function GiftCardsPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

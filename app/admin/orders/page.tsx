@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { orders, users } from "@/lib/schema";
-import { desc, or, ilike } from "drizzle-orm";
+import { desc, or, ilike, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -13,41 +13,55 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AdminSearch } from "@/components/admin/admin-search";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/helpers";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 25;
+
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
 
-  const allOrders = await db.query.orders.findMany({
-    where: q
-      ? or(
-          ilike(orders.orderNumber, `%${q}%`),
-          ilike(orders.email, `%${q}%`),
-        )
-      : undefined,
-    orderBy: [desc(orders.createdAt)],
-    with: {
-      user: { columns: { name: true, email: true } },
-      items: true,
-    },
-  });
+  const whereClause = q
+    ? or(
+        ilike(orders.orderNumber, `%${q}%`),
+        ilike(orders.email, `%${q}%`),
+      )
+    : undefined;
+
+  const [allOrders, countResult] = await Promise.all([
+    db.query.orders.findMany({
+      where: whereClause,
+      orderBy: [desc(orders.createdAt)],
+      limit: PAGE_SIZE,
+      offset: (currentPage - 1) * PAGE_SIZE,
+      with: {
+        user: { columns: { name: true, email: true } },
+        items: true,
+      },
+    }),
+    db.select({ count: sql<number>`count(*)` }).from(orders).where(whereClause),
+  ]);
+
+  const totalItems = Number(countResult[0]?.count || 0);
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
         <p className="text-muted-foreground">
-          Manage and fulfill customer orders ({allOrders.length} orders)
+          Manage and fulfill customer orders ({totalItems} orders)
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {[
           {
             label: "Total Orders",
@@ -80,6 +94,7 @@ export default async function OrdersPage({
           <AdminSearch placeholder="Search orders..." />
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -152,6 +167,13 @@ export default async function OrdersPage({
               )}
             </TableBody>
           </Table>
+          </div>
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+          />
         </CardContent>
       </Card>
     </div>

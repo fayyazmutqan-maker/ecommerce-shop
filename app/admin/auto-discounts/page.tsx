@@ -116,6 +116,7 @@ export default function AutoDiscountsPage() {
   const fetchDiscounts = useCallback(async () => {
     try {
       const res = await fetch("/api/auto-discounts");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setDiscounts(Array.isArray(data) ? data : []);
     } catch {
@@ -267,7 +268,7 @@ export default function AutoDiscountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Automatic Discounts</h1>
           <p className="text-muted-foreground">BOGO, Buy X Get Y, and auto-applied promotions</p>
@@ -323,6 +324,7 @@ export default function AutoDiscountsPage() {
       {/* Table */}
       <Card>
         <CardContent className="pt-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -380,6 +382,7 @@ export default function AutoDiscountsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

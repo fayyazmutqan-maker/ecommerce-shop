@@ -3,11 +3,14 @@ import { db } from "@/lib/db";
 import { products as productsTable, categories as categoriesTable, productImages, productCategories, productAttributes, productAttributeValues } from "@/lib/schema";
 import { eq, desc, asc, and, or, count, sql, ilike, inArray, gte, lte, isNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslationsBatch } from "@/lib/translations";
 import { ProductCardGrid } from "@/components/store/product-card-grid";
 import { ProductFilters } from "@/components/store/product-filters";
 import { Button } from "@/components/ui/button";
 import { SortSelect } from "@/components/store/sort-select";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -246,23 +249,21 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   const total = Number(totalResult[0].value);
 
+  // Apply locale translations
+  const locale = await getLocale();
+  const tProducts = await applyTranslationsBatch("product", products as Record<string, unknown>[], locale) as typeof products;
+  const tCategories = await applyTranslationsBatch("category", categories as Record<string, unknown>[], locale) as typeof categories;
+
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-10 lg:py-14">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Products</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Products" }]} />
 
       <div className="flex flex-col lg:flex-row gap-10 lg:gap-12">
         {/* Filter Sidebar (desktop) + Mobile Sheet */}
         <ProductFilters
           facets={filtersRes.facets}
           priceRange={filtersRes.priceRange}
-          categories={categories.map((c) => ({
+          categories={tCategories.map((c) => ({
             id: c.id,
             name: c.name,
             slug: c.slug,
@@ -280,7 +281,7 @@ export default async function ProductsPage({ searchParams }: Props) {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
                 {category
-                  ? categories.find((c) => c.slug === category)?.name ||
+                  ? tCategories.find((c) => c.slug === category)?.name ||
                     "Products"
                   : featured
                     ? "Featured Products"
@@ -296,7 +297,7 @@ export default async function ProductsPage({ searchParams }: Props) {
             </div>
           </div>
 
-          {products.length === 0 ? (
+          {tProducts.length === 0 ? (
             <div className="text-center py-24">
               <p className="text-muted-foreground text-base">
                 No products found.
@@ -308,7 +309,7 @@ export default async function ProductsPage({ searchParams }: Props) {
           ) : (
             <>
               <ProductCardGrid
-                products={products.map((p) => ({
+                products={tProducts.map((p) => ({
                   id: p.id,
                   name: p.name,
                   slug: p.slug,

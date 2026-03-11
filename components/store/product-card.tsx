@@ -103,18 +103,18 @@ export function ProductCard({
             )}
           </div>
           {/* Wishlist */}
-          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
+          <div className="absolute top-3 right-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 translate-y-0 lg:translate-y-1 lg:group-hover:translate-y-0">
             <Button
               variant="secondary"
               size="icon"
-              className="h-9 w-9 rounded-full shadow-md bg-background/90 backdrop-blur-sm hover:bg-background"
+              className="h-10 w-10 lg:h-9 lg:w-9 rounded-full shadow-md bg-background/90 backdrop-blur-sm hover:bg-background"
               onClick={handleWishlist}
             >
               <Heart className="h-4 w-4" />
             </Button>
           </div>
           {/* Quick Add */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+          <div className="absolute bottom-0 left-0 right-0 p-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 translate-y-0 lg:translate-y-2 lg:group-hover:translate-y-0">
             <Button
               className="w-full h-10 text-sm font-medium shadow-lg"
               onClick={handleAddToCart}

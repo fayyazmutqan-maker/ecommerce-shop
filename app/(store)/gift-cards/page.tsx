@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CreditCard, Gift, Search, Loader2 } from "lucide-react";
@@ -94,11 +95,7 @@ export default function GiftCardsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Gift Cards</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Gift Cards" }]} />
 
       <div className="text-center mb-10">
         <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -108,7 +105,7 @@ export default function GiftCardsPage() {
         </p>
       </div>
 
-      <div className="flex justify-center gap-2 mb-8">
+      <div className="flex flex-col sm:flex-row justify-center gap-2 mb-8">
         <Button variant={tab === "buy" ? "default" : "outline"} onClick={() => setTab("buy")}>
           <CreditCard className="mr-2 h-4 w-4" />Purchase Gift Card
         </Button>

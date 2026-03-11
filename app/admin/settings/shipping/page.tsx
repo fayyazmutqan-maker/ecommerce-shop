@@ -111,7 +111,7 @@ export default function ShippingSettingsPage() {
             <Label>Enable Shipping</Label>
             <Switch checked={settings.shippingEnabled} onCheckedChange={(v) => setSettings((s) => ({ ...s, shippingEnabled: v }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Free Shipping Minimum (SAR)</Label>
               <Input value={settings.freeShippingMin} onChange={(e) => setSettings((s) => ({ ...s, freeShippingMin: e.target.value }))} type="number" placeholder="e.g. 200" />

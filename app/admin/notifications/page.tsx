@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Loader2, Check, CheckCheck, Trash2, Package, Users, AlertTriangle, Star, RotateCcw } from "lucide-react";
 import { formatDateTime } from "@/lib/helpers";
+import { useFetch } from "@/hooks/use-fetch";
 
 interface Notification {
   id: string;
@@ -28,34 +29,22 @@ const typeIcons: Record<string, any> = {
 };
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  async function fetchNotifications() {
-    try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      }
-    } catch {
-      toast.error("Failed to fetch notifications");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { fetchNotifications(); }, []);
+  const { data, loading, refetch: fetchNotifications } = useFetch<{ notifications: Notification[]; unreadCount: number }>(
+    "/api/notifications",
+    { notifications: [], unreadCount: 0 },
+    { errorMessage: "Failed to fetch notifications" }
+  );
+  const notifications = data.notifications;
+  const unreadCount = data.unreadCount;
 
   async function markAsRead(id: string) {
     try {
-      await fetch("/api/notifications", {
+      const res = await fetch("/api/notifications", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
+      if (!res.ok) throw new Error();
       fetchNotifications();
     } catch {
       toast.error("Failed to update");
@@ -64,11 +53,12 @@ export default function NotificationsPage() {
 
   async function markAllRead() {
     try {
-      await fetch("/api/notifications", {
+      const res = await fetch("/api/notifications", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAllRead: true }),
       });
+      if (!res.ok) throw new Error();
       toast.success("All marked as read");
       fetchNotifications();
     } catch {
@@ -78,7 +68,8 @@ export default function NotificationsPage() {
 
   async function deleteNotification(id: string) {
     try {
-      await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       fetchNotifications();
     } catch {
       toast.error("Failed to delete");
@@ -87,7 +78,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
           <p className="text-muted-foreground">

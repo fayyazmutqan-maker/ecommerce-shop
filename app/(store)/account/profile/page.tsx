@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { Package, Heart, MapPin, User, Settings } from "lucide-react";
 import { ProfileEditForm } from "./profile-form";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +13,10 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link href="/account" className="hover:text-foreground transition-colors">My Account</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Profile</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "My Account", href: "/account" },
+        { label: "Profile" },
+      ]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
         <aside className="space-y-5">

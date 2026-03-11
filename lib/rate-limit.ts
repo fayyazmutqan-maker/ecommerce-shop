@@ -140,16 +140,47 @@ export const couponLimiter = createRateLimiter({
   prefix: "coupon",
 });
 
+/** Payment charge creation: 5 per 60 s per IP (prevents rapid charge spam) */
+export const paymentLimiter = createRateLimiter({
+  maxRequests: 5,
+  windowSeconds: 60,
+  prefix: "payment",
+});
+
+/** Password reset: 3 per 300 s per IP (prevents email flooding) */
+export const passwordResetLimiter = createRateLimiter({
+  maxRequests: 3,
+  windowSeconds: 300,
+  prefix: "pwreset",
+});
+
+/** Webhook: 60 per 60 s (server-to-server from Tap, generous) */
+export const webhookLimiter = createRateLimiter({
+  maxRequests: 60,
+  windowSeconds: 60,
+  prefix: "webhook",
+});
+
 /**
  * Extract a usable IP from the request for rate-limiting.
  * Falls back to a static key so the limiter always works.
+ */
+/**
+ * Extract client IP from request headers.
+ * IMPORTANT: This relies on X-Forwarded-For being set by a trusted reverse proxy
+ * (e.g., Vercel, Cloudflare, nginx). In production, ensure your deployment platform
+ * strips/overwrites X-Forwarded-For to prevent IP spoofing by clients.
+ * Vercel and Cloudflare do this automatically.
  */
 export function getClientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   const real = req.headers.get("x-real-ip");
   if (real) return real;
-  return "unknown";
+  // Derive a fallback key from available request characteristics
+  // to avoid all unknown-IP requests sharing a single bucket
+  const ua = req.headers.get("user-agent") || "";
+  return `no-ip:${ua.substring(0, 64)}`;
 }
 
 /**

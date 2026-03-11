@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -42,20 +43,10 @@ export default async function OrdersPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link
-          href="/account"
-          className="hover:text-foreground transition-colors"
-        >
-          Account
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Orders</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "Account", href: "/account" },
+        { label: "Orders" },
+      ]} />
 
       <div className="flex items-center gap-4 mb-10">
         <Button variant="outline" size="icon" asChild className="h-10 w-10">

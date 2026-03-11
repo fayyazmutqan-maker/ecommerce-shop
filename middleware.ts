@@ -1,5 +1,50 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { PermissionKey } from "@/lib/permissions";
+import { getStaffPermissions } from "@/lib/permissions";
+
+/**
+ * Map API path prefixes to the staff permission required.
+ * ADMIN users bypass this check entirely.
+ * Routes not listed here don't require a specific staff permission.
+ */
+const STAFF_PERMISSION_MAP: { prefix: string; permission: PermissionKey }[] = [
+  { prefix: "/api/products", permission: "products" },
+  { prefix: "/api/categories", permission: "products" },
+  { prefix: "/api/inventory-adjustments", permission: "products" },
+  { prefix: "/api/product-groups", permission: "products" },
+  { prefix: "/api/filters", permission: "products" },
+  { prefix: "/api/orders", permission: "orders" },
+  { prefix: "/api/fulfillments", permission: "orders" },
+  { prefix: "/api/refunds", permission: "orders" },
+  { prefix: "/api/returns", permission: "orders" },
+  { prefix: "/api/draft-orders", permission: "orders" },
+  { prefix: "/api/abandoned-carts", permission: "orders" },
+  { prefix: "/api/customers", permission: "customers" },
+  { prefix: "/api/discounts", permission: "discounts" },
+  { prefix: "/api/coupons", permission: "discounts" },
+  { prefix: "/api/auto-discounts", permission: "discounts" },
+  { prefix: "/api/pages", permission: "content" },
+  { prefix: "/api/templates", permission: "content" },
+  { prefix: "/api/blog", permission: "content" },
+  { prefix: "/api/navigations", permission: "content" },
+  { prefix: "/api/settings", permission: "settings" },
+  { prefix: "/api/shipping-zones", permission: "settings" },
+  { prefix: "/api/analytics", permission: "analytics" },
+  { prefix: "/api/import-export", permission: "import_export" },
+  { prefix: "/api/smart-collections", permission: "products" },
+  { prefix: "/api/gift-cards", permission: "orders" },
+  { prefix: "/api/store-credit", permission: "orders" },
+  { prefix: "/api/newsletter", permission: "content" },
+  { prefix: "/api/notifications", permission: "orders" },
+];
+
+function getRequiredPermission(pathname: string): PermissionKey | null {
+  for (const entry of STAFF_PERMISSION_MAP) {
+    if (pathname.startsWith(entry.prefix)) return entry.permission;
+  }
+  return null;
+}
 
 /** Allowed origins for mutating API requests (CSRF protection) */
 const ALLOWED_ORIGINS = [
@@ -11,7 +56,7 @@ function isOriginAllowed(origin: string | null): boolean {
   return ALLOWED_ORIGINS.some((allowed) => origin === allowed || origin === new URL(allowed).origin);
 }
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const isAdmin = req.auth?.user?.role === "ADMIN";
@@ -49,6 +94,29 @@ export default auth((req) => {
     }
     if (!isAdminOrStaff) {
       return NextResponse.redirect(new URL("/", req.url));
+    }
+  }
+
+  // ── Enforce granular staff permissions ──
+  // ADMIN users bypass — only STAFF users are permission-checked.
+  // Public endpoints (customer-facing GETs, evaluate, checkout) are excluded.
+  if (
+    isStaff &&
+    pathname.startsWith("/api/") &&
+    // Exclude public/checkout endpoints
+    !pathname.startsWith("/api/auto-discounts/evaluate") &&
+    !pathname.startsWith("/api/shipping-zones/calculate") &&
+    !pathname.startsWith("/api/payments/")
+  ) {
+    const requiredPerm = getRequiredPermission(pathname);
+    if (requiredPerm) {
+      const perms = await getStaffPermissions(req.auth!.user!.id!);
+      if (!perms.includes(requiredPerm)) {
+        return NextResponse.json(
+          { error: "Insufficient permissions" },
+          { status: 403 }
+        );
+      }
     }
   }
 
@@ -155,10 +223,42 @@ export default auth((req) => {
     }
   }
 
-  // Protect payment test-connection (admin only)
-  // NOTE: create-charge allows guests (ownership is verified in the route handler)
+  // Protect payment endpoints
+  // test-connection — admin only
   if (pathname.startsWith("/api/payments/test-connection")) {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // Protect navigations mutations — ADMIN or STAFF
+  if (pathname.startsWith("/api/navigations") && req.method !== "GET") {
+    if (!isLoggedIn || !isAdminOrStaff) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // Protect newsletter admin actions (not subscribe)
+  if (
+    pathname.startsWith("/api/newsletter") &&
+    req.method !== "POST" &&
+    req.method !== "GET"
+  ) {
+    if (!isLoggedIn || !isAdminOrStaff) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // Protect product-groups mutations
+  if (pathname.startsWith("/api/product-groups") && req.method !== "GET") {
+    if (!isLoggedIn || !isAdminOrStaff) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // Protect filters mutations
+  if (pathname.startsWith("/api/filters") && req.method !== "GET") {
+    if (!isLoggedIn || !isAdminOrStaff) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
@@ -172,15 +272,16 @@ export default auth((req) => {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()"
   );
+  const isDev = process.env.NODE_ENV === "development";
   response.headers.set(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://goSellJSLib.b-cdn.net",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdnjs.cloudflare.com https://goSellJSLib.b-cdn.net`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https://*.s3.*.amazonaws.com https://placehold.co https://lh3.googleusercontent.com",
+      "img-src 'self' data: blob: https://*.amazonaws.com https://placehold.co https://lh3.googleusercontent.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com",
+      `connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
       "frame-src 'self' https://goSellJSLib.b-cdn.net",
       "object-src 'none'",
       "base-uri 'self'",

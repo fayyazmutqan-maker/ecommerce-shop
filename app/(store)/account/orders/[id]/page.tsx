@@ -8,7 +8,8 @@ import { serializeDecimal } from "@/lib/decimal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Package, Truck, MapPin, ArrowLeft, Clock } from "lucide-react";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export default async function OrderDetailPage({
       billingAddress: true,
       timeline: { orderBy: [desc(orderTimeline.createdAt)] },
       fulfillments: true,
+      refunds: true,
     },
   });
 
@@ -63,15 +65,11 @@ export default async function OrderDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link href="/account" className="hover:text-foreground transition-colors">Account</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link href="/account/orders" className="hover:text-foreground transition-colors">Orders</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">{data.orderNumber}</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "Account", href: "/account" },
+        { label: "Orders", href: "/account/orders" },
+        { label: data.orderNumber },
+      ]} />
 
       <div className="flex items-center gap-4 mb-8">
         <Button variant="outline" size="icon" asChild>
@@ -207,6 +205,30 @@ export default async function OrderDetailPage({
               {data.couponCode && <p className="text-muted-foreground">Coupon: {data.couponCode}</p>}
             </CardContent>
           </Card>
+
+          {/* Refunds */}
+          {data.refunds && data.refunds.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base"><RotateCcw className="h-4 w-4" /> Refunds</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-3">
+                {data.refunds.map((refund: { id: string; type: string; amount: string | number; status: string; reason: string | null; createdAt: string | Date }) => (
+                  <div key={refund.id} className="border-b last:border-0 pb-3 last:pb-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium">{refund.type} Refund</span>
+                      <Badge className={getStatusColor(refund.status)}>{refund.status}</Badge>
+                    </div>
+                    <p className="font-semibold">SAR {Number(refund.amount).toFixed(2)}</p>
+                    {refund.reason && <p className="text-muted-foreground">{refund.reason}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(refund.createdAt).toLocaleDateString("en-SA", { year: "numeric", month: "long", day: "numeric" })}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -12,8 +12,8 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const perPage = parseInt(searchParams.get("perPage") || "20");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get("perPage") || "20")));
     const search = searchParams.get("search") || "";
 
     const where = search

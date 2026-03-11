@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { products } from "@/lib/schema";
-import { desc, or, ilike } from "drizzle-orm";
+import { desc, or, ilike, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,34 +22,48 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AdminSearch } from "@/components/admin/admin-search";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { DeleteProductItem } from "@/components/admin/delete-product-item";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 25;
+
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
 
-  const allProducts = await db.query.products.findMany({
-    where: q
-      ? or(
-          ilike(products.name, `%${q}%`),
-          ilike(products.sku, `%${q}%`),
-          ilike(products.vendor, `%${q}%`),
-          ilike(products.productType, `%${q}%`),
-        )
-      : undefined,
-    orderBy: [desc(products.createdAt)],
-    with: {
-      images: true,
-      categories: { with: { category: true } },
-      orderItems: true,
-      reviews: true,
-    },
-  });
+  const whereClause = q
+    ? or(
+        ilike(products.name, `%${q}%`),
+        ilike(products.sku, `%${q}%`),
+        ilike(products.vendor, `%${q}%`),
+        ilike(products.productType, `%${q}%`),
+      )
+    : undefined;
+
+  const [allProducts, countResult] = await Promise.all([
+    db.query.products.findMany({
+      where: whereClause,
+      orderBy: [desc(products.createdAt)],
+      limit: PAGE_SIZE,
+      offset: (currentPage - 1) * PAGE_SIZE,
+      with: {
+        images: true,
+        categories: { with: { category: true } },
+        orderItems: true,
+        reviews: true,
+      },
+    }),
+    db.select({ count: sql<number>`count(*)` }).from(products).where(whereClause),
+  ]);
+
+  const totalItems = Number(countResult[0]?.count || 0);
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   const productsList = allProducts.map((p) => ({
     ...p,
@@ -59,11 +73,11 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">
-            Manage your product catalog ({productsList.length} products)
+            Manage your product catalog ({totalItems} products)
           </p>
         </div>
         <Button asChild>
@@ -81,6 +95,7 @@ export default async function ProductsPage({
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -196,6 +211,13 @@ export default async function ProductsPage({
               )}
             </TableBody>
           </Table>
+          </div>
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+          />
         </CardContent>
       </Card>
     </div>

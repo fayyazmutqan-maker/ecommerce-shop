@@ -2,6 +2,19 @@ import { Resend } from "resend";
 import { formatCurrency } from "@/lib/helpers";
 
 // ============================================================
+// HTML ESCAPING — Prevent XSS in email templates
+// ============================================================
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ============================================================
 // EMAIL SERVICE — Powered by Resend
 // Falls back to console logging when RESEND_API_KEY is not set
 // ============================================================
@@ -122,7 +135,7 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     .map(
       (item) => `
     <tr>
-      <td>${item.name}${item.variantName ? ` (${item.variantName})` : ""}</td>
+      <td>${escapeHtml(item.name)}${item.variantName ? ` (${escapeHtml(item.variantName)})` : ""}</td>
       <td style="text-align:center">${item.quantity}</td>
       <td style="text-align:right">${formatCurrency(item.price * item.quantity)}</td>
     </tr>`
@@ -130,13 +143,13 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     .join("");
 
   const addressBlock = data.shippingAddress
-    ? `<p><strong>Shipping to:</strong><br>${data.shippingAddress.firstName} ${data.shippingAddress.lastName}<br>${data.shippingAddress.address}<br>${data.shippingAddress.city}, ${data.shippingAddress.country}</p>`
+    ? `<p><strong>Shipping to:</strong><br>${escapeHtml(data.shippingAddress.firstName)} ${escapeHtml(data.shippingAddress.lastName)}<br>${escapeHtml(data.shippingAddress.address)}<br>${escapeHtml(data.shippingAddress.city)}, ${escapeHtml(data.shippingAddress.country)}</p>`
     : "";
 
   const html = baseLayout(`
     <h2 style="margin-top:0">Order Confirmed! 🎉</h2>
-    <p>Hi ${data.customerName || "there"},</p>
-    <p>Thank you for your order! We've received your order <strong>#${data.orderNumber}</strong> and it's being processed.</p>
+    <p>Hi ${escapeHtml(data.customerName || "there")},</p>
+    <p>Thank you for your order! We've received your order <strong>#${escapeHtml(data.orderNumber)}</strong> and it's being processed.</p>
     
     <table class="order-table">
       <thead>
@@ -200,7 +213,7 @@ export async function sendShippingUpdate(data: {
 }) {
   const statusMessages: Record<string, string> = {
     PROCESSING: "Your order is being prepared for shipping.",
-    SHIPPED: `Your order has been shipped!${data.trackingNumber ? ` Tracking number: <strong>${data.trackingNumber}</strong>` : ""}`,
+    SHIPPED: `Your order has been shipped!${data.trackingNumber ? ` Tracking number: <strong>${escapeHtml(data.trackingNumber)}</strong>` : ""}`,
     DELIVERY: "Your order is out for delivery.",
     DELIVERED: "Your order has been delivered. We hope you love it!",
     CANCELLED: "Your order has been cancelled. If you have questions, please contact us.",
@@ -210,8 +223,8 @@ export async function sendShippingUpdate(data: {
 
   const html = baseLayout(`
     <h2 style="margin-top:0">Order Update</h2>
-    <p>Hi ${data.customerName || "there"},</p>
-    <p>We have an update for your order <strong>#${data.orderNumber}</strong>:</p>
+    <p>Hi ${escapeHtml(data.customerName || "there")},</p>
+    <p>We have an update for your order <strong>#${escapeHtml(data.orderNumber)}</strong>:</p>
     <div style="background:#f8f8f8;padding:16px;border-radius:8px;margin:16px 0">
       <p style="margin:0;font-size:16px">${message}</p>
     </div>
@@ -242,7 +255,7 @@ export async function sendWelcomeEmail(data: {
 }) {
   const html = baseLayout(`
     <h2 style="margin-top:0">Welcome to ShopFlow! 🛍️</h2>
-    <p>Hi ${data.name},</p>
+    <p>Hi ${escapeHtml(data.name)},</p>
     <p>Thank you for creating an account with us. We're excited to have you!</p>
     <p>You can now:</p>
     <ul>
@@ -265,6 +278,33 @@ export async function sendWelcomeEmail(data: {
 }
 
 // ============================================================
+// EMAIL VERIFICATION
+// ============================================================
+
+export async function sendEmailVerification(data: {
+  email: string;
+  name: string;
+  verificationUrl: string;
+}) {
+  const html = baseLayout(`
+    <h2 style="margin-top:0">Verify Your Email</h2>
+    <p>Hi ${escapeHtml(data.name)},</p>
+    <p>Thank you for creating an account! Please verify your email address by clicking the button below:</p>
+    <p style="text-align:center;margin-top:24px">
+      <a href="${data.verificationUrl}" class="btn">Verify Email</a>
+    </p>
+    <p style="font-size:13px;color:#666;margin-top:24px">If you didn't create an account, you can safely ignore this email. This link will expire in 24 hours.</p>
+  `);
+
+  return sendEmail({
+    to: data.email,
+    subject: "Verify Your Email - ShopFlow",
+    html,
+    tags: [{ name: "type", value: "email-verification" }],
+  });
+}
+
+// ============================================================
 // PASSWORD RESET
 // ============================================================
 
@@ -275,7 +315,7 @@ export async function sendPasswordReset(data: {
 }) {
   const html = baseLayout(`
     <h2 style="margin-top:0">Reset Your Password</h2>
-    <p>Hi ${data.name},</p>
+    <p>Hi ${escapeHtml(data.name)},</p>
     <p>We received a request to reset your password. Click the button below to set a new password:</p>
     <p style="text-align:center;margin-top:24px">
       <a href="${data.resetUrl}" class="btn">Reset Password</a>
@@ -304,13 +344,13 @@ export async function sendRefundConfirmation(data: {
 }) {
   const html = baseLayout(`
     <h2 style="margin-top:0">Refund Processed</h2>
-    <p>Hi ${data.customerName || "there"},</p>
-    <p>We've processed a refund for your order <strong>#${data.orderNumber}</strong>.</p>
+    <p>Hi ${escapeHtml(data.customerName || "there")},</p>
+    <p>We've processed a refund for your order <strong>#${escapeHtml(data.orderNumber)}</strong>.</p>
     <div style="background:#f8f8f8;padding:16px;border-radius:8px;margin:16px 0">
       <p style="margin:0;font-size:20px;font-weight:700">${formatCurrency(data.refundAmount)}</p>
       <p style="margin:4px 0 0;font-size:13px;color:#666">Refunded to your original payment method</p>
     </div>
-    ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ""}
+    ${data.reason ? `<p><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>` : ""}
     <p style="font-size:13px;color:#666">Refunds typically take 5–10 business days to appear on your statement.</p>
     <p style="text-align:center;margin-top:24px">
       <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders" class="btn">View Orders</a>
@@ -339,8 +379,8 @@ export async function sendLowStockAlert(data: {
   const rows = data.products
     .map(
       (p) => `<tr>
-        <td>${p.name}</td>
-        <td>${p.sku || "—"}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.sku || "—")}</td>
         <td style="color:#e11d48;font-weight:600">${p.quantity}</td>
         <td>${p.threshold}</td>
       </tr>`
@@ -391,7 +431,7 @@ export async function sendAbandonedCartEmail(data: {
       <td>
         <div style="display:flex;align-items:center;gap:12px">
           ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" />` : ""}
-          <span>${item.name}</span>
+          <span>${escapeHtml(item.name)}</span>
         </div>
       </td>
       <td style="text-align:center">${item.quantity}</td>
@@ -436,5 +476,38 @@ export async function sendAbandonedCartEmail(data: {
     subject: "You left items in your cart — complete your order!",
     html,
     tags: [{ name: "type", value: "abandoned-cart" }],
+  });
+}
+
+// ============================================================
+// CONTACT FORM NOTIFICATION
+// ============================================================
+
+export async function sendContactFormNotification(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  recipientEmail: string;
+}) {
+  const html = baseLayout(`
+    <h2 style="margin-top:0">New Contact Form Submission</h2>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666;width:100px">Name</td><td style="padding:8px 12px">${escapeHtml(data.name)}</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666">Email</td><td style="padding:8px 12px"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></td></tr>
+      ${data.phone ? `<tr><td style="padding:8px 12px;font-weight:600;color:#666">Phone</td><td style="padding:8px 12px">${escapeHtml(data.phone)}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666">Subject</td><td style="padding:8px 12px">${escapeHtml(data.subject)}</td></tr>
+    </table>
+    <div style="padding:16px;background:#f9f9f9;border-radius:6px;margin:16px 0;white-space:pre-wrap">${escapeHtml(data.message)}</div>
+    <p style="font-size:13px;color:#666">Reply directly to this email to respond to the customer.</p>
+  `);
+
+  return sendEmail({
+    to: data.recipientEmail,
+    subject: `Contact: ${data.subject}`,
+    html,
+    replyTo: data.email,
+    tags: [{ name: "type", value: "contact-form" }],
   });
 }

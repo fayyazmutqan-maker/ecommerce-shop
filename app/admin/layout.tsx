@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { Providers } from "@/components/providers";
 import { auth } from "@/lib/auth";
+import { getLocale, getMessages } from "next-intl/server";
 
 export default async function AdminLayout({
   children,
@@ -20,13 +21,16 @@ export default async function AdminLayout({
     redirect("/");
   }
 
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <Providers>
+    <Providers locale={locale} messages={messages as Record<string, unknown>}>
       <SidebarProvider>
         <AdminSidebar />
         <SidebarInset>
           <AdminHeader />
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>
     </Providers>

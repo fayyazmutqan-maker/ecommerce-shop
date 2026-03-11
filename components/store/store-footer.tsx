@@ -27,7 +27,7 @@ export function StoreFooter() {
                   key={social.label}
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                  className="h-10 w-10 text-muted-foreground hover:text-foreground"
                   asChild
                 >
                   <a href="#" aria-label={social.label}>

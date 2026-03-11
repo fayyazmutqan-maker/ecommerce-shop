@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { retrieveTapCharge, mapTapStatus } from "@/lib/tap";
 import { orders, storeSettings, transactions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
+import { webhookLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 /**
  * GET /api/payments/callback
@@ -10,6 +11,10 @@ import { eq, and } from "drizzle-orm";
  * Verifies the charge status and redirects to order confirmation or failure page.
  */
 export async function GET(req: Request) {
+  const ip = getClientIp(req);
+  const rlResponse = await rateLimitResponse(webhookLimiter, ip);
+  if (rlResponse) return rlResponse;
+
   try {
     const { searchParams } = new URL(req.url);
     const tapId = searchParams.get("tap_id");

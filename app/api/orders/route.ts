@@ -17,8 +17,11 @@ import {
   orderTimeline,
   shippingRates,
   coupons,
+  couponUsages,
   autoDiscounts,
   storeSettings,
+  users,
+  abandonedCarts,
 } from "@/lib/schema";
 
 const orderItemSchema = z.object({
@@ -230,8 +233,10 @@ export async function POST(req: Request) {
         shippingAmount = toNumber(shippingRate.price);
         shippingMethodName = shippingRate.name;
       } else {
-        // Fallback: invalid rate ID — apply a safe default
-        shippingAmount = subtotal > 200 ? 0 : 25;
+        return NextResponse.json(
+          { error: "Invalid shipping rate selected" },
+          { status: 400 }
+        );
       }
     } else {
       // No rate selected — apply default logic
@@ -258,16 +263,45 @@ export async function POST(req: Request) {
         (!coupon.usageLimit || coupon.usedCount < coupon.usageLimit) &&
         (!coupon.minOrderAmount || subtotal >= toNumber(coupon.minOrderAmount))
       ) {
-        couponCode = coupon.code;
-        if (coupon.type === "PERCENTAGE") {
-          couponDiscount = (subtotal * toNumber(coupon.value)) / 100;
-          if (coupon.maxDiscountAmount && couponDiscount > toNumber(coupon.maxDiscountAmount)) {
-            couponDiscount = toNumber(coupon.maxDiscountAmount);
+        // Per-user/email coupon limit: prevent reuse by same user or guest email
+        if (userId) {
+          const existingUsage = await db.query.couponUsages.findFirst({
+            where: and(
+              eq(couponUsages.couponId, coupon.id),
+              eq(couponUsages.userId, userId),
+            ),
+          });
+          if (existingUsage) {
+            // User already used this coupon — silently skip
+          } else {
+            couponCode = coupon.code;
           }
-        } else if (coupon.type === "FIXED_AMOUNT") {
-          couponDiscount = Math.min(toNumber(coupon.value), subtotal);
-        } else if (coupon.type === "FREE_SHIPPING") {
-          couponFreeShipping = true;
+        } else {
+          // Guest: track by email to prevent reuse
+          const existingGuestUsage = await db.query.couponUsages.findFirst({
+            where: and(
+              eq(couponUsages.couponId, coupon.id),
+              eq(couponUsages.email, data.email.toLowerCase()),
+            ),
+          });
+          if (existingGuestUsage) {
+            // Guest already used this coupon — silently skip
+          } else {
+            couponCode = coupon.code;
+          }
+        }
+
+        if (couponCode) {
+          if (coupon.type === "PERCENTAGE") {
+            couponDiscount = (subtotal * toNumber(coupon.value)) / 100;
+            if (coupon.maxDiscountAmount && couponDiscount > toNumber(coupon.maxDiscountAmount)) {
+              couponDiscount = toNumber(coupon.maxDiscountAmount);
+            }
+          } else if (coupon.type === "FIXED_AMOUNT") {
+            couponDiscount = Math.min(toNumber(coupon.value), subtotal);
+          } else if (coupon.type === "FREE_SHIPPING") {
+            couponFreeShipping = true;
+          }
         }
       }
       // If coupon is invalid we silently ignore — client already validated
@@ -509,12 +543,27 @@ export async function POST(req: Request) {
         }
       }
 
-      // Increment coupon usage
+      // Increment coupon usage and record per-user usage
       if (couponCode) {
+        const couponRecord = await tx.query.coupons.findFirst({
+          where: eq(coupons.code, couponCode),
+          columns: { id: true },
+        });
+
         await tx
           .update(coupons)
           .set({ usedCount: sql`${coupons.usedCount} + 1` })
           .where(eq(coupons.code, couponCode));
+
+        // Record coupon usage (prevents re-use by the same user or guest email)
+        if (couponRecord) {
+          await tx.insert(couponUsages).values({
+            couponId: couponRecord.id,
+            ...(userId ? { userId } : {}),
+            email: data.email.toLowerCase(),
+            orderId: newOrder.id,
+          }).onConflictDoNothing();
+        }
       }
 
       // Increment auto-discount usage
@@ -554,6 +603,25 @@ export async function POST(req: Request) {
 
     // Send order confirmation email (non-blocking)
     const serializedOrder = serializeDecimal(order);
+
+    // ── Mark abandoned carts as recovered ──
+    try {
+      const abandonedWhere = userId
+        ? or(
+            and(eq(abandonedCarts.userId, userId), inArray(abandonedCarts.status, ["ABANDONED", "EMAIL_SENT"])),
+            and(eq(abandonedCarts.email, data.email), inArray(abandonedCarts.status, ["ABANDONED", "EMAIL_SENT"]))
+          )
+        : and(eq(abandonedCarts.email, data.email), inArray(abandonedCarts.status, ["ABANDONED", "EMAIL_SENT"]));
+
+      await db.update(abandonedCarts).set({
+        status: "RECOVERED",
+        recoveredAt: new Date(),
+        orderId: order.id,
+      }).where(abandonedWhere!);
+    } catch {
+      // Non-critical — don't fail the order
+    }
+
     sendOrderConfirmation({
       orderNumber: serializedOrder.orderNumber,
       customerName: session?.user?.name || data.shippingAddress.firstName,

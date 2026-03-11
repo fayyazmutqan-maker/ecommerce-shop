@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
+import { Noto_Sans_Arabic } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { getLocale } from "next-intl/server";
 import "./globals.css";
 
-const fontSans = Poppins({
+const fontSans = Outfit({
   subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+const fontArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  variable: "--font-arabic",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -39,14 +46,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const dir = locale === "ar" ? "rtl" : "ltr";
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${fontSans.variable} ${fontMono.variable} antialiased`}>
+    <html lang={locale} dir={dir} suppressHydrationWarning>
+      <body className={`${fontSans.variable} ${fontMono.variable} ${fontArabic.variable} antialiased`}>
         {children}
         <Toaster richColors position="top-right" />
       </body>

@@ -5,16 +5,38 @@ import { eq, count } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { authLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { audit } from "@/lib/audit";
 
 const profileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   phone: z.string().max(30).nullable().optional(),
-  image: z.string().nullable().optional(),
+  image: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((url) => {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === "https:" || parsed.protocol === "http:";
+      } catch {
+        return false;
+      }
+    }, "Image must be a valid HTTP(S) URL")
+    .nullable()
+    .optional(),
 });
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(6),
-  newPassword: z.string().min(6).max(100),
+  currentPassword: z.string().min(1),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128)
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    ),
 });
 
 export async function GET() {
@@ -51,6 +73,10 @@ export async function GET() {
 
 // Update profile
 export async function PUT(req: Request) {
+  const ip = getClientIp(req);
+  const rlResponse = await rateLimitResponse(authLimiter, ip);
+  if (rlResponse) return rlResponse;
+
   try {
     const session = await auth();
     if (!session?.user) {
@@ -81,6 +107,8 @@ export async function PUT(req: Request) {
 
       const hashedPassword = await bcrypt.hash(parsed.data.newPassword, 12);
       await db.update(users).set({ password: hashedPassword }).where(eq(users.id, session.user.id));
+
+      audit({ action: "AUTH_PASSWORD_CHANGE", email: user.email, ip, resource: "user", resourceId: user.id, success: true });
 
       return NextResponse.json({ message: "Password updated successfully" });
     }

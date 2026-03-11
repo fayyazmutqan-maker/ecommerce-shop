@@ -16,6 +16,7 @@ import {
 } from "@/lib/schema";
 import { createTapRefund } from "@/lib/tap";
 import { serializeDecimal } from "@/lib/decimal";
+import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const createRefundSchema = z.object({
   orderId: z.string().min(1),
@@ -77,6 +78,11 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
+    // Rate limit refund creation
+    const ip = getClientIp(req);
+    const rlResponse = await rateLimitResponse(checkoutLimiter, ip);
+    if (rlResponse) return rlResponse;
+
     const session = await auth();
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

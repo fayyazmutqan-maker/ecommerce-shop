@@ -4,10 +4,13 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/schema";
 import { eq, desc, and } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslationsBatch } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import { formatDate } from "@/lib/helpers";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +20,15 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogPage() {
-  const posts = await db.query.blogPosts.findMany({
+  const rawPosts = await db.query.blogPosts.findMany({
     where: eq(blogPosts.isPublished, true),
     orderBy: desc(blogPosts.publishedAt),
     with: { author: { columns: { id: true, name: true, image: true } } },
   });
+
+  // Apply locale translations
+  const locale = await getLocale();
+  const posts = await applyTranslationsBatch("blogPost", rawPosts as Record<string, unknown>[], locale) as typeof rawPosts;
 
   // Extract unique tags
   const allTags = [...new Set(
@@ -30,11 +37,7 @@ export default async function BlogPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Blog</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Blog" }]} />
 
       <div className="mb-10">
         <h1 className="text-4xl font-bold tracking-tight">Blog</h1>

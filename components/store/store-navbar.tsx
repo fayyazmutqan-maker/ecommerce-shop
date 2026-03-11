@@ -15,6 +15,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { CartSheet } from "@/components/store/cart-sheet";
+import { LanguageSwitcher } from "@/components/store/language-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { title: "Home", href: "/" },
@@ -49,7 +51,7 @@ export function StoreNavbar() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[320px]">
+              <SheetContent side="left" className="w-[min(320px,85vw)]">
                 <SheetHeader>
                   <SheetTitle className="text-left">
                     <Link href="/" className="flex items-center gap-2.5">
@@ -61,6 +63,13 @@ export function StoreNavbar() {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="mt-8 flex flex-col gap-1">
+                  <Link
+                    href="/search"
+                    className="flex items-center px-4 py-3 text-[15px] font-medium rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <Search className="h-4 w-4 mr-3" />
+                    Search
+                  </Link>
                   {navLinks.map((link) => (
                     <Link
                       key={link.href}
@@ -135,6 +144,8 @@ export function StoreNavbar() {
                   <User className="h-[18px] w-[18px]" />
                 </Link>
               </Button>
+              <ThemeToggle />
+              <LanguageSwitcher />
               <CartSheet />
             </div>
           </div>

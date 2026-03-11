@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,15 +16,34 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingBag, Loader2 } from "lucide-react";
+import { ShoppingBag, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+
+const verificationMessages: Record<string, { type: "success" | "error"; message: string }> = {
+  success: { type: "success", message: "Email verified successfully! You can now sign in." },
+  expired: { type: "error", message: "Verification link has expired. Please register again." },
+  invalid: { type: "error", message: "Invalid verification link." },
+  error: { type: "error", message: "Something went wrong during verification. Please try again." },
+};
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const verified = searchParams.get("verified");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (verified && verificationMessages[verified]) {
+      const msg = verificationMessages[verified];
+      if (msg.type === "success") {
+        toast.success(msg.message);
+      } else {
+        toast.error(msg.message);
+      }
+    }
+  }, [verified]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,7 +64,15 @@ function LoginForm() {
         toast.error("Invalid email or password");
       } else {
         toast.success("Logged in successfully");
-        router.push(callbackUrl);
+        // Fetch session to check role and redirect admins/staff to /admin
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        const role = session?.user?.role;
+        if ((role === "ADMIN" || role === "STAFF") && (callbackUrl === "/" || !callbackUrl)) {
+          router.push("/admin");
+        } else {
+          router.push(callbackUrl);
+        }
         router.refresh();
       }
     } catch {
@@ -81,6 +108,18 @@ function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 px-7">
+          {verified && verificationMessages[verified] && (
+            <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+              verificationMessages[verified].type === "success"
+                ? "bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-200"
+                : "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
+            }`}>
+              {verificationMessages[verified].type === "success"
+                ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                : <XCircle className="h-4 w-4 shrink-0" />}
+              {verificationMessages[verified].message}
+            </div>
+          )}
           <Button
             variant="outline"
             className="w-full h-11 font-medium"
@@ -123,7 +162,7 @@ function LoginForm() {
             </div>
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} method="post" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
               <Input

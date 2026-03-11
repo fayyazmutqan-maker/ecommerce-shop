@@ -656,7 +656,7 @@ export default function CheckoutPage() {
                           className="object-cover"
                         />
                       )}
-                      <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold">
+                      <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background rounded-full h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold">
                         {item.quantity}
                       </span>
                     </div>

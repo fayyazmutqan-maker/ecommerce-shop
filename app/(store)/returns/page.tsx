@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import Link from "next/link";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Return & Refund Policy",
@@ -9,13 +9,7 @@ export const metadata: Metadata = {
 export default function ReturnsPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">Return & Refund Policy</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Return & Refund Policy" }]} />
 
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <h1>Return & Refund Policy</h1>

@@ -245,8 +245,8 @@ export default function NewProductPage() {
   // ─── Data Loading ─────────────────────────────────
   useEffect(() => {
     Promise.all([
-      fetch("/api/product-groups").then((r) => r.json()),
-      fetch("/api/categories").then((r) => r.json()),
+      fetch("/api/product-groups").then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
+      fetch("/api/categories").then((r) => { if (!r.ok) throw new Error(); return r.json(); }),
     ])
       .then(([groupsData, catsData]) => {
         setGroups(groupsData);
@@ -265,7 +265,7 @@ export default function NewProductPage() {
       fetch(
         `/api/products?search=${encodeURIComponent(bundleSearch)}&admin=true`
       )
-        .then((r) => r.json())
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((data) => {
           const products = Array.isArray(data) ? data : data.products || [];
           setBundleSearchResults(

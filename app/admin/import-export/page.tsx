@@ -231,7 +231,7 @@ export default function ImportExportPage() {
                     <p className="text-sm font-medium">Import Complete</p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
                       <p className="text-lg font-bold text-green-700 dark:text-green-400">{importResult.created}</p>
                       <p className="text-xs text-muted-foreground">Created</p>

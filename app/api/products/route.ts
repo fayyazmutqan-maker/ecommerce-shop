@@ -236,6 +236,7 @@ export async function GET(req: Request) {
             ? { where: eq(productImages.isPrimary, true), limit: 1 }
             : { orderBy: asc(productImages.position) },
           categories: { with: { category: true } },
+          variants: true,
           attributeValues: {
             with: {
               attribute: {

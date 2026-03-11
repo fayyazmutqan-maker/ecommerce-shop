@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { db } from "@/lib/db";
 import {
   categories,
@@ -24,6 +25,9 @@ import {
   max,
   isNull,
 } from "drizzle-orm";
+import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
+import { applyTranslations, applyTranslationsBatch } from "@/lib/translations";
 import { ProductCardGrid } from "@/components/store/product-card-grid";
 import { ProductFilters } from "@/components/store/product-filters";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +46,34 @@ export const dynamic = "force-dynamic";
 interface Props {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const category = await db.query.categories.findFirst({
+    where: eq(categories.slug, slug),
+  });
+
+  if (!category) {
+    return { title: "Collection Not Found" };
+  }
+
+  const title = category.seoTitle || category.name;
+  const description = category.seoDescription || category.description || `Browse ${category.name} collection`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/collections/${slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: category.image ? [{ url: category.image }] : undefined,
+    },
+  };
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
@@ -243,41 +275,36 @@ export default async function CollectionPage({ params, searchParams }: Props) {
     })(),
   ]);
 
+  // Apply locale translations
+  const locale = await getLocale();
+  const tCategory = await applyTranslations("category", category as Record<string, unknown>, locale) as typeof category;
+  const tProductsList = await applyTranslationsBatch("product", productsList as Record<string, unknown>[], locale) as typeof productsList;
+  const tAllCategories = await applyTranslationsBatch("category", allCategories as Record<string, unknown>[], locale) as typeof allCategories;
+
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <Link
-          href="/collections"
-          className="hover:text-foreground transition-colors"
-        >
-          Collections
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">{category.name}</span>
-      </nav>
+      <Breadcrumbs items={[
+        { label: "Collections", href: "/collections" },
+        { label: tCategory.name },
+      ]} />
 
       {/* Header */}
       <div className="mb-10">
         <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">
           Collection
         </p>
-        <h1 className="text-3xl lg:text-4xl font-bold">{category.name}</h1>
-        {category.description && (
+        <h1 className="text-3xl lg:text-4xl font-bold">{tCategory.name}</h1>
+        {tCategory.description && (
           <p className="text-muted-foreground mt-3 max-w-2xl text-[15px] leading-relaxed">
-            {category.description}
+            {tCategory.description}
           </p>
         )}
       </div>
 
       {/* Subcategories */}
-      {category.children.length > 0 && (
+      {tCategory.children.length > 0 && (
         <div className="flex flex-wrap gap-2.5 mb-10">
-          {category.children.map((child) => (
+          {tCategory.children.map((child) => (
             <Link key={child.id} href={`/collections/${child.slug}`}>
               <Badge
                 variant="outline"
@@ -295,7 +322,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         <ProductFilters
           facets={filtersData.facets}
           priceRange={filtersData.priceRange}
-          categories={allCategories.map((c) => ({
+          categories={tAllCategories.map((c) => ({
             id: c.id,
             name: c.name,
             slug: c.slug,
@@ -318,10 +345,10 @@ export default async function CollectionPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          {productsList.length > 0 ? (
+          {tProductsList.length > 0 ? (
             <>
               <ProductCardGrid
-                products={productsList.map((p) => ({
+                products={tProductsList.map((p) => ({
                   id: p.id,
                   name: p.name,
                   slug: p.slug,
@@ -330,7 +357,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
                     ? Number(p.compareAtPrice)
                     : null,
                   images: p.images.map((i) => i.url),
-                  category: category.name,
+                  category: tCategory.name,
                   isNew:
                     new Date().getTime() - new Date(p.createdAt).getTime() <
                     7 * 24 * 60 * 60 * 1000,

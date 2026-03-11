@@ -13,12 +13,14 @@ import {
   ChevronRight,
   Wallet,
   RotateCcw,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -43,13 +45,7 @@ export default async function AccountPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link href="/" className="hover:text-foreground transition-colors">
-          Home
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">My Account</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "My Account" }]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
         {/* Sidebar */}
@@ -77,13 +73,14 @@ export default async function AccountPage() {
               { href: "/account/orders", icon: Package, label: "Orders" },
               { href: "/account/wishlist", icon: Heart, label: "Wishlist" },
               { href: "/account/addresses", icon: MapPin, label: "Addresses" },
+              { href: "/account/reviews", icon: MessageSquare, label: "Reviews" },
               { href: "/account/store-credit", icon: Wallet, label: "Store Credit" },
               { href: "/account/returns", icon: RotateCcw, label: "Returns" },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors ${
                   item.active
                     ? "bg-accent font-semibold"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -145,7 +142,7 @@ export default async function AccountPage() {
                   {orderList.map((order) => (
                     <div
                       key={order.id}
-                      className="flex items-center justify-between py-3 border-b last:border-0"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-2 border-b last:border-0"
                     >
                       <div>
                         <p className="text-sm font-semibold">

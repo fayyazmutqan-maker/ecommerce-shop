@@ -331,10 +331,11 @@ export default function EditProductPage() {
   async function fetchCategories() {
     try {
       const res = await fetch("/api/categories");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setAllCategories(data);
     } catch {
-      // Silent fail
+      toast.error("Failed to load categories");
     }
   }
 
@@ -594,7 +595,7 @@ export default function EditProductPage() {
               <CardTitle>Pricing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Price (SAR) *</Label>
                   <Input
@@ -650,7 +651,7 @@ export default function EditProductPage() {
                 <Label>Schedule sale pricing</Label>
               </div>
               {scheduleSale && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Sale Starts</Label>
                     <Input
@@ -678,7 +679,7 @@ export default function EditProductPage() {
               <CardTitle>Inventory</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SKU</Label>
                   <Input
@@ -706,7 +707,7 @@ export default function EditProductPage() {
               </div>
 
               {trackInventory && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Quantity</Label>
                     <Input
@@ -746,6 +747,7 @@ export default function EditProductPage() {
                 <CardDescription>Edit variant details inline. Uncheck to deactivate a variant.</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -811,6 +813,7 @@ export default function EditProductPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -830,7 +833,7 @@ export default function EditProductPage() {
               </div>
               {requiresShipping && (
                 <>
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label>Weight (kg)</Label>
                       <Input
@@ -874,7 +877,7 @@ export default function EditProductPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Country of Origin</Label>
                       <Input
@@ -939,6 +942,8 @@ export default function EditProductPage() {
               </div>
             </CardContent>
           </Card>
+
+
         </div>
 
         {/* Sidebar */}
@@ -1117,7 +1122,7 @@ export default function EditProductPage() {
                 <Switch checked={taxable} onCheckedChange={setTaxable} />
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Min Order Qty</Label>
                   <Input

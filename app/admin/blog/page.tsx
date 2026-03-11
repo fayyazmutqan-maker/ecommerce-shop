@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -16,8 +17,9 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, Pencil, Trash2, FileText, Image } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, FileText } from "lucide-react";
 import { formatDate } from "@/lib/helpers";
+import { useFetch } from "@/hooks/use-fetch";
 
 interface BlogPost {
   id: string;
@@ -47,28 +49,15 @@ const emptyForm = {
 };
 
 export default function BlogAdminPage() {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: posts, loading, setData: setPosts, refetch: fetchPosts } = useFetch<BlogPost[]>(
+    "/api/blog?admin=true",
+    [],
+    { errorMessage: "Failed to fetch posts" }
+  );
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
-
-  async function fetchPosts() {
-    try {
-      const res = await fetch("/api/blog?admin=true");
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data.posts || data);
-      }
-    } catch {
-      toast.error("Failed to fetch posts");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { fetchPosts(); }, []);
 
   function openCreate() {
     setEditingId(null);
@@ -132,7 +121,7 @@ export default function BlogAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Blog</h1>
           <p className="text-muted-foreground">Manage your blog posts for content marketing</p>
@@ -207,6 +196,7 @@ export default function BlogAdminPage() {
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -224,7 +214,7 @@ export default function BlogAdminPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {post.featuredImage ? (
-                          <img src={post.featuredImage} alt="" className="h-8 w-8 rounded object-cover" />
+                          <Image src={post.featuredImage} alt="" width={32} height={32} className="h-8 w-8 rounded object-cover" />
                         ) : (
                           <FileText className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -271,6 +261,7 @@ export default function BlogAdminPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

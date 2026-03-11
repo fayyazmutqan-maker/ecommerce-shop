@@ -38,7 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { formatCurrency, formatDateTime } from "@/lib/helpers";
+import { formatCurrency, formatDateTime, getStatusColor } from "@/lib/helpers";
 
 interface Customer {
   id: string;
@@ -89,23 +89,6 @@ interface Customer {
     totalReviews: number;
     wishlistItems: number;
   };
-}
-
-function getStatusColor(status: string): "default" | "secondary" | "destructive" | "outline" {
-  switch (status) {
-    case "DELIVERED":
-    case "PAID":
-      return "default";
-    case "PENDING":
-    case "PROCESSING":
-      return "secondary";
-    case "CANCELLED":
-    case "REFUNDED":
-    case "FAILED":
-      return "destructive";
-    default:
-      return "outline";
-  }
 }
 
 export default function CustomerDetailPage() {

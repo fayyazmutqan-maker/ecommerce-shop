@@ -131,7 +131,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
             <button
               key={star}
               type="button"
-              className="p-0.5 transition-colors"
+              className="p-2 transition-colors"
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(0)}
               onClick={() => setRating(star)}

@@ -23,7 +23,7 @@ export default async function DiscountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Discounts</h1>
           <p className="text-muted-foreground">
@@ -35,6 +35,7 @@ export default async function DiscountsPage() {
 
       <Card>
         <CardContent className="pt-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -102,6 +103,7 @@ export default async function DiscountsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

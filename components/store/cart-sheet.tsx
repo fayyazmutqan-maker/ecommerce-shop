@@ -87,7 +87,7 @@ export function CartSheet() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-10 w-10"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity - 1)
                           }
@@ -100,7 +100,7 @@ export function CartSheet() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-10 w-10"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity + 1)
                           }
@@ -110,7 +110,7 @@ export function CartSheet() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 ml-auto text-muted-foreground hover:text-destructive"
+                          className="h-10 w-10 ml-auto text-muted-foreground hover:text-destructive"
                           onClick={() => removeItem(item.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />

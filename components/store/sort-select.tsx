@@ -30,7 +30,7 @@ export function SortSelect({ defaultValue }: SortSelectProps) {
 
   return (
     <Select defaultValue={defaultValue} onValueChange={handleChange}>
-      <SelectTrigger className="w-[180px] h-10">
+      <SelectTrigger className="w-[180px] max-w-full h-10">
         <SelectValue placeholder="Sort by" />
       </SelectTrigger>
       <SelectContent>

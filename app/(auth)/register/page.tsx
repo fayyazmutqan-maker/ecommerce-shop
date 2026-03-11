@@ -37,8 +37,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast.error("Password must contain uppercase, lowercase, and a number");
       setIsLoading(false);
       return;
     }
@@ -113,7 +119,7 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={8}
                 disabled={isLoading}
                 className="h-11"
               />
@@ -126,7 +132,7 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={8}
                 disabled={isLoading}
                 className="h-11"
               />

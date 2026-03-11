@@ -58,8 +58,8 @@ export async function GET(req: Request, { params }: RouteParams) {
     }
 
     // Non-admin can only see their own orders
-    const isAdmin = session.user.role === "ADMIN";
-    if (!isAdmin && order.userId !== session.user.id) {
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "STAFF";
+    if (!isAdmin && (!order.userId || order.userId !== session.user.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

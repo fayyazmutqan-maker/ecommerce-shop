@@ -671,16 +671,18 @@ export const couponsRelations = relations(coupons, ({ many }) => ({
   usages: many(couponUsages),
 }));
 
-// Per-customer coupon usage tracking
+// Per-customer/guest coupon usage tracking
 export const couponUsages = pgTable("CouponUsage", {
   id: cuid(),
   couponId: text("couponId").notNull().references(() => coupons.id, { onDelete: "cascade" }),
-  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: text("userId").references(() => users.id, { onDelete: "cascade" }),
+  email: text("email"),
   orderId: text("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [
   index("CouponUsage_couponId_idx").on(t.couponId),
   index("CouponUsage_userId_idx").on(t.userId),
+  index("CouponUsage_email_idx").on(t.email),
   uniqueIndex("CouponUsage_couponId_orderId_key").on(t.couponId, t.orderId),
 ]);
 
@@ -1136,4 +1138,25 @@ export const inventoryAdjustments = pgTable("InventoryAdjustment", {
 }, (t) => [
   index("InventoryAdjustment_productId_idx").on(t.productId),
   index("InventoryAdjustment_createdAt_idx").on(t.createdAt),
+]);
+
+// ============================================================
+// CONTENT TRANSLATIONS (Dynamic content i18n)
+// ============================================================
+// Generic translation table for any translatable entity:
+// products, categories, pages, blogPosts, smartCollections
+
+export const contentTranslations = pgTable("ContentTranslation", {
+  id: cuid(),
+  entityType: text("entityType").notNull(), // product | category | page | blogPost | smartCollection
+  entityId: text("entityId").notNull(),
+  locale: text("locale").notNull(), // e.g. "ar", "en"
+  field: text("field").notNull(), // e.g. "name", "description", "seoTitle"
+  value: text("value").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("ContentTranslation_entity_locale_field_idx").on(t.entityType, t.entityId, t.locale, t.field),
+  index("ContentTranslation_entityType_entityId_idx").on(t.entityType, t.entityId),
+  index("ContentTranslation_locale_idx").on(t.locale),
 ]);

@@ -44,6 +44,11 @@ export async function GET(req: Request) {
 // POST — create notification (internal)
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    if (!session?.user || !["ADMIN", "STAFF"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { userId, type, title, message, entityType, entityId } = body;
 

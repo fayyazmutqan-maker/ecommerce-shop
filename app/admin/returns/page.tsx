@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Loader2,
   RotateCcw,
   Search,
@@ -38,7 +37,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { formatDateTime } from "@/lib/helpers";
+import { formatDateTime, getStatusColor } from "@/lib/helpers";
 
 interface ReturnRequest {
   id: string;
@@ -64,20 +63,6 @@ interface ReturnRequest {
     condition: string | null;
     orderItem: { id: string; name: string; sku: string | null; quantity: number; price: number };
   }[];
-}
-
-function getReturnStatusColor(status: string): "default" | "secondary" | "destructive" | "outline" {
-  switch (status) {
-    case "COMPLETED":
-      return "default";
-    case "APPROVED":
-    case "RECEIVED":
-      return "secondary";
-    case "REJECTED":
-      return "destructive";
-    default:
-      return "outline";
-  }
 }
 
 export default function AdminReturnsPage() {
@@ -166,16 +151,9 @@ export default function AdminReturnsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Returns</h1>
-          <p className="text-sm text-muted-foreground">{returns.length} total return requests</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Returns</h1>
+        <p className="text-muted-foreground">{returns.length} total return requests</p>
       </div>
 
       <Card>
@@ -212,6 +190,7 @@ export default function AdminReturnsPage() {
               <p className="text-muted-foreground">No return requests found</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -246,7 +225,7 @@ export default function AdminReturnsPage() {
                       {r.order.user?.name || r.order.email}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getReturnStatusColor(r.status)}>{r.status}</Badge>
+                      <Badge variant={getStatusColor(r.status)}>{r.status}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{r.action}</Badge>
@@ -262,6 +241,7 @@ export default function AdminReturnsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -277,12 +257,12 @@ export default function AdminReturnsPage() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Reason</Label>
                 <p className="text-sm">{selected.reason}</p>
               </div>
               {selected.customerNotes && (
-                <div>
+                <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Customer Notes</Label>
                   <p className="text-sm">{selected.customerNotes}</p>
                 </div>

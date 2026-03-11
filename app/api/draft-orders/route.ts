@@ -80,12 +80,15 @@ export async function GET(req: Request) {
       orderBy: desc(draftOrders.createdAt),
     });
 
-    return NextResponse.json(serializeDecimal(drafts.map((d) => ({
-      ...d,
-      items: JSON.parse(d.items),
-      shippingAddress: d.shippingAddress ? JSON.parse(d.shippingAddress) : null,
-      billingAddress: d.billingAddress ? JSON.parse(d.billingAddress) : null,
-    }))));
+    return NextResponse.json(serializeDecimal(drafts.map((d) => {
+      let items = [];
+      let shippingAddress = null;
+      let billingAddress = null;
+      try { items = JSON.parse(d.items); } catch { /* corrupted data */ }
+      try { shippingAddress = d.shippingAddress ? JSON.parse(d.shippingAddress) : null; } catch { /* corrupted */ }
+      try { billingAddress = d.billingAddress ? JSON.parse(d.billingAddress) : null; } catch { /* corrupted */ }
+      return { ...d, items, shippingAddress, billingAddress };
+    })));
   } catch (error) {
     console.error("Draft orders GET error:", error);
     return NextResponse.json({ error: "Failed to fetch draft orders" }, { status: 500 });

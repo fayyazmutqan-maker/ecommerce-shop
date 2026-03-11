@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Star, Check, X, Trash2, Loader2, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useFetch } from "@/hooks/use-fetch";
 
 interface Review {
   id: string;
@@ -29,22 +30,12 @@ interface Review {
 }
 
 export default function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: reviews, loading, setData: setReviews, refetch: fetchReviews } = useFetch<Review[]>(
+    "/api/reviews?admin=true",
+    [],
+    { errorMessage: "Failed to load reviews" }
+  );
   const [filter, setFilter] = useState<"all" | "pending" | "approved">("all");
-
-  const fetchReviews = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reviews?admin=true");
-      if (res.ok) setReviews(await res.json());
-    } catch {
-      toast.error("Failed to load reviews");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchReviews(); }, [fetchReviews]);
 
   async function toggleApproval(id: string, approve: boolean) {
     try {
@@ -83,13 +74,13 @@ export default function ReviewsPage() {
   const approvedCount = reviews.filter((r) => r.isApproved).length;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Reviews</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
           <p className="text-muted-foreground">Moderate and manage product reviews</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Badge variant="secondary" className="text-sm px-3 py-1">{reviews.length} Total</Badge>
           <Badge variant="outline" className="text-sm px-3 py-1 text-yellow-600">{pendingCount} Pending</Badge>
           <Badge variant="outline" className="text-sm px-3 py-1 text-green-600">{approvedCount} Approved</Badge>
@@ -111,6 +102,7 @@ export default function ReviewsPage() {
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">No reviews found</div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -175,6 +167,7 @@ export default function ReviewsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

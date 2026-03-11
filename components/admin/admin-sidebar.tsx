@@ -34,6 +34,7 @@ import {
   Mail,
   Navigation,
   Wallet,
+  Globe,
 } from "lucide-react";
 import {
   Sidebar,
@@ -164,6 +165,11 @@ const settingsNav = [
     title: "Smart Collections",
     href: "/admin/smart-collections",
     icon: FolderKanban,
+  },
+  {
+    title: "Translations",
+    href: "/admin/translations",
+    icon: Globe,
   },
   {
     title: "Navigation",

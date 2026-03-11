@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Loader2,
   Package,
   Search,
@@ -62,7 +61,7 @@ export default function InventoryPage() {
 
   async function fetchInventory() {
     try {
-      const res = await fetch("/api/products?perPage=500&fields=inventory");
+      const res = await fetch("/api/products?admin=true&limit=100");
       if (!res.ok) throw new Error();
       const data = await res.json();
       const products = data.products || data;
@@ -180,17 +179,10 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Inventory</h1>
-            <p className="text-sm text-muted-foreground">{items.length} products</p>
-          </div>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground">{items.length} products</p>
         </div>
         {hasAdjustments && (
           <Button onClick={handleSaveAdjustments} disabled={saving}>
@@ -201,7 +193,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -262,6 +254,7 @@ export default function InventoryPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -348,6 +341,7 @@ export default function InventoryPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -92,6 +92,7 @@ export default function ActivityLogPage() {
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
             <>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -135,6 +136,7 @@ export default function ActivityLogPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>

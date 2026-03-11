@@ -67,10 +67,10 @@ export default function NewsletterPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Newsletter Subscribers</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Newsletter Subscribers</h1>
           <p className="text-muted-foreground">Manage your email subscriber list</p>
         </div>
         <Button variant="outline" onClick={exportCSV} disabled={!data?.subscribers.length}>
@@ -78,9 +78,9 @@ export default function NewsletterPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center gap-3 pt-6">
             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
               <Mail className="h-5 w-5 text-green-600" />
             </div>
@@ -91,7 +91,7 @@ export default function NewsletterPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center gap-3 pt-6">
             <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
               <Users className="h-5 w-5 text-gray-600" />
             </div>
@@ -118,6 +118,7 @@ export default function NewsletterPage() {
             <div className="text-center py-20 text-muted-foreground">No subscribers found</div>
           ) : (
             <>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -146,6 +147,7 @@ export default function NewsletterPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
               {data.pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <p className="text-sm text-muted-foreground">

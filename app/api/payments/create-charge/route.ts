@@ -5,6 +5,8 @@ import { createTapCharge, parseSaudiPhone } from "@/lib/tap";
 import { z } from "zod";
 import { orders, storeSettings, transactions, orderTimeline } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { paymentLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { audit, auditMeta } from "@/lib/audit";
 
 const createChargeSchema = z.object({
   orderId: z.string().min(1),
@@ -18,8 +20,17 @@ const createChargeSchema = z.object({
  * Supports both authenticated users and guest checkout.
  */
 export async function POST(req: Request) {
+  // Rate-limit payment creation attempts
+  const ip = getClientIp(req);
+  const rlResponse = await rateLimitResponse(paymentLimiter, ip);
+  if (rlResponse) {
+    audit({ action: "RATE_LIMIT_HIT", ip, resource: "payment-create", success: false });
+    return rlResponse;
+  }
+
   try {
     const session = await auth();
+    const meta = auditMeta(req);
 
     const body = await req.json();
     const parsed = createChargeSchema.safeParse(body);
@@ -148,12 +159,24 @@ export async function POST(req: Request) {
     });
 
     // Return the Tap payment page URL
+    audit({
+      action: "PAYMENT_INITIATE",
+      userId: session?.user?.id,
+      email: order.email,
+      ip: meta.ip,
+      resource: "payment",
+      resourceId: charge.id,
+      details: { orderId: order.id, orderNumber: order.orderNumber, amount: Number(order.totalAmount) },
+      success: true,
+    });
+
     return NextResponse.json({
       paymentUrl: charge.transaction.url,
       chargeId: charge.id,
     });
   } catch (error) {
     console.error("Create charge error:", error);
+    audit({ action: "PAYMENT_INITIATE", ip, success: false, error: String(error) });
     return NextResponse.json(
       { error: "Failed to create payment" },
       { status: 500 }
