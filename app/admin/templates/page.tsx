@@ -1088,7 +1088,7 @@ function SectionRow({
                         />
                         <Label className="text-xs">Enable Countdown</Label>
                       </div>
-                      {countdown.enabled && (
+                      {countdown.enabled === true && (
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           <div>
                             <Label className="text-xs">End Date & Time</Label>

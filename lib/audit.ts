@@ -35,7 +35,12 @@ export type AuditAction =
   | "IMPORT_EXPORT"
   | "POS_SESSION_OPENED"
   | "POS_SESSION_CLOSED"
-  | "ZATCA_ONBOARD";
+  | "ZATCA_ONBOARD"
+  | "CHANNEL_CONNECTED"
+  | "CHANNEL_DISCONNECTED"
+  | "CHANNEL_SYNC"
+  | "CHANNEL_OAUTH_INITIATED"
+  | "CHANNEL_WEBHOOK";
 
 export interface AuditEntry {
   action: AuditAction;

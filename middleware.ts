@@ -37,6 +37,7 @@ const STAFF_PERMISSION_MAP: { prefix: string; permission: PermissionKey }[] = [
   { prefix: "/api/store-credit", permission: "orders" },
   { prefix: "/api/newsletter", permission: "content" },
   { prefix: "/api/notifications", permission: "orders" },
+  { prefix: "/api/channels", permission: "channels" },
 ];
 
 function getRequiredPermission(pathname: string): PermissionKey | null {
@@ -71,7 +72,8 @@ export default auth(async (req) => {
     req.method !== "OPTIONS" &&
     // Exclude webhook endpoints (server-to-server)
     !pathname.startsWith("/api/payments/webhook") &&
-    !pathname.startsWith("/api/payments/callback")
+    !pathname.startsWith("/api/payments/callback") &&
+    !pathname.startsWith("/api/channels/meta/webhook")
   ) {
     const origin = req.headers.get("origin");
     if (origin && !isOriginAllowed(origin)) {

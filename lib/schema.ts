@@ -186,6 +186,7 @@ export const productsRelations = relations(products, ({ many }) => ({
   attributeValues: many(productAttributeValues),
   bundleItems: many(productBundles, { relationName: "BundleParent" }),
   bundledIn: many(productBundles, { relationName: "BundleChild" }),
+  channels: many(channelProducts),
 }));
 
 export const productBundles = pgTable("ProductBundle", {
@@ -392,6 +393,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   refunds: many(refunds),
   returns: many(returns),
   fulfillments: many(fulfillments),
+  channelOrders: many(channelOrders),
 }));
 
 export const orderItems = pgTable("OrderItem", {
@@ -1210,3 +1212,108 @@ export const contentTranslations = pgTable("ContentTranslation", {
   index("ContentTranslation_entityType_entityId_idx").on(t.entityType, t.entityId),
   index("ContentTranslation_locale_idx").on(t.locale),
 ]);
+
+// ============================================================
+// SALES CHANNELS (Facebook, Instagram, Google, TikTok)
+// ============================================================
+
+export const salesChannels = pgTable("SalesChannel", {
+  id: cuid(),
+  name: text("name").notNull(),
+  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | GOOGLE | TIKTOK
+  status: text("status").notNull().default("DISCONNECTED"), // ACTIVE | PAUSED | DISCONNECTED | ERROR
+  // OAuth / API credentials (encrypted JSON: { accessToken, pageAccessToken, refreshToken, expiresAt })
+  credentials: text("credentials"),
+  // Platform-specific identifiers
+  externalAccountId: text("externalAccountId"), // Business Account ID
+  externalPageId: text("externalPageId"), // FB Page ID or IG Business ID
+  externalCatalogId: text("externalCatalogId"), // Platform catalog ID
+  pixelId: text("pixelId"), // Meta Pixel / Conversions API dataset ID
+  // Sync settings (JSON: { autoSync, syncFrequency, syncInventory, syncOrders })
+  settings: text("settings"),
+  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
+  lastSyncStatus: text("lastSyncStatus"), // SUCCESS | PARTIAL | FAILED
+  lastSyncError: text("lastSyncError"),
+  syncedProductCount: integer("syncedProductCount").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  index("SalesChannel_platform_idx").on(t.platform),
+  index("SalesChannel_status_idx").on(t.status),
+]);
+
+export const salesChannelsRelations = relations(salesChannels, ({ many }) => ({
+  products: many(channelProducts),
+  orders: many(channelOrders),
+  syncLogs: many(channelSyncLogs),
+}));
+
+export const channelProducts = pgTable("ChannelProduct", {
+  id: cuid(),
+  channelId: text("channelId").notNull().references(() => salesChannels.id, { onDelete: "cascade" }),
+  productId: text("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  externalProductId: text("externalProductId"), // Platform-side product/item ID
+  externalVariantIds: text("externalVariantIds"), // JSON: { variantId: externalId }
+  status: text("status").notNull().default("PENDING"), // PENDING | SYNCED | REJECTED | ERROR
+  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
+  lastError: text("lastError"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  uniqueIndex("ChannelProduct_channelId_productId_key").on(t.channelId, t.productId),
+  index("ChannelProduct_channelId_idx").on(t.channelId),
+  index("ChannelProduct_productId_idx").on(t.productId),
+  index("ChannelProduct_status_idx").on(t.status),
+]);
+
+export const channelProductsRelations = relations(channelProducts, ({ one }) => ({
+  channel: one(salesChannels, { fields: [channelProducts.channelId], references: [salesChannels.id] }),
+  product: one(products, { fields: [channelProducts.productId], references: [products.id] }),
+}));
+
+export const channelOrders = pgTable("ChannelOrder", {
+  id: cuid(),
+  channelId: text("channelId").notNull().references(() => salesChannels.id, { onDelete: "cascade" }),
+  orderId: text("orderId").references(() => orders.id, { onDelete: "set null" }),
+  externalOrderId: text("externalOrderId").notNull(), // Platform order ID
+  externalCustomerId: text("externalCustomerId"),
+  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM
+  status: text("status").notNull().default("PENDING"), // PENDING | IMPORTED | FULFILLED | ERROR
+  rawPayload: text("rawPayload"), // Raw JSON from platform
+  lastError: text("lastError"),
+  processedAt: timestamp("processedAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  uniqueIndex("ChannelOrder_channelId_externalOrderId_key").on(t.channelId, t.externalOrderId),
+  index("ChannelOrder_channelId_idx").on(t.channelId),
+  index("ChannelOrder_orderId_idx").on(t.orderId),
+  index("ChannelOrder_status_idx").on(t.status),
+]);
+
+export const channelOrdersRelations = relations(channelOrders, ({ one }) => ({
+  channel: one(salesChannels, { fields: [channelOrders.channelId], references: [salesChannels.id] }),
+  order: one(orders, { fields: [channelOrders.orderId], references: [orders.id] }),
+}));
+
+export const channelSyncLogs = pgTable("ChannelSyncLog", {
+  id: cuid(),
+  channelId: text("channelId").notNull().references(() => salesChannels.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // CATALOG_FULL | CATALOG_INCREMENTAL | ORDER_IMPORT | FULFILLMENT_PUSH | INVENTORY_UPDATE
+  status: text("status").notNull().default("PENDING"), // PENDING | RUNNING | SUCCESS | PARTIAL | FAILED
+  totalItems: integer("totalItems").notNull().default(0),
+  successCount: integer("successCount").notNull().default(0),
+  failureCount: integer("failureCount").notNull().default(0),
+  errors: text("errors"), // JSON array of { productId, error }
+  startedAt: timestamp("startedAt", { mode: "date" }),
+  completedAt: timestamp("completedAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [
+  index("ChannelSyncLog_channelId_idx").on(t.channelId),
+  index("ChannelSyncLog_type_idx").on(t.type),
+  index("ChannelSyncLog_createdAt_idx").on(t.createdAt),
+]);
+
+export const channelSyncLogsRelations = relations(channelSyncLogs, ({ one }) => ({
+  channel: one(salesChannels, { fields: [channelSyncLogs.channelId], references: [salesChannels.id] }),
+}));

@@ -14,6 +14,7 @@ import {
   categories,
   productAttributes,
 } from "@/lib/schema";
+import { syncProductToAllChannels } from "@/lib/catalog-sync";
 import {
   eq,
   and,
@@ -455,6 +456,11 @@ export async function POST(req: Request) {
 
       return newProduct;
     });
+
+    // Sync new product to connected channels (fire-and-forget)
+    if (product.status === "ACTIVE") {
+      syncProductToAllChannels(product.id).catch(() => {});
+    }
 
     return NextResponse.json(serializeDecimal(product), { status: 201 });
   } catch (error) {

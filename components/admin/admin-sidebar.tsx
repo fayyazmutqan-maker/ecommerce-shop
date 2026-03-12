@@ -35,6 +35,7 @@ import {
   Navigation,
   Wallet,
   Globe,
+  Share2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -185,6 +186,11 @@ const settingsNav = [
     title: "Store Credit",
     href: "/admin/store-credit",
     icon: Wallet,
+  },
+  {
+    title: "Sales Channels",
+    href: "/admin/channels",
+    icon: Share2,
   },
   {
     title: "Activity Log",

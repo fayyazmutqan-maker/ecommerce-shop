@@ -7,6 +7,7 @@ import { reportOrderToZatca } from "@/lib/zatca/service";
 import { checkoutLimiter, dailyOrderLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit, auditMeta } from "@/lib/audit";
 import { trackInvoiceEvent } from "@/lib/invoice-monitor";
+import { trackPurchase, extractTrackingContext } from "@/lib/conversions";
 import { toNumber, serializeDecimal } from "@/lib/decimal";
 import { eq, and, or, lte, gte, desc, count, sql, inArray } from "drizzle-orm";
 import {
@@ -665,6 +666,21 @@ export async function POST(req: Request) {
 
     // Track for anomaly detection (non-blocking)
     trackInvoiceEvent({ ip, type: "order", orderId: order.id });
+
+    // Track purchase event for Meta Conversions API (non-blocking)
+    trackPurchase(
+      {
+        orderId: order.id,
+        value: totalAmount,
+        currency: "SAR",
+        items: orderItems.map((item) => ({
+          id: item.sku || item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      },
+      { ...extractTrackingContext(req, session?.user?.id), email: data.email, phone: data.phone ?? undefined },
+    ).catch(() => {});
 
     return NextResponse.json(
       {

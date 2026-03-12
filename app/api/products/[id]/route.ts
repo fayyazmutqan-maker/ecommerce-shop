@@ -16,6 +16,7 @@ import {
   cartItems,
   wishlistItems,
 } from "@/lib/schema";
+import { syncProductToAllChannels, removeProductFromChannels } from "@/lib/catalog-sync";
 
 export async function GET(
   req: Request,
@@ -216,6 +217,9 @@ export async function PUT(
       },
     });
 
+    // Trigger incremental sync to connected channels (fire-and-forget)
+    syncProductToAllChannels(id).catch(() => {});
+
     return NextResponse.json(serializeDecimal(result));
   } catch (error) {
     console.error("Product PUT error:", error);
@@ -246,6 +250,8 @@ export async function DELETE(
 
     if (orderCount.value > 0) {
       await db.update(products).set({ status: "ARCHIVED" }).where(eq(products.id, id));
+      // Remove from channels since it's no longer active
+      removeProductFromChannels(id).catch(() => {});
       return NextResponse.json({ message: "Product archived (has existing orders)" });
     }
 
@@ -262,6 +268,9 @@ export async function DELETE(
       await tx.delete(reviews).where(eq(reviews.productId, id));
       await tx.delete(products).where(eq(products.id, id));
     });
+
+    // Remove from all channels (fire-and-forget)
+    removeProductFromChannels(id).catch(() => {});
 
     return NextResponse.json({ message: "Product deleted" });
   } catch (error) {

@@ -25,6 +25,7 @@ export const ALL_PERMISSIONS = [
   { key: "settings", label: "Settings", description: "Manage store settings and shipping zones" },
   { key: "analytics", label: "Analytics", description: "View dashboard and analytics" },
   { key: "import_export", label: "Import / Export", description: "Import and export data" },
+  { key: "channels", label: "Sales Channels", description: "Manage Facebook, Instagram, and other sales channels" },
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number]["key"];

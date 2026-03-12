@@ -9,9 +9,13 @@ import {
   orders,
   orderItems,
   orderTimeline,
+  channelOrders,
+  salesChannels,
 } from "@/lib/schema";
 import { serializeDecimal } from "@/lib/decimal";
 import { sendShippingUpdate } from "@/lib/email";
+import { fulfillOrder as metaFulfillOrder } from "@/lib/meta";
+import type { MetaCredentials } from "@/lib/meta";
 
 const createFulfillmentSchema = z.object({
   orderId: z.string().min(1),
@@ -195,9 +199,63 @@ export async function POST(req: Request) {
       }).catch((err) => console.error("Shipping email failed:", err));
     }
 
+    // Sync fulfillment to Meta if this order was imported from a channel
+    syncFulfillmentToMeta(data.orderId, data, order.items).catch((err) =>
+      console.error("[Meta Fulfillment] Sync error:", err)
+    );
+
     return NextResponse.json(serializeDecimal(result), { status: 201 });
   } catch (error) {
     console.error("Fulfillment POST error:", error);
     return NextResponse.json({ error: "Failed to create fulfillment" }, { status: 500 });
   }
+}
+
+// ─── Meta Fulfillment Sync ──────────────────────────────────
+
+async function syncFulfillmentToMeta(
+  orderId: string,
+  data: { trackingNumber?: string; carrier?: string; items: { orderItemId: string; quantity: number }[] },
+  orderItemsList: { id: string; sku: string | null; productId: string }[],
+) {
+  if (!data.trackingNumber) return;
+
+  // Check if this order has a Meta channel mapping
+  const channelOrder = await db.query.channelOrders.findFirst({
+    where: eq(channelOrders.orderId, orderId),
+  });
+  if (!channelOrder?.externalOrderId) return;
+
+  const channel = await db.query.salesChannels.findFirst({
+    where: eq(salesChannels.id, channelOrder.channelId),
+  });
+  if (!channel) return;
+
+  let credentials: MetaCredentials;
+  try {
+    credentials = JSON.parse(channel.credentials || "{}");
+  } catch { return; }
+  if (!credentials.accessToken) return;
+
+  // Map order items to Meta retailer IDs
+  const itemMap = new Map(orderItemsList.map((i) => [i.id, i]));
+  const metaItems = data.items
+    .map((item) => {
+      const oi = itemMap.get(item.orderItemId);
+      if (!oi) return null;
+      return { retailer_id: oi.sku || oi.productId, quantity: item.quantity };
+    })
+    .filter((i): i is { retailer_id: string; quantity: number } => i !== null);
+
+  if (metaItems.length === 0) return;
+
+  await metaFulfillOrder(
+    channelOrder.externalOrderId,
+    {
+      carrier: data.carrier || "Other",
+      tracking_number: data.trackingNumber,
+    },
+    metaItems,
+    credentials.accessToken,
+  );
 }

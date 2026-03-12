@@ -57,15 +57,27 @@ const envSchema = z.object({
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
 
+  // Meta (Facebook / Instagram) Commerce
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+  META_API_VERSION: z.string().default("v21.0"),
+
+  // Google Merchant Center
+  GOOGLE_MERCHANT_CENTER_ID: z.string().optional(),
+  GOOGLE_MERCHANT_SERVICE_ACCOUNT_KEY: z.string().optional(), // Base64-encoded service account JSON
+
   // Invoice monitor — anomaly detection thresholds
   MONITOR_SPIKE_THRESHOLD_IP: z.string().regex(/^\d+$/).optional(),
   MONITOR_SPIKE_THRESHOLD_GLOBAL: z.string().regex(/^\d+$/).optional(),
   MONITOR_RAPID_FIRE_MS: z.string().regex(/^\d+$/).optional(),
   MONITOR_RAPID_FIRE_COUNT: z.string().regex(/^\d+$/).optional(),
   MONITOR_ALERT_COOLDOWN_MS: z.string().regex(/^\d+$/).optional(),
-  MONITOR_ADMIN_EMAIL: z.string().email().optional(),
+  MONITOR_ADMIN_EMAIL: z.string().email().optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
-  if (data.NODE_ENV === "production") {
+  // next build sets NODE_ENV=production but these services aren't needed at build time
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+  if (data.NODE_ENV === "production" && !isBuildPhase) {
     if (!data.RESEND_API_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -103,7 +115,7 @@ function validateEnv(): Env {
 
     console.error("❌ Environment variable validation failed:\n" + errorMessages);
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
       throw new Error("Missing required environment variables");
     }
   }
