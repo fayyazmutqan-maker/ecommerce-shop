@@ -77,7 +77,9 @@ export default auth(async (req) => {
     !pathname.startsWith("/api/channels/google/callback") &&
     !pathname.startsWith("/api/channels/whatsapp/webhook") &&
     !pathname.startsWith("/api/channels/tiktok/webhook") &&
-    !pathname.startsWith("/api/channels/tiktok/callback")
+    !pathname.startsWith("/api/channels/tiktok/callback") &&
+    !pathname.startsWith("/api/channels/snapchat/webhook") &&
+    !pathname.startsWith("/api/channels/snapchat/callback")
   ) {
     const origin = req.headers.get("origin");
     if (origin && !isOriginAllowed(origin)) {

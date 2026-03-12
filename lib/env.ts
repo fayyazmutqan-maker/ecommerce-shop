@@ -77,6 +77,10 @@ const envSchema = z.object({
   TIKTOK_APP_KEY: z.string().optional(),
   TIKTOK_APP_SECRET: z.string().optional(),
 
+  // Snapchat
+  SNAPCHAT_CLIENT_ID: z.string().optional(),
+  SNAPCHAT_CLIENT_SECRET: z.string().optional(),
+
   // Invoice monitor — anomaly detection thresholds
   MONITOR_SPIKE_THRESHOLD_IP: z.string().regex(/^\d+$/).optional(),
   MONITOR_SPIKE_THRESHOLD_GLOBAL: z.string().regex(/^\d+$/).optional(),

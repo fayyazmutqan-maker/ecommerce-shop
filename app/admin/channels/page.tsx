@@ -54,6 +54,7 @@ import {
   Clock,
   ShoppingBag,
   Store,
+  Camera,
 } from "lucide-react";
 import { formatDate, formatDateTime, getStatusColor } from "@/lib/helpers";
 
@@ -118,12 +119,19 @@ interface TikTokDiscoveryData {
   warehouses: { id: string; name: string; type?: string }[];
 }
 
+interface SnapchatDiscoveryData {
+  organizations: { id: string; name: string; country?: string }[];
+  catalogs: { id: string; name: string }[];
+  adAccounts: { id: string; name: string; status: string; currency: string }[];
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 function getApiBase(platform: string): string {
   if (platform === "GOOGLE") return "/api/channels/google";
   if (platform === "WHATSAPP") return "/api/channels/whatsapp";
   if (platform === "TIKTOK") return "/api/channels/tiktok";
+  if (platform === "SNAPCHAT") return "/api/channels/snapchat";
   return "/api/channels/meta";
 }
 
@@ -143,6 +151,10 @@ function isTikTokChannel(platform: string): boolean {
   return platform === "TIKTOK";
 }
 
+function isSnapchatChannel(platform: string): boolean {
+  return platform === "SNAPCHAT";
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 export default function ChannelsPage() {
@@ -150,11 +162,13 @@ export default function ChannelsPage() {
   const [googleChannels, setGoogleChannels] = useState<Channel[]>([]);
   const [whatsAppChannels, setWhatsAppChannels] = useState<Channel[]>([]);
   const [tiktokChannels, setTiktokChannels] = useState<Channel[]>([]);
+  const [snapchatChannels, setSnapchatChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingMeta, setConnectingMeta] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
   const [connectingTikTok, setConnectingTikTok] = useState(false);
+  const [connectingSnapchat, setConnectingSnapchat] = useState(false);
   const [whatsAppConnectOpen, setWhatsAppConnectOpen] = useState(false);
 
   // Settings dialog
@@ -164,6 +178,7 @@ export default function ChannelsPage() {
   const [googleDiscovery, setGoogleDiscovery] = useState<GoogleDiscoveryData | null>(null);
   const [whatsAppDiscovery, setWhatsAppDiscovery] = useState<WhatsAppDiscoveryData | null>(null);
   const [tiktokDiscovery, setTiktokDiscovery] = useState<TikTokDiscoveryData | null>(null);
+  const [snapchatDiscovery, setSnapchatDiscovery] = useState<SnapchatDiscoveryData | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -195,18 +210,24 @@ export default function ChannelsPage() {
   const [selectedTikTokCategoryId, setSelectedTikTokCategoryId] = useState("");
   const [selectedTikTokWarehouseId, setSelectedTikTokWarehouseId] = useState("");
 
+  // Snapchat settings form
+  const [selectedSnapchatOrgId, setSelectedSnapchatOrgId] = useState("");
+  const [selectedSnapchatCatalogId, setSelectedSnapchatCatalogId] = useState("");
+
   const fetchChannels = useCallback(async () => {
     try {
-      const [metaRes, googleRes, waRes, tiktokRes] = await Promise.all([
+      const [metaRes, googleRes, waRes, tiktokRes, snapchatRes] = await Promise.all([
         fetch("/api/channels/meta"),
         fetch("/api/channels/google"),
         fetch("/api/channels/whatsapp"),
         fetch("/api/channels/tiktok"),
+        fetch("/api/channels/snapchat"),
       ]);
       if (metaRes.ok) setMetaChannels(await metaRes.json());
       if (googleRes.ok) setGoogleChannels(await googleRes.json());
       if (waRes.ok) setWhatsAppChannels(await waRes.json());
       if (tiktokRes.ok) setTiktokChannels(await tiktokRes.json());
+      if (snapchatRes.ok) setSnapchatChannels(await snapchatRes.json());
     } catch {
       toast.error("Failed to load channels");
     } finally {
@@ -311,6 +332,26 @@ export default function ChannelsPage() {
     }
   };
 
+  const handleConnectSnapchat = async () => {
+    setConnectingSnapchat(true);
+    try {
+      const res = await fetch("/api/channels/snapchat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "oauth" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to start connection");
+      }
+      const { oauthUrl } = await res.json();
+      window.location.href = oauthUrl;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Connection failed");
+      setConnectingSnapchat(false);
+    }
+  };
+
   const openSettings = async (channel: Channel) => {
     setSettingsOpen(true);
     setLoadingDetails(true);
@@ -318,6 +359,7 @@ export default function ChannelsPage() {
     setGoogleDiscovery(null);
     setWhatsAppDiscovery(null);
     setTiktokDiscovery(null);
+    setSnapchatDiscovery(null);
 
     const base = getApiBase(channel.platform);
 
@@ -357,6 +399,11 @@ export default function ChannelsPage() {
           setSelectedTikTokWarehouseId((details.parsedSettings.warehouseId as string) || "");
           setSyncOrders((details.parsedSettings.syncOrders as boolean) ?? true);
         }
+
+        if (isSnapchatChannel(channel.platform)) {
+          setSelectedSnapchatOrgId(details.externalAccountId || "");
+          setSelectedSnapchatCatalogId(details.externalCatalogId || "");
+        }
       }
 
       if (discoveryRes.ok) {
@@ -369,6 +416,8 @@ export default function ChannelsPage() {
           setWhatsAppDiscovery(discoveryData);
         } else if (isTikTokChannel(channel.platform)) {
           setTiktokDiscovery(discoveryData);
+        } else if (isSnapchatChannel(channel.platform)) {
+          setSnapchatDiscovery(discoveryData);
         }
       }
     } catch {
@@ -386,6 +435,7 @@ export default function ChannelsPage() {
     const isGoogle = isGoogleChannel(selectedChannel.platform);
     const isWhatsApp = isWhatsAppChannel(selectedChannel.platform);
     const isTikTok = isTikTokChannel(selectedChannel.platform);
+    const isSnapchat = isSnapchatChannel(selectedChannel.platform);
 
     try {
       const body = isGoogle
@@ -411,6 +461,13 @@ export default function ChannelsPage() {
               defaultCategoryId: selectedTikTokCategoryId || undefined,
               warehouseId: selectedTikTokWarehouseId || undefined,
             },
+          }
+        : isSnapchat
+        ? {
+            name: channelName,
+            organizationId: selectedSnapchatOrgId || undefined,
+            catalogId: selectedSnapchatCatalogId || undefined,
+            settings: { autoSync, syncInventory },
           }
         : {
             name: channelName,
@@ -508,6 +565,7 @@ export default function ChannelsPage() {
       case "GOOGLE": return <Store className="size-5" />;
       case "WHATSAPP": return <MessageSquare className="size-5" />;
       case "TIKTOK": return <Music className="size-5" />;
+      case "SNAPCHAT": return <Camera className="size-5" />;
       default: return <Facebook className="size-5" />;
     }
   };
@@ -518,12 +576,13 @@ export default function ChannelsPage() {
       case "GOOGLE": return "Google Merchant";
       case "WHATSAPP": return "WhatsApp Business";
       case "TIKTOK": return "TikTok Shop";
+      case "SNAPCHAT": return "Snapchat";
       case "FACEBOOK": return "Facebook";
       default: return platform;
     }
   };
 
-  const allChannels = [...metaChannels, ...googleChannels, ...whatsAppChannels, ...tiktokChannels];
+  const allChannels = [...metaChannels, ...googleChannels, ...whatsAppChannels, ...tiktokChannels, ...snapchatChannels];
 
   // ─── Render ──────────────────────────────────────────────
 
@@ -548,7 +607,7 @@ export default function ChannelsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Sales Channels</h1>
           <p className="text-muted-foreground">
-            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, TikTok Shop, and more
+            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, TikTok Shop, Snapchat, and more
           </p>
         </div>
         <div className="flex gap-2">
@@ -580,6 +639,14 @@ export default function ChannelsPage() {
             )}
             Connect TikTok
           </Button>
+          <Button onClick={handleConnectSnapchat} disabled={connectingSnapchat} variant="outline">
+            {connectingSnapchat ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Camera className="mr-2 size-4" />
+            )}
+            Connect Snapchat
+          </Button>
         </div>
       </div>
 
@@ -591,7 +658,7 @@ export default function ChannelsPage() {
             <h3 className="text-lg font-semibold mb-2">No channels connected</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
               Connect your store to Facebook, Instagram, Google Merchant Center, WhatsApp Business,
-              or TikTok Shop to sync products and reach more customers.
+              TikTok Shop, or Snapchat to sync products and reach more customers.
             </p>
             <div className="flex gap-3 flex-wrap justify-center">
               <Button onClick={handleConnectMeta} disabled={connectingMeta} variant="outline">
@@ -621,6 +688,14 @@ export default function ChannelsPage() {
                   <Music className="mr-2 size-4" />
                 )}
                 Connect TikTok Shop
+              </Button>
+              <Button onClick={handleConnectSnapchat} disabled={connectingSnapchat} variant="outline">
+                {connectingSnapchat ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Camera className="mr-2 size-4" />
+                )}
+                Connect Snapchat
               </Button>
             </div>
           </CardContent>
@@ -703,6 +778,8 @@ export default function ChannelsPage() {
                 ? "Configure catalog sync and messaging for your WhatsApp Business connection"
                 : selectedChannel && isTikTokChannel(selectedChannel.platform)
                 ? "Configure shop, categories, and sync settings for your TikTok Shop connection"
+                : selectedChannel && isSnapchatChannel(selectedChannel.platform)
+                ? "Configure organization, catalog, and sync settings for your Snapchat connection"
                 : "Configure sync settings and manage your Meta Commerce connection"}
             </DialogDescription>
           </DialogHeader>
@@ -723,7 +800,7 @@ export default function ChannelsPage() {
                   id="channelName"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
-                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : isTikTokChannel(selectedChannel.platform) ? "My TikTok Shop" : "My Facebook Shop"}
+                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : isTikTokChannel(selectedChannel.platform) ? "My TikTok Shop" : isSnapchatChannel(selectedChannel.platform) ? "My Snapchat Catalog" : "My Facebook Shop"}
                 />
               </div>
 
@@ -1024,6 +1101,73 @@ export default function ChannelsPage() {
                 </>
               )}
 
+              {/* ─── Snapchat-specific Settings ─── */}
+              {selectedChannel && isSnapchatChannel(selectedChannel.platform) && (
+                <>
+                  {/* Organization Selection */}
+                  {snapchatDiscovery?.organizations && snapchatDiscovery.organizations.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Organization</Label>
+                      <Select value={selectedSnapchatOrgId} onValueChange={setSelectedSnapchatOrgId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an organization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {snapchatDiscovery.organizations.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.name} {org.country ? `(${org.country})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select the Snapchat organization to sync products with
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Catalog Selection */}
+                  {snapchatDiscovery?.catalogs && snapchatDiscovery.catalogs.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Product Catalog</Label>
+                      <Select value={selectedSnapchatCatalogId} onValueChange={setSelectedSnapchatCatalogId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a catalog" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {snapchatDiscovery.catalogs.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select the catalog for product sync
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Ad Accounts Info */}
+                  {snapchatDiscovery?.adAccounts && snapchatDiscovery.adAccounts.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold">Ad Accounts</Label>
+                      <div className="space-y-2">
+                        {snapchatDiscovery.adAccounts.map((acc) => (
+                          <div key={acc.id} className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <p className="font-medium">{acc.name}</p>
+                              <p className="text-sm text-muted-foreground">{acc.currency}</p>
+                            </div>
+                            <Badge variant="outline">{acc.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Sync Settings (common) */}
               <div className="space-y-4">
                 <Label className="text-base font-semibold">Sync Settings</Label>
@@ -1032,7 +1176,7 @@ export default function ChannelsPage() {
                     <div>
                       <Label htmlFor="autoSync">Auto Sync Products</Label>
                       <p className="text-xs text-muted-foreground">
-                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : isTikTokChannel(selectedChannel.platform) ? "TikTok Shop" : "Meta catalog"}
+                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : isTikTokChannel(selectedChannel.platform) ? "TikTok Shop" : isSnapchatChannel(selectedChannel.platform) ? "Snapchat catalog" : "Meta catalog"}
                       </p>
                     </div>
                     <Switch id="autoSync" checked={autoSync} onCheckedChange={setAutoSync} />
