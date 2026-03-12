@@ -16,7 +16,9 @@ import {
 } from "@/lib/schema";
 import { createTapRefund } from "@/lib/tap";
 import { serializeDecimal } from "@/lib/decimal";
-import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { refundLimiter, dailyRefundLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { reportCreditNoteToZatca } from "@/lib/zatca/service";
+import { trackInvoiceEvent } from "@/lib/invoice-monitor";
 
 const createRefundSchema = z.object({
   orderId: z.string().min(1),
@@ -78,15 +80,19 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   try {
-    // Rate limit refund creation
+    // Rate limit refund creation (per-minute + daily cap)
     const ip = getClientIp(req);
-    const rlResponse = await rateLimitResponse(checkoutLimiter, ip);
+    const rlResponse = await rateLimitResponse(refundLimiter, ip);
     if (rlResponse) return rlResponse;
 
     const session = await auth();
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Daily refund cap per admin user (prevents mass credit-note generation)
+    const dailyRl = await rateLimitResponse(dailyRefundLimiter, session.user.id);
+    if (dailyRl) return dailyRl;
 
     const body = await req.json();
     const parsed = createRefundSchema.safeParse(body);
@@ -296,6 +302,14 @@ export async function POST(req: Request) {
 
       return refund;
     });
+
+    // Report credit note to ZATCA (non-blocking)
+    reportCreditNoteToZatca(result.id).catch((err) =>
+      console.error("ZATCA credit note reporting failed:", err)
+    );
+
+    // Track for anomaly detection (non-blocking)
+    trackInvoiceEvent({ ip, type: "refund", userId: session.user.id, refundId: result.id });
 
     return NextResponse.json(serializeDecimal(result), { status: 201 });
   } catch (error) {

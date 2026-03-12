@@ -511,3 +511,47 @@ export async function sendContactFormNotification(data: {
     tags: [{ name: "type", value: "contact-form" }],
   });
 }
+
+// ============================================================
+// SECURITY ALERT — Suspicious invoice generation
+// ============================================================
+
+export async function sendSecurityAlert(data: {
+  adminEmail: string;
+  severity: "HIGH" | "CRITICAL";
+  title: string;
+  message: string;
+  ip: string;
+  eventType: string;
+  resourceId?: string;
+}) {
+  const severityColor = data.severity === "CRITICAL" ? "#dc2626" : "#f59e0b";
+  const severityBg = data.severity === "CRITICAL" ? "#fef2f2" : "#fffbeb";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const html = baseLayout(`
+    <div style="background:${severityBg};border-left:4px solid ${severityColor};padding:16px;border-radius:6px;margin-bottom:20px">
+      <h2 style="margin:0;color:${severityColor}">🚨 Security Alert — ${escapeHtml(data.severity)}</h2>
+    </div>
+    <h3 style="margin-top:0">${escapeHtml(data.title)}</h3>
+    <p>${escapeHtml(data.message)}</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666;width:120px">Severity</td><td style="padding:8px 12px;color:${severityColor};font-weight:600">${escapeHtml(data.severity)}</td></tr>
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666">Source IP</td><td style="padding:8px 12px"><code>${escapeHtml(data.ip)}</code></td></tr>
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666">Event Type</td><td style="padding:8px 12px">${escapeHtml(data.eventType)}</td></tr>
+      ${data.resourceId ? `<tr><td style="padding:8px 12px;font-weight:600;color:#666">Resource ID</td><td style="padding:8px 12px"><code>${escapeHtml(data.resourceId)}</code></td></tr>` : ""}
+      <tr><td style="padding:8px 12px;font-weight:600;color:#666">Time</td><td style="padding:8px 12px">${new Date().toISOString()}</td></tr>
+    </table>
+    <p style="text-align:center;margin-top:24px">
+      <a href="${appUrl}/admin/activity-log" class="btn">View Activity Log</a>
+    </p>
+    <p style="font-size:13px;color:#666;margin-top:16px">This alert was triggered by the invoice generation monitoring system. If this is expected activity, no action is needed. Alerts are rate-limited to prevent flooding.</p>
+  `);
+
+  return sendEmail({
+    to: data.adminEmail,
+    subject: `🚨 [${data.severity}] ${data.title}`,
+    html,
+    tags: [{ name: "type", value: "security-alert" }],
+  });
+}

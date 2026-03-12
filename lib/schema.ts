@@ -366,6 +366,11 @@ export const orders = pgTable("Order", {
   storeCreditAmount: decimal("storeCreditAmount", { precision: 12, scale: 2 }),
   shippingAddressId: text("shippingAddressId").unique(),
   billingAddressId: text("billingAddressId").unique(),
+  // ZATCA e-invoicing
+  zatcaStatus: text("zatcaStatus").notNull().default("PENDING"), // PENDING | REPORTED | CLEARED | FAILED | NOT_APPLICABLE
+  zatcaReportedAt: timestamp("zatcaReportedAt", { mode: "date" }),
+  zatcaInvoiceHash: text("zatcaInvoiceHash"),
+  zatcaRequestId: text("zatcaRequestId"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
@@ -525,6 +530,11 @@ export const refunds = pgTable("Refund", {
   type: text("type").notNull().default("PARTIAL"), // FULL | PARTIAL
   restockItems: boolean("restockItems").notNull().default(false),
   processedBy: text("processedBy"),
+  // ZATCA credit note tracking
+  zatcaStatus: text("zatcaStatus").notNull().default("PENDING"), // PENDING | REPORTED | FAILED | NOT_APPLICABLE
+  zatcaReportedAt: timestamp("zatcaReportedAt", { mode: "date" }),
+  zatcaInvoiceHash: text("zatcaInvoiceHash"),
+  zatcaCreditNoteNumber: text("zatcaCreditNoteNumber"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -730,6 +740,18 @@ export const storeSettings = pgTable("StoreSettings", {
   tapPublicKey: text("tapPublicKey"),
   tapSecretKey: text("tapSecretKey"),
   codEnabled: boolean("codEnabled").notNull().default(true),
+  // ZATCA e-invoicing
+  zatcaEnabled: boolean("zatcaEnabled").notNull().default(true),
+  vatNumber: text("vatNumber"),
+  commercialRegNo: text("commercialRegNo"),
+  // ZATCA API integration (Phase 2)
+  zatcaEnvironment: text("zatcaEnvironment").notNull().default("sandbox"), // sandbox | simulation | production
+  zatcaCsid: text("zatcaCsid"), // Base64-encoded compliance/production certificate
+  zatcaSecret: text("zatcaSecret"), // Secret key returned with CSID
+  zatcaPcsid: text("zatcaPcsid"), // Production CSID (Base64)
+  zatcaPcsidSecret: text("zatcaPcsidSecret"), // Production secret
+  zatcaInvoiceCounter: integer("zatcaInvoiceCounter").notNull().default(0),
+  zatcaPreviousHash: text("zatcaPreviousHash").notNull().default("NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ=="), // Base64 of SHA-256 hash of "0"
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

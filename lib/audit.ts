@@ -34,7 +34,8 @@ export type AuditAction =
   | "CUSTOMER_UPDATE"
   | "IMPORT_EXPORT"
   | "POS_SESSION_OPENED"
-  | "POS_SESSION_CLOSED";
+  | "POS_SESSION_CLOSED"
+  | "ZATCA_ONBOARD";
 
 export interface AuditEntry {
   action: AuditAction;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,15 @@ import {
 } from "@/components/ui/card";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,22 +55,30 @@ export default function RegisterPage() {
     }
 
     try {
+      if (turnstileSiteKey && !turnstileToken) {
+        toast.error("Please complete the CAPTCHA");
+        setIsLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, turnstileToken }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         toast.error(data.error || "Registration failed");
+        turnstileRef.current?.reset();
       } else {
-        toast.success("Account created! Please sign in.");
+        toast.success("Account created! Check your email to verify your account.");
         router.push("/login");
       }
     } catch {
       toast.error("Something went wrong");
+      turnstileRef.current?.reset();
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +150,22 @@ export default function RegisterPage() {
                 className="h-11"
               />
             </div>
+            {/* Honeypot — hidden from real users, bots auto-fill it */}
+            <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
+              <Label htmlFor="website">Website</Label>
+              <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+            </div>
+
+            {turnstileSiteKey && (
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                onSuccess={setTurnstileToken}
+                onError={() => setTurnstileToken("")}
+                onExpire={() => setTurnstileToken("")}
+              />
+            )}
+
             <Button type="submit" className="w-full h-12 text-[15px] font-semibold" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account

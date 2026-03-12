@@ -107,6 +107,7 @@ interface StoreConfig {
   storePhone: string;
   currency: string;
   vatNumber: string;
+  zatcaEnabled: boolean;
   taxRate: number;
   taxIncluded: boolean;
 }
@@ -173,6 +174,7 @@ export default function PosPage() {
     storePhone: "",
     currency: "SAR",
     vatNumber: "",
+    zatcaEnabled: true,
     taxRate: 0.15,
     taxIncluded: false,
   });
@@ -437,6 +439,7 @@ export default function PosPage() {
           storePhone: s.storePhone || "",
           currency: s.currency || "SAR",
           vatNumber: s.vatNumber || "",
+          zatcaEnabled: s.zatcaEnabled ?? true,
           taxRate: Number(s.taxRate) || 0.15,
           taxIncluded: s.taxIncluded || false,
         });
@@ -821,7 +824,7 @@ export default function PosPage() {
     };
 
     // Generate ZATCA QR code for Saudi e-invoicing compliance
-    const zatcaQr = storeConfig.vatNumber
+    const zatcaQr = storeConfig.zatcaEnabled && storeConfig.vatNumber
       ? generateZatcaQR({
           sellerName: storeConfig.storeName,
           vatNumber: storeConfig.vatNumber,

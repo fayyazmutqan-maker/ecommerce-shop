@@ -31,10 +31,13 @@ const settingsSchema = z.object({
   tapPublicKey: z.string().max(200).optional().nullable(),
   tapSecretKey: z.string().max(200).optional().nullable(),
   codEnabled: z.boolean().optional(),
+  // ZATCA
+  zatcaEnabled: z.boolean().optional(),
+  zatcaEnvironment: z.enum(["sandbox", "simulation", "production"]).optional(),
 }).strip();
 
 /** Fields that must NEVER be returned to non-admin callers */
-const SENSITIVE_FIELDS = ["tapSecretKey"] as const;
+const SENSITIVE_FIELDS = ["tapSecretKey", "zatcaCsid", "zatcaSecret", "zatcaPcsid", "zatcaPcsidSecret"] as const;
 
 export async function GET() {
   try {
@@ -63,6 +66,11 @@ export async function GET() {
       const key = adminSafe.tapSecretKey as string;
       adminSafe.tapSecretKey = key.length > 4 ? `sk_****${key.slice(-4)}` : "sk_****";
     }
+    // For ZATCA certs, expose only whether they exist (not the actual values)
+    adminSafe.zatcaCsid = !!adminSafe.zatcaCsid;
+    adminSafe.zatcaSecret = !!adminSafe.zatcaSecret;
+    adminSafe.zatcaPcsid = !!adminSafe.zatcaPcsid;
+    adminSafe.zatcaPcsidSecret = !!adminSafe.zatcaPcsidSecret;
     return NextResponse.json(serializeDecimal(adminSafe));
   } catch (error) {
     console.error("Settings GET error:", error);

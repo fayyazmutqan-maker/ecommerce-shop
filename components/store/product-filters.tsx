@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -183,20 +184,20 @@ function FilterContent({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
           Categories
         </p>
-        <a
+        <Link
           href="/products"
           className={`flex items-center text-sm py-2 px-3 rounded-lg transition-colors ${!currentCategory ? "bg-accent font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}
         >
           All Products
-        </a>
+        </Link>
         {categories.map((cat) => (
-          <a
+          <Link
             key={cat.id}
             href={`/collections/${cat.slug}`}
             className={`flex items-center text-sm py-2 px-3 rounded-lg transition-colors ${currentCategory === cat.slug ? "bg-accent font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}
           >
             {cat.name}
-          </a>
+          </Link>
         ))}
       </div>
 

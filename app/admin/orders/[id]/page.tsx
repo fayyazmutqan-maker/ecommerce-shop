@@ -17,6 +17,7 @@ import {
   Copy,
   ExternalLink,
   RotateCcw,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,9 @@ interface Order {
   cancelReason: string | null;
   createdAt: string;
   updatedAt: string;
+  zatcaStatus: string;
+  zatcaReportedAt: string | null;
+  zatcaInvoiceHash: string | null;
   user: { id: string; name: string | null; email: string } | null;
   items: OrderItem[];
   shippingAddress: OrderAddress | null;
@@ -132,6 +136,8 @@ interface Refund {
   status: string;
   type: string;
   restockItems: boolean;
+  zatcaStatus: string;
+  zatcaCreditNoteNumber: string | null;
   createdAt: string;
   items: { id: string; orderItemId: string; quantity: number; amount: number }[];
 }
@@ -183,6 +189,9 @@ export default function OrderDetailPage() {
   const [fulfillNotes, setFulfillNotes] = useState("");
   const [fulfillItems, setFulfillItems] = useState<Record<string, { selected: boolean; quantity: number; max: number }>>({});
   const [orderFulfillments, setOrderFulfillments] = useState<Fulfillment[]>([]);
+
+  // ZATCA state
+  const [zatcaRetrying, setZatcaRetrying] = useState(false);
 
   useEffect(() => {
     fetchOrder();
@@ -392,6 +401,30 @@ export default function OrderDetailPage() {
     }
   }
 
+  async function handleZatcaRetry() {
+    if (!order) return;
+    setZatcaRetrying(true);
+    try {
+      const res = await fetch("/api/zatca/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ZATCA retry failed");
+      if (data.success) {
+        toast.success("Invoice reported to ZATCA successfully");
+      } else {
+        toast.error(data.errors?.[0] || "ZATCA reporting failed");
+      }
+      await fetchOrder();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "ZATCA retry failed");
+    } finally {
+      setZatcaRetrying(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -435,6 +468,15 @@ export default function OrderDetailPage() {
               {order.source === "POS" && (
                 <Badge variant="outline">POS</Badge>
               )}
+              {order.zatcaStatus && order.zatcaStatus !== "NOT_APPLICABLE" && (
+                <Badge variant={
+                  order.zatcaStatus === "REPORTED" || order.zatcaStatus === "CLEARED" ? "default"
+                  : order.zatcaStatus === "FAILED" ? "destructive"
+                  : "secondary"
+                }>
+                  ZATCA: {order.zatcaStatus}
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {formatDateTime(order.createdAt)}
@@ -442,6 +484,27 @@ export default function OrderDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.open(`/api/orders/${orderId}/invoice`, "_blank")}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Invoice
+          </Button>
+          {(order.zatcaStatus === "FAILED" || order.zatcaStatus === "PENDING") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleZatcaRetry}
+              disabled={zatcaRetrying}
+            >
+              {zatcaRetrying ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying...</>
+              ) : (
+                <><RotateCcw className="mr-2 h-4 w-4" /> Retry ZATCA</>
+              )}
+            </Button>
+          )}
           {hasUnfulfilled && (
             <Dialog open={fulfillOpen} onOpenChange={setFulfillOpen}>
               <DialogTrigger asChild>
@@ -987,6 +1050,7 @@ export default function OrderDetailPage() {
                     <TableRow>
                       <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>ZATCA</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Reason</TableHead>
                       <TableHead>Date</TableHead>
@@ -1002,6 +1066,45 @@ export default function OrderDetailPage() {
                           <Badge variant={getStatusColor(refund.status)}>
                             {refund.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {refund.zatcaStatus && refund.zatcaStatus !== "NOT_APPLICABLE" ? (
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant={
+                                refund.zatcaStatus === "REPORTED" ? "default"
+                                : refund.zatcaStatus === "FAILED" ? "destructive"
+                                : "secondary"
+                              }>
+                                {refund.zatcaStatus}
+                              </Badge>
+                              {refund.zatcaStatus === "FAILED" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch("/api/zatca/retry", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ refundId: refund.id }),
+                                      });
+                                      const data = await res.json();
+                                      if (data.success) toast.success("Credit note reported to ZATCA");
+                                      else toast.error(data.errors?.[0] || "ZATCA retry failed");
+                                      await fetchOrder();
+                                    } catch {
+                                      toast.error("ZATCA retry failed");
+                                    }
+                                  }}
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(refund.amount)}

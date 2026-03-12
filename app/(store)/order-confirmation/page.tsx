@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle, XCircle, AlertTriangle, ShieldAlert } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, ShieldAlert, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/schema";
@@ -119,6 +119,12 @@ export default async function OrderConfirmationPage({ searchParams }: Props) {
       <div className="flex items-center justify-center gap-4">
         <Button className="h-12 px-8" asChild>
           <Link href="/products">Continue Shopping</Link>
+        </Button>
+        <Button variant="outline" className="h-12 px-8" asChild>
+          <Link href={`/api/orders/${order.id}/invoice`} target="_blank">
+            <FileText className="mr-2 h-4 w-4" />
+            Download Invoice
+          </Link>
         </Button>
       </div>
     </div>

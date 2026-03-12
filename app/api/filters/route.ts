@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { products, productAttributes, productAttributeValues, productCategories, categories } from "@/lib/schema";
-import { eq, and, sql, asc, inArray } from "drizzle-orm";
+import { eq, and, sql, asc, inArray, isNull } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
+import { applyTranslationsBatch } from "@/lib/translations";
 
 // GET filterable attributes with counts for active products
 export async function GET(req: Request) {
@@ -83,12 +85,21 @@ export async function GET(req: Request) {
       .from(products)
       .where(and(...priceConditions));
 
+    // Fetch root categories for sidebar
+    const allCategories = await db.query.categories.findMany({
+      where: and(eq(categories.isActive, true), isNull(categories.parentId)),
+      orderBy: [asc(categories.sortOrder)],
+    });
+    const locale = await getLocale();
+    const tCategories = await applyTranslationsBatch("category", allCategories as Record<string, unknown>[], locale) as typeof allCategories;
+
     return NextResponse.json({
       facets,
       priceRange: {
         min: priceAgg?.minPrice ? parseFloat(priceAgg.minPrice) : 0,
         max: priceAgg?.maxPrice ? parseFloat(priceAgg.maxPrice) : 1000,
       },
+      categories: tCategories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
     });
   } catch (error) {
     console.error("Filters GET error:", error);

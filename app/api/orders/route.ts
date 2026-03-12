@@ -3,8 +3,10 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { sendOrderConfirmation } from "@/lib/email";
-import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { reportOrderToZatca } from "@/lib/zatca/service";
+import { checkoutLimiter, dailyOrderLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit, auditMeta } from "@/lib/audit";
+import { trackInvoiceEvent } from "@/lib/invoice-monitor";
 import { toNumber, serializeDecimal } from "@/lib/decimal";
 import { eq, and, or, lte, gte, desc, count, sql, inArray } from "drizzle-orm";
 import {
@@ -79,6 +81,13 @@ export async function POST(req: Request) {
   if (rlResponse) {
     audit({ action: "RATE_LIMIT_HIT", ip, resource: "orders", success: false });
     return rlResponse;
+  }
+
+  // ── Daily transaction cap (prevents mass invoice generation) ──
+  const dailyRl = await rateLimitResponse(dailyOrderLimiter, ip);
+  if (dailyRl) {
+    audit({ action: "RATE_LIMIT_HIT", ip, resource: "orders-daily", success: false });
+    return dailyRl;
   }
 
   try {
@@ -648,6 +657,14 @@ export async function POST(req: Request) {
       },
       paymentMethod: data.paymentMethod,
     }).catch((err) => console.error("Failed to send order confirmation email:", err));
+
+    // Report invoice to ZATCA (non-blocking)
+    reportOrderToZatca(order.id).catch((err) =>
+      console.error("ZATCA reporting failed:", err)
+    );
+
+    // Track for anomaly detection (non-blocking)
+    trackInvoiceEvent({ ip, type: "order", orderId: order.id });
 
     return NextResponse.json(
       {

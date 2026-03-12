@@ -1,0 +1,1 @@
+ALTER TABLE "StoreSettings" ALTER COLUMN "zatcaEnabled" SET DEFAULT true;

@@ -37,6 +37,33 @@ const envSchema = z.object({
   // Upstash Redis (rate limiting) — required for production
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+  // Rate limits — format: "maxRequests/windowSeconds" e.g. "10/60"
+  RATE_LIMIT_AUTH: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_CHECKOUT: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_FORM: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_SEARCH: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_COUPON: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_PAYMENT: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_PASSWORD_RESET: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_WEBHOOK: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_REFUND: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_ZATCA_RETRY: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_ZATCA_ONBOARD: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_DAILY_ORDER: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+  RATE_LIMIT_DAILY_REFUND: z.string().regex(/^\d+(\/\d+)?$/).optional(),
+
+  // Cloudflare Turnstile (bot protection)
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+
+  // Invoice monitor — anomaly detection thresholds
+  MONITOR_SPIKE_THRESHOLD_IP: z.string().regex(/^\d+$/).optional(),
+  MONITOR_SPIKE_THRESHOLD_GLOBAL: z.string().regex(/^\d+$/).optional(),
+  MONITOR_RAPID_FIRE_MS: z.string().regex(/^\d+$/).optional(),
+  MONITOR_RAPID_FIRE_COUNT: z.string().regex(/^\d+$/).optional(),
+  MONITOR_ALERT_COOLDOWN_MS: z.string().regex(/^\d+$/).optional(),
+  MONITOR_ADMIN_EMAIL: z.string().email().optional(),
 }).superRefine((data, ctx) => {
   if (data.NODE_ENV === "production") {
     if (!data.RESEND_API_KEY) {

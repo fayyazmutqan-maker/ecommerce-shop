@@ -61,7 +61,11 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error("Invalid email or password");
+        if (result.error.includes("verify your email")) {
+          toast.error(result.error);
+        } else {
+          toast.error("Invalid email or password");
+        }
       } else {
         toast.success("Logged in successfully");
         // Fetch session to check role and redirect admins/staff to /admin

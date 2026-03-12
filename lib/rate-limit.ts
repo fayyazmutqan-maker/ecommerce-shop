@@ -103,62 +103,109 @@ function createRateLimiter(opts: {
   };
 }
 
-// ── Pre-configured limiters ────────────────────────────────────────
+// ── Env-configurable helper ────────────────────────────────────────
 
-/** Auth endpoints: 7 attempts per 60 s */
+/**
+ * Read a rate-limit value from an environment variable.
+ * Format: "maxRequests/windowSeconds" e.g. "10/60" or just "maxRequests" (uses default window).
+ * Falls back to the provided defaults if the env var is missing or invalid.
+ */
+function envLimit(
+  envKey: string,
+  defaults: { maxRequests: number; windowSeconds: number },
+): { maxRequests: number; windowSeconds: number } {
+  const raw = process.env[envKey];
+  if (!raw) return defaults;
+  const parts = raw.split("/").map(Number);
+  if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
+    return { maxRequests: parts[0], windowSeconds: parts[1] };
+  }
+  if (parts.length === 1 && parts[0] > 0) {
+    return { maxRequests: parts[0], windowSeconds: defaults.windowSeconds };
+  }
+  return defaults;
+}
+
+// ── Pre-configured limiters ────────────────────────────────────────
+// All limits are overridable via env vars using the format "maxRequests/windowSeconds"
+// e.g. RATE_LIMIT_AUTH=5/60 means 5 requests per 60 seconds
+
+/** Auth endpoints — default: 7 per 60 s */
 export const authLimiter = createRateLimiter({
-  maxRequests: 7,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_AUTH", { maxRequests: 7, windowSeconds: 60 }),
   prefix: "auth",
 });
 
-/** Checkout / order creation: 10 per 60 s */
+/** Checkout / order creation — default: 10 per 60 s */
 export const checkoutLimiter = createRateLimiter({
-  maxRequests: 10,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_CHECKOUT", { maxRequests: 10, windowSeconds: 60 }),
   prefix: "checkout",
 });
 
-/** Newsletter / public form submissions: 5 per 60 s */
+/** Newsletter / public form submissions — default: 5 per 60 s */
 export const formLimiter = createRateLimiter({
-  maxRequests: 5,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_FORM", { maxRequests: 5, windowSeconds: 60 }),
   prefix: "form",
 });
 
-/** Search / read-heavy public endpoints: 30 per 60 s */
+/** Search / read-heavy public endpoints — default: 30 per 60 s */
 export const searchLimiter = createRateLimiter({
-  maxRequests: 30,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_SEARCH", { maxRequests: 30, windowSeconds: 60 }),
   prefix: "search",
 });
 
-/** Coupon validation: 10 per 60 s */
+/** Coupon validation — default: 10 per 60 s */
 export const couponLimiter = createRateLimiter({
-  maxRequests: 10,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_COUPON", { maxRequests: 10, windowSeconds: 60 }),
   prefix: "coupon",
 });
 
-/** Payment charge creation: 5 per 60 s per IP (prevents rapid charge spam) */
+/** Payment charge creation — default: 5 per 60 s per IP */
 export const paymentLimiter = createRateLimiter({
-  maxRequests: 5,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_PAYMENT", { maxRequests: 5, windowSeconds: 60 }),
   prefix: "payment",
 });
 
-/** Password reset: 3 per 300 s per IP (prevents email flooding) */
+/** Password reset — default: 3 per 300 s per IP */
 export const passwordResetLimiter = createRateLimiter({
-  maxRequests: 3,
-  windowSeconds: 300,
+  ...envLimit("RATE_LIMIT_PASSWORD_RESET", { maxRequests: 3, windowSeconds: 300 }),
   prefix: "pwreset",
 });
 
-/** Webhook: 60 per 60 s (server-to-server from Tap, generous) */
+/** Webhook — default: 60 per 60 s (server-to-server, generous) */
 export const webhookLimiter = createRateLimiter({
-  maxRequests: 60,
-  windowSeconds: 60,
+  ...envLimit("RATE_LIMIT_WEBHOOK", { maxRequests: 60, windowSeconds: 60 }),
   prefix: "webhook",
+});
+
+/** Refund creation — default: 5 per 60 s per IP */
+export const refundLimiter = createRateLimiter({
+  ...envLimit("RATE_LIMIT_REFUND", { maxRequests: 5, windowSeconds: 60 }),
+  prefix: "refund",
+});
+
+/** ZATCA retry — default: 3 per 60 s per IP */
+export const zatcaRetryLimiter = createRateLimiter({
+  ...envLimit("RATE_LIMIT_ZATCA_RETRY", { maxRequests: 3, windowSeconds: 60 }),
+  prefix: "zatca-retry",
+});
+
+/** ZATCA onboarding — default: 3 per 300 s per IP */
+export const zatcaOnboardLimiter = createRateLimiter({
+  ...envLimit("RATE_LIMIT_ZATCA_ONBOARD", { maxRequests: 3, windowSeconds: 300 }),
+  prefix: "zatca-onboard",
+});
+
+/** Daily order cap per IP — default: 100 per 24h */
+export const dailyOrderLimiter = createRateLimiter({
+  ...envLimit("RATE_LIMIT_DAILY_ORDER", { maxRequests: 100, windowSeconds: 86400 }),
+  prefix: "daily-order",
+});
+
+/** Daily refund cap per admin user — default: 30 per 24h */
+export const dailyRefundLimiter = createRateLimiter({
+  ...envLimit("RATE_LIMIT_DAILY_REFUND", { maxRequests: 30, windowSeconds: 86400 }),
+  prefix: "daily-refund",
 });
 
 /**
