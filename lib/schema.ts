@@ -1220,7 +1220,7 @@ export const contentTranslations = pgTable("ContentTranslation", {
 export const salesChannels = pgTable("SalesChannel", {
   id: cuid(),
   name: text("name").notNull(),
-  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | GOOGLE | TIKTOK
+  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | GOOGLE | WHATSAPP | TIKTOK
   status: text("status").notNull().default("DISCONNECTED"), // ACTIVE | PAUSED | DISCONNECTED | ERROR
   // OAuth / API credentials (encrypted JSON: { accessToken, pageAccessToken, refreshToken, expiresAt })
   credentials: text("credentials"),
@@ -1277,7 +1277,7 @@ export const channelOrders = pgTable("ChannelOrder", {
   orderId: text("orderId").references(() => orders.id, { onDelete: "set null" }),
   externalOrderId: text("externalOrderId").notNull(), // Platform order ID
   externalCustomerId: text("externalCustomerId"),
-  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM
+  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | WHATSAPP
   status: text("status").notNull().default("PENDING"), // PENDING | IMPORTED | FULFILLED | ERROR
   rawPayload: text("rawPayload"), // Raw JSON from platform
   lastError: text("lastError"),

@@ -67,6 +67,12 @@ const envSchema = z.object({
   GOOGLE_MERCHANT_CENTER_ID: z.string().optional(),
   GOOGLE_MERCHANT_SERVICE_ACCOUNT_KEY: z.string().optional(), // Base64-encoded service account JSON
 
+  // WhatsApp Business API
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(), // Permanent token from Meta Business Suite
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+
   // Invoice monitor — anomaly detection thresholds
   MONITOR_SPIKE_THRESHOLD_IP: z.string().regex(/^\d+$/).optional(),
   MONITOR_SPIKE_THRESHOLD_GLOBAL: z.string().regex(/^\d+$/).optional(),

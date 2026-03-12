@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import {
   Facebook,
   Instagram,
+  MessageSquare,
   Plus,
   Trash2,
   RefreshCw,
@@ -104,10 +105,17 @@ interface GoogleDiscoveryData {
   productStatusSummary?: { approved: number; disapproved: number; pending: number };
 }
 
+interface WhatsAppDiscoveryData {
+  catalogs: { id: string; name: string; product_count?: number }[];
+  phoneNumbers: { id: string; display_phone_number: string; verified_name: string; quality_rating?: string }[];
+  profile: { about?: string; address?: string; description?: string; vertical?: string; websites?: string[] } | null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 function getApiBase(platform: string): string {
   if (platform === "GOOGLE") return "/api/channels/google";
+  if (platform === "WHATSAPP") return "/api/channels/whatsapp";
   return "/api/channels/meta";
 }
 
@@ -119,20 +127,28 @@ function isMetaChannel(platform: string): boolean {
   return platform === "FACEBOOK" || platform === "INSTAGRAM";
 }
 
+function isWhatsAppChannel(platform: string): boolean {
+  return platform === "WHATSAPP";
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 export default function ChannelsPage() {
   const [metaChannels, setMetaChannels] = useState<Channel[]>([]);
   const [googleChannels, setGoogleChannels] = useState<Channel[]>([]);
+  const [whatsAppChannels, setWhatsAppChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingMeta, setConnectingMeta] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
+  const [whatsAppConnectOpen, setWhatsAppConnectOpen] = useState(false);
 
   // Settings dialog
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<ChannelDetails | null>(null);
   const [metaDiscovery, setMetaDiscovery] = useState<MetaDiscoveryData | null>(null);
   const [googleDiscovery, setGoogleDiscovery] = useState<GoogleDiscoveryData | null>(null);
+  const [whatsAppDiscovery, setWhatsAppDiscovery] = useState<WhatsAppDiscoveryData | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -151,14 +167,24 @@ export default function ChannelsPage() {
   const [contentLanguage, setContentLanguage] = useState("en");
   const [targetCountry, setTargetCountry] = useState("SA");
 
+  // WhatsApp connect form
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waBusinessAccountId, setWaBusinessAccountId] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
+
+  // WhatsApp settings form
+  const [selectedWaCatalogId, setSelectedWaCatalogId] = useState("");
+
   const fetchChannels = useCallback(async () => {
     try {
-      const [metaRes, googleRes] = await Promise.all([
+      const [metaRes, googleRes, waRes] = await Promise.all([
         fetch("/api/channels/meta"),
         fetch("/api/channels/google"),
+        fetch("/api/channels/whatsapp"),
       ]);
       if (metaRes.ok) setMetaChannels(await metaRes.json());
       if (googleRes.ok) setGoogleChannels(await googleRes.json());
+      if (waRes.ok) setWhatsAppChannels(await waRes.json());
     } catch {
       toast.error("Failed to load channels");
     } finally {
@@ -210,11 +236,45 @@ export default function ChannelsPage() {
     }
   };
 
+  const handleConnectWhatsApp = async () => {
+    if (!waAccessToken || !waBusinessAccountId || !waPhoneNumberId) {
+      toast.error("All WhatsApp fields are required");
+      return;
+    }
+    setConnectingWhatsApp(true);
+    try {
+      const res = await fetch("/api/channels/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken: waAccessToken,
+          wabaId: waBusinessAccountId,
+          phoneNumberId: waPhoneNumberId,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to connect WhatsApp");
+      }
+      toast.success("WhatsApp Business connected successfully");
+      setWhatsAppConnectOpen(false);
+      setWaAccessToken("");
+      setWaBusinessAccountId("");
+      setWaPhoneNumberId("");
+      fetchChannels();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Connection failed");
+    } finally {
+      setConnectingWhatsApp(false);
+    }
+  };
+
   const openSettings = async (channel: Channel) => {
     setSettingsOpen(true);
     setLoadingDetails(true);
     setMetaDiscovery(null);
     setGoogleDiscovery(null);
+    setWhatsAppDiscovery(null);
 
     const base = getApiBase(channel.platform);
 
@@ -243,14 +303,20 @@ export default function ChannelsPage() {
           setContentLanguage((details.parsedSettings.contentLanguage as string) || "en");
           setTargetCountry((details.parsedSettings.targetCountry as string) || "SA");
         }
+
+        if (isWhatsAppChannel(channel.platform)) {
+          setSelectedWaCatalogId(details.externalCatalogId || "");
+        }
       }
 
       if (discoveryRes.ok) {
         const discoveryData = await discoveryRes.json();
         if (isMetaChannel(channel.platform)) {
           setMetaDiscovery(discoveryData);
-        } else {
+        } else if (isGoogleChannel(channel.platform)) {
           setGoogleDiscovery(discoveryData);
+        } else if (isWhatsAppChannel(channel.platform)) {
+          setWhatsAppDiscovery(discoveryData);
         }
       }
     } catch {
@@ -266,6 +332,7 @@ export default function ChannelsPage() {
 
     const base = getApiBase(selectedChannel.platform);
     const isGoogle = isGoogleChannel(selectedChannel.platform);
+    const isWhatsApp = isWhatsAppChannel(selectedChannel.platform);
 
     try {
       const body = isGoogle
@@ -273,6 +340,12 @@ export default function ChannelsPage() {
             name: channelName,
             merchantId: selectedMerchantId || undefined,
             settings: { autoSync, syncInventory, contentLanguage, targetCountry },
+          }
+        : isWhatsApp
+        ? {
+            name: channelName,
+            catalogId: selectedWaCatalogId || undefined,
+            settings: { autoSync, syncInventory },
           }
         : {
             name: channelName,
@@ -368,6 +441,7 @@ export default function ChannelsPage() {
     switch (platform) {
       case "INSTAGRAM": return <Instagram className="size-5" />;
       case "GOOGLE": return <Store className="size-5" />;
+      case "WHATSAPP": return <MessageSquare className="size-5" />;
       default: return <Facebook className="size-5" />;
     }
   };
@@ -376,12 +450,13 @@ export default function ChannelsPage() {
     switch (platform) {
       case "INSTAGRAM": return "Instagram";
       case "GOOGLE": return "Google Merchant";
+      case "WHATSAPP": return "WhatsApp Business";
       case "FACEBOOK": return "Facebook";
       default: return platform;
     }
   };
 
-  const allChannels = [...metaChannels, ...googleChannels];
+  const allChannels = [...metaChannels, ...googleChannels, ...whatsAppChannels];
 
   // ─── Render ──────────────────────────────────────────────
 
@@ -406,7 +481,7 @@ export default function ChannelsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Sales Channels</h1>
           <p className="text-muted-foreground">
-            Connect your store to Facebook, Instagram, Google Shopping, and more
+            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, and more
           </p>
         </div>
         <div className="flex gap-2">
@@ -426,6 +501,10 @@ export default function ChannelsPage() {
             )}
             Connect Google
           </Button>
+          <Button onClick={() => setWhatsAppConnectOpen(true)} variant="outline">
+            <MessageSquare className="mr-2 size-4" />
+            Connect WhatsApp
+          </Button>
         </div>
       </div>
 
@@ -436,7 +515,7 @@ export default function ChannelsPage() {
             <ShoppingBag className="size-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No channels connected</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              Connect your store to Facebook, Instagram, or Google Merchant Center
+              Connect your store to Facebook, Instagram, Google Merchant Center, or WhatsApp Business
               to sync products and reach more customers.
             </p>
             <div className="flex gap-3">
@@ -455,6 +534,10 @@ export default function ChannelsPage() {
                   <Store className="mr-2 size-4" />
                 )}
                 Connect Google Merchant
+              </Button>
+              <Button onClick={() => setWhatsAppConnectOpen(true)} variant="outline">
+                <MessageSquare className="mr-2 size-4" />
+                Connect WhatsApp
               </Button>
             </div>
           </CardContent>
@@ -533,6 +616,8 @@ export default function ChannelsPage() {
             <DialogDescription>
               {selectedChannel && isGoogleChannel(selectedChannel.platform)
                 ? "Configure sync settings for your Google Merchant Center connection"
+                : selectedChannel && isWhatsAppChannel(selectedChannel.platform)
+                ? "Configure catalog sync and messaging for your WhatsApp Business connection"
                 : "Configure sync settings and manage your Meta Commerce connection"}
             </DialogDescription>
           </DialogHeader>
@@ -553,7 +638,7 @@ export default function ChannelsPage() {
                   id="channelName"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
-                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : "My Facebook Shop"}
+                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : "My Facebook Shop"}
                 />
               </div>
 
@@ -710,6 +795,77 @@ export default function ChannelsPage() {
                 </>
               )}
 
+              {/* ─── WhatsApp-specific Settings ─── */}
+              {isWhatsAppChannel(selectedChannel.platform) && (
+                <>
+                  {/* Catalog Selection */}
+                  {whatsAppDiscovery?.catalogs && whatsAppDiscovery.catalogs.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Product Catalog</Label>
+                      <Select value={selectedWaCatalogId} onValueChange={setSelectedWaCatalogId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a catalog" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {whatsAppDiscovery.catalogs.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name} {cat.product_count != null ? `(${cat.product_count} products)` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select the Meta Commerce catalog to sync products with WhatsApp
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Phone Number Info */}
+                  {whatsAppDiscovery?.phoneNumbers && whatsAppDiscovery.phoneNumbers.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold">Connected Phone Numbers</Label>
+                      <div className="space-y-2">
+                        {whatsAppDiscovery.phoneNumbers.map((phone) => (
+                          <div key={phone.id} className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <p className="font-medium">{phone.display_phone_number}</p>
+                              <p className="text-sm text-muted-foreground">{phone.verified_name}</p>
+                            </div>
+                            {phone.quality_rating && (
+                              <Badge variant="outline">{phone.quality_rating}</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Business Profile Info */}
+                  {whatsAppDiscovery?.profile && (
+                    <div className="space-y-2">
+                      <Label className="text-base font-semibold">Business Profile</Label>
+                      <div className="rounded-lg border p-3 space-y-1 text-sm">
+                        {whatsAppDiscovery.profile.about && (
+                          <p><span className="font-medium">About:</span> {whatsAppDiscovery.profile.about}</p>
+                        )}
+                        {whatsAppDiscovery.profile.description && (
+                          <p><span className="font-medium">Description:</span> {whatsAppDiscovery.profile.description}</p>
+                        )}
+                        {whatsAppDiscovery.profile.address && (
+                          <p><span className="font-medium">Address:</span> {whatsAppDiscovery.profile.address}</p>
+                        )}
+                        {whatsAppDiscovery.profile.vertical && (
+                          <p><span className="font-medium">Category:</span> {whatsAppDiscovery.profile.vertical}</p>
+                        )}
+                        {whatsAppDiscovery.profile.websites && whatsAppDiscovery.profile.websites.length > 0 && (
+                          <p><span className="font-medium">Websites:</span> {whatsAppDiscovery.profile.websites.join(", ")}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Sync Settings (common) */}
               <div className="space-y-4">
                 <Label className="text-base font-semibold">Sync Settings</Label>
@@ -718,7 +874,7 @@ export default function ChannelsPage() {
                     <div>
                       <Label htmlFor="autoSync">Auto Sync Products</Label>
                       <p className="text-xs text-muted-foreground">
-                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : "Meta catalog"}
+                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : "Meta catalog"}
                       </p>
                     </div>
                     <Switch id="autoSync" checked={autoSync} onCheckedChange={setAutoSync} />
@@ -826,6 +982,74 @@ export default function ChannelsPage() {
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
               Save Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Connect Dialog */}
+      <Dialog open={whatsAppConnectOpen} onOpenChange={setWhatsAppConnectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="size-5" />
+              Connect WhatsApp Business
+            </DialogTitle>
+            <DialogDescription>
+              Enter your WhatsApp Business API credentials. You can find these in your
+              Meta Business Suite under WhatsApp &gt; API Setup.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="waAccessToken">Access Token</Label>
+              <Input
+                id="waAccessToken"
+                type="password"
+                value={waAccessToken}
+                onChange={(e) => setWaAccessToken(e.target.value)}
+                placeholder="Permanent System User access token"
+              />
+              <p className="text-xs text-muted-foreground">
+                Generate a permanent token from Meta Business Suite &gt; System Users
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="waBusinessAccountId">Business Account ID</Label>
+              <Input
+                id="waBusinessAccountId"
+                value={waBusinessAccountId}
+                onChange={(e) => setWaBusinessAccountId(e.target.value)}
+                placeholder="e.g. 123456789012345"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your WhatsApp Business Account (WABA) ID
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="waPhoneNumberId">Phone Number ID</Label>
+              <Input
+                id="waPhoneNumberId"
+                value={waPhoneNumberId}
+                onChange={(e) => setWaPhoneNumberId(e.target.value)}
+                placeholder="e.g. 123456789012345"
+              />
+              <p className="text-xs text-muted-foreground">
+                The Phone Number ID to use for messaging and catalog
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWhatsAppConnectOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConnectWhatsApp} disabled={connectingWhatsApp}>
+              {connectingWhatsApp && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Connect
             </Button>
           </DialogFooter>
         </DialogContent>

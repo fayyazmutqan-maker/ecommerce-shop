@@ -18,6 +18,7 @@ import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { syncProductsBatch, deleteProductsBatch, formatMetaPrice } from "@/lib/meta";
 import type { MetaCatalogItem, MetaCredentials } from "@/lib/meta";
 import { syncProductToAllGoogleChannels, removeProductFromGoogleChannels } from "@/lib/google-catalog-sync";
+import { syncProductToAllWhatsAppChannels, removeProductFromWhatsAppChannels } from "@/lib/whatsapp-catalog-sync";
 import { env } from "@/lib/env";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -424,6 +425,9 @@ export async function removeProductFromChannels(productId: string): Promise<void
   // Also remove from Google channels
   await removeProductFromGoogleChannels(productId).catch(() => {});
 
+  // Also remove from WhatsApp channels
+  await removeProductFromWhatsAppChannels(productId).catch(() => {});
+
   // Clean up the channelProducts records
   await db.delete(channelProducts).where(eq(channelProducts.productId, productId));
 }
@@ -445,6 +449,8 @@ export async function syncProductToAllChannels(productId: string): Promise<void>
     ...metaChannels.map((ch) => syncProduct(ch.id, productId)),
     // Google channels
     syncProductToAllGoogleChannels(productId),
+    // WhatsApp channels
+    syncProductToAllWhatsAppChannels(productId),
   ]);
 }
 
