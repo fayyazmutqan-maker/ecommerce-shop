@@ -73,6 +73,10 @@ const envSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional(), // Permanent token from Meta Business Suite
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
 
+  // TikTok Shop
+  TIKTOK_APP_KEY: z.string().optional(),
+  TIKTOK_APP_SECRET: z.string().optional(),
+
   // Invoice monitor — anomaly detection thresholds
   MONITOR_SPIKE_THRESHOLD_IP: z.string().regex(/^\d+$/).optional(),
   MONITOR_SPIKE_THRESHOLD_GLOBAL: z.string().regex(/^\d+$/).optional(),

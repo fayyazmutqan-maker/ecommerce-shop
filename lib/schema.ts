@@ -1277,7 +1277,7 @@ export const channelOrders = pgTable("ChannelOrder", {
   orderId: text("orderId").references(() => orders.id, { onDelete: "set null" }),
   externalOrderId: text("externalOrderId").notNull(), // Platform order ID
   externalCustomerId: text("externalCustomerId"),
-  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | WHATSAPP
+  platform: text("platform").notNull(), // FACEBOOK | INSTAGRAM | WHATSAPP | TIKTOK
   status: text("status").notNull().default("PENDING"), // PENDING | IMPORTED | FULFILLED | ERROR
   rawPayload: text("rawPayload"), // Raw JSON from platform
   lastError: text("lastError"),

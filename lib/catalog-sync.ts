@@ -19,6 +19,7 @@ import { syncProductsBatch, deleteProductsBatch, formatMetaPrice } from "@/lib/m
 import type { MetaCatalogItem, MetaCredentials } from "@/lib/meta";
 import { syncProductToAllGoogleChannels, removeProductFromGoogleChannels } from "@/lib/google-catalog-sync";
 import { syncProductToAllWhatsAppChannels, removeProductFromWhatsAppChannels } from "@/lib/whatsapp-catalog-sync";
+import { syncProductToAllTikTokChannels, removeProductFromTikTokChannels } from "@/lib/tiktok-catalog-sync";
 import { env } from "@/lib/env";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -428,6 +429,9 @@ export async function removeProductFromChannels(productId: string): Promise<void
   // Also remove from WhatsApp channels
   await removeProductFromWhatsAppChannels(productId).catch(() => {});
 
+  // Also remove from TikTok channels
+  await removeProductFromTikTokChannels(productId).catch(() => {});
+
   // Clean up the channelProducts records
   await db.delete(channelProducts).where(eq(channelProducts.productId, productId));
 }
@@ -451,6 +455,8 @@ export async function syncProductToAllChannels(productId: string): Promise<void>
     syncProductToAllGoogleChannels(productId),
     // WhatsApp channels
     syncProductToAllWhatsAppChannels(productId),
+    // TikTok channels
+    syncProductToAllTikTokChannels(productId),
   ]);
 }
 

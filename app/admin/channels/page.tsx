@@ -42,6 +42,7 @@ import {
   Facebook,
   Instagram,
   MessageSquare,
+  Music,
   Plus,
   Trash2,
   RefreshCw,
@@ -111,11 +112,18 @@ interface WhatsAppDiscoveryData {
   profile: { about?: string; address?: string; description?: string; vertical?: string; websites?: string[] } | null;
 }
 
+interface TikTokDiscoveryData {
+  shops: { id: string; name: string; region: string; sellerType?: string }[];
+  categories: { id: string; name: string; parentId?: string; isLeaf?: boolean }[];
+  warehouses: { id: string; name: string; type?: string }[];
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 function getApiBase(platform: string): string {
   if (platform === "GOOGLE") return "/api/channels/google";
   if (platform === "WHATSAPP") return "/api/channels/whatsapp";
+  if (platform === "TIKTOK") return "/api/channels/tiktok";
   return "/api/channels/meta";
 }
 
@@ -131,16 +139,22 @@ function isWhatsAppChannel(platform: string): boolean {
   return platform === "WHATSAPP";
 }
 
+function isTikTokChannel(platform: string): boolean {
+  return platform === "TIKTOK";
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 export default function ChannelsPage() {
   const [metaChannels, setMetaChannels] = useState<Channel[]>([]);
   const [googleChannels, setGoogleChannels] = useState<Channel[]>([]);
   const [whatsAppChannels, setWhatsAppChannels] = useState<Channel[]>([]);
+  const [tiktokChannels, setTiktokChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingMeta, setConnectingMeta] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
+  const [connectingTikTok, setConnectingTikTok] = useState(false);
   const [whatsAppConnectOpen, setWhatsAppConnectOpen] = useState(false);
 
   // Settings dialog
@@ -149,6 +163,7 @@ export default function ChannelsPage() {
   const [metaDiscovery, setMetaDiscovery] = useState<MetaDiscoveryData | null>(null);
   const [googleDiscovery, setGoogleDiscovery] = useState<GoogleDiscoveryData | null>(null);
   const [whatsAppDiscovery, setWhatsAppDiscovery] = useState<WhatsAppDiscoveryData | null>(null);
+  const [tiktokDiscovery, setTiktokDiscovery] = useState<TikTokDiscoveryData | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -175,16 +190,23 @@ export default function ChannelsPage() {
   // WhatsApp settings form
   const [selectedWaCatalogId, setSelectedWaCatalogId] = useState("");
 
+  // TikTok settings form
+  const [selectedTikTokShopId, setSelectedTikTokShopId] = useState("");
+  const [selectedTikTokCategoryId, setSelectedTikTokCategoryId] = useState("");
+  const [selectedTikTokWarehouseId, setSelectedTikTokWarehouseId] = useState("");
+
   const fetchChannels = useCallback(async () => {
     try {
-      const [metaRes, googleRes, waRes] = await Promise.all([
+      const [metaRes, googleRes, waRes, tiktokRes] = await Promise.all([
         fetch("/api/channels/meta"),
         fetch("/api/channels/google"),
         fetch("/api/channels/whatsapp"),
+        fetch("/api/channels/tiktok"),
       ]);
       if (metaRes.ok) setMetaChannels(await metaRes.json());
       if (googleRes.ok) setGoogleChannels(await googleRes.json());
       if (waRes.ok) setWhatsAppChannels(await waRes.json());
+      if (tiktokRes.ok) setTiktokChannels(await tiktokRes.json());
     } catch {
       toast.error("Failed to load channels");
     } finally {
@@ -269,12 +291,33 @@ export default function ChannelsPage() {
     }
   };
 
+  const handleConnectTikTok = async () => {
+    setConnectingTikTok(true);
+    try {
+      const res = await fetch("/api/channels/tiktok", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "oauth" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to start connection");
+      }
+      const { oauthUrl } = await res.json();
+      window.location.href = oauthUrl;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Connection failed");
+      setConnectingTikTok(false);
+    }
+  };
+
   const openSettings = async (channel: Channel) => {
     setSettingsOpen(true);
     setLoadingDetails(true);
     setMetaDiscovery(null);
     setGoogleDiscovery(null);
     setWhatsAppDiscovery(null);
+    setTiktokDiscovery(null);
 
     const base = getApiBase(channel.platform);
 
@@ -307,6 +350,13 @@ export default function ChannelsPage() {
         if (isWhatsAppChannel(channel.platform)) {
           setSelectedWaCatalogId(details.externalCatalogId || "");
         }
+
+        if (isTikTokChannel(channel.platform)) {
+          setSelectedTikTokShopId(details.externalAccountId || "");
+          setSelectedTikTokCategoryId((details.parsedSettings.defaultCategoryId as string) || "");
+          setSelectedTikTokWarehouseId((details.parsedSettings.warehouseId as string) || "");
+          setSyncOrders((details.parsedSettings.syncOrders as boolean) ?? true);
+        }
       }
 
       if (discoveryRes.ok) {
@@ -317,6 +367,8 @@ export default function ChannelsPage() {
           setGoogleDiscovery(discoveryData);
         } else if (isWhatsAppChannel(channel.platform)) {
           setWhatsAppDiscovery(discoveryData);
+        } else if (isTikTokChannel(channel.platform)) {
+          setTiktokDiscovery(discoveryData);
         }
       }
     } catch {
@@ -333,6 +385,7 @@ export default function ChannelsPage() {
     const base = getApiBase(selectedChannel.platform);
     const isGoogle = isGoogleChannel(selectedChannel.platform);
     const isWhatsApp = isWhatsAppChannel(selectedChannel.platform);
+    const isTikTok = isTikTokChannel(selectedChannel.platform);
 
     try {
       const body = isGoogle
@@ -346,6 +399,18 @@ export default function ChannelsPage() {
             name: channelName,
             catalogId: selectedWaCatalogId || undefined,
             settings: { autoSync, syncInventory },
+          }
+        : isTikTok
+        ? {
+            name: channelName,
+            shopId: selectedTikTokShopId || undefined,
+            settings: {
+              autoSync,
+              syncInventory,
+              syncOrders,
+              defaultCategoryId: selectedTikTokCategoryId || undefined,
+              warehouseId: selectedTikTokWarehouseId || undefined,
+            },
           }
         : {
             name: channelName,
@@ -442,6 +507,7 @@ export default function ChannelsPage() {
       case "INSTAGRAM": return <Instagram className="size-5" />;
       case "GOOGLE": return <Store className="size-5" />;
       case "WHATSAPP": return <MessageSquare className="size-5" />;
+      case "TIKTOK": return <Music className="size-5" />;
       default: return <Facebook className="size-5" />;
     }
   };
@@ -451,12 +517,13 @@ export default function ChannelsPage() {
       case "INSTAGRAM": return "Instagram";
       case "GOOGLE": return "Google Merchant";
       case "WHATSAPP": return "WhatsApp Business";
+      case "TIKTOK": return "TikTok Shop";
       case "FACEBOOK": return "Facebook";
       default: return platform;
     }
   };
 
-  const allChannels = [...metaChannels, ...googleChannels, ...whatsAppChannels];
+  const allChannels = [...metaChannels, ...googleChannels, ...whatsAppChannels, ...tiktokChannels];
 
   // ─── Render ──────────────────────────────────────────────
 
@@ -481,7 +548,7 @@ export default function ChannelsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Sales Channels</h1>
           <p className="text-muted-foreground">
-            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, and more
+            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, TikTok Shop, and more
           </p>
         </div>
         <div className="flex gap-2">
@@ -505,6 +572,14 @@ export default function ChannelsPage() {
             <MessageSquare className="mr-2 size-4" />
             Connect WhatsApp
           </Button>
+          <Button onClick={handleConnectTikTok} disabled={connectingTikTok} variant="outline">
+            {connectingTikTok ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Music className="mr-2 size-4" />
+            )}
+            Connect TikTok
+          </Button>
         </div>
       </div>
 
@@ -515,10 +590,10 @@ export default function ChannelsPage() {
             <ShoppingBag className="size-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No channels connected</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              Connect your store to Facebook, Instagram, Google Merchant Center, or WhatsApp Business
-              to sync products and reach more customers.
+              Connect your store to Facebook, Instagram, Google Merchant Center, WhatsApp Business,
+              or TikTok Shop to sync products and reach more customers.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap justify-center">
               <Button onClick={handleConnectMeta} disabled={connectingMeta} variant="outline">
                 {connectingMeta ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -538,6 +613,14 @@ export default function ChannelsPage() {
               <Button onClick={() => setWhatsAppConnectOpen(true)} variant="outline">
                 <MessageSquare className="mr-2 size-4" />
                 Connect WhatsApp
+              </Button>
+              <Button onClick={handleConnectTikTok} disabled={connectingTikTok} variant="outline">
+                {connectingTikTok ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Music className="mr-2 size-4" />
+                )}
+                Connect TikTok Shop
               </Button>
             </div>
           </CardContent>
@@ -618,6 +701,8 @@ export default function ChannelsPage() {
                 ? "Configure sync settings for your Google Merchant Center connection"
                 : selectedChannel && isWhatsAppChannel(selectedChannel.platform)
                 ? "Configure catalog sync and messaging for your WhatsApp Business connection"
+                : selectedChannel && isTikTokChannel(selectedChannel.platform)
+                ? "Configure shop, categories, and sync settings for your TikTok Shop connection"
                 : "Configure sync settings and manage your Meta Commerce connection"}
             </DialogDescription>
           </DialogHeader>
@@ -638,7 +723,7 @@ export default function ChannelsPage() {
                   id="channelName"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
-                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : "My Facebook Shop"}
+                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : isTikTokChannel(selectedChannel.platform) ? "My TikTok Shop" : "My Facebook Shop"}
                 />
               </div>
 
@@ -866,6 +951,79 @@ export default function ChannelsPage() {
                 </>
               )}
 
+              {/* ─── TikTok-specific Settings ─── */}
+              {selectedChannel && isTikTokChannel(selectedChannel.platform) && (
+                <>
+                  {/* Shop Selection */}
+                  {tiktokDiscovery?.shops && tiktokDiscovery.shops.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>TikTok Shop</Label>
+                      <Select value={selectedTikTokShopId} onValueChange={setSelectedTikTokShopId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a shop" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiktokDiscovery.shops.map((shop) => (
+                            <SelectItem key={shop.id} value={shop.id}>
+                              {shop.name} ({shop.region})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select the TikTok Shop to sync products with
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Default Category Selection */}
+                  {tiktokDiscovery?.categories && tiktokDiscovery.categories.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Default Product Category</Label>
+                      <Select value={selectedTikTokCategoryId} onValueChange={setSelectedTikTokCategoryId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a default category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiktokDiscovery.categories
+                            .filter((cat) => cat.isLeaf !== false)
+                            .map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        TikTok Shop requires a category for every product. This default will be used when no specific category is mapped.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Warehouse Selection */}
+                  {tiktokDiscovery?.warehouses && tiktokDiscovery.warehouses.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Warehouse</Label>
+                      <Select value={selectedTikTokWarehouseId} onValueChange={setSelectedTikTokWarehouseId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a warehouse" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiktokDiscovery.warehouses.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name} {wh.type ? `(${wh.type})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Warehouse for inventory and fulfillment tracking
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Sync Settings (common) */}
               <div className="space-y-4">
                 <Label className="text-base font-semibold">Sync Settings</Label>
@@ -874,7 +1032,7 @@ export default function ChannelsPage() {
                     <div>
                       <Label htmlFor="autoSync">Auto Sync Products</Label>
                       <p className="text-xs text-muted-foreground">
-                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : "Meta catalog"}
+                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : isTikTokChannel(selectedChannel.platform) ? "TikTok Shop" : "Meta catalog"}
                       </p>
                     </div>
                     <Switch id="autoSync" checked={autoSync} onCheckedChange={setAutoSync} />
@@ -888,12 +1046,14 @@ export default function ChannelsPage() {
                     </div>
                     <Switch id="syncInventory" checked={syncInventory} onCheckedChange={setSyncInventory} />
                   </div>
-                  {isMetaChannel(selectedChannel.platform) && (
+                  {(isMetaChannel(selectedChannel.platform) || isTikTokChannel(selectedChannel.platform)) && (
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="syncOrders">Import Orders</Label>
                         <p className="text-xs text-muted-foreground">
-                          Automatically import orders from Facebook/Instagram shops
+                          {isTikTokChannel(selectedChannel.platform)
+                            ? "Automatically import orders from TikTok Shop"
+                            : "Automatically import orders from Facebook/Instagram shops"}
                         </p>
                       </div>
                       <Switch id="syncOrders" checked={syncOrders} onCheckedChange={setSyncOrders} />
