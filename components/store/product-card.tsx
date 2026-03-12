@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/lib/store";
+import { useWishlist } from "@/hooks/use-wishlist";
 import { toast } from "sonner";
 
 interface ProductCardProps {
@@ -39,6 +40,8 @@ export function ProductCard({
   showBadges = true,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const { has: isWishlisted, toggle: toggleWishlist } = useWishlist();
+  const inWishlist = isWishlisted(id);
   const discount =
     compareAtPrice && compareAtPrice > price
       ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
@@ -58,26 +61,12 @@ export function ProductCard({
 
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/wishlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: id }),
-      });
-      if (res.status === 401) {
-        toast.error("Please sign in to add items to your wishlist");
-        return;
-      }
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Failed to update wishlist");
-        return;
-      }
-      const data = await res.json();
-      toast.success(data.removed ? "Removed from wishlist" : "Added to wishlist");
-    } catch {
-      toast.error("Failed to update wishlist");
+    const result = await toggleWishlist(id);
+    if (result === null) {
+      toast.error("Please sign in to add items to your wishlist");
+      return;
     }
+    toast.success(result ? "Added to wishlist" : "Removed from wishlist");
   };
 
   const RATIO_CLASS: Record<string, string> = {
@@ -128,7 +117,7 @@ export function ProductCard({
               className="h-10 w-10 lg:h-9 lg:w-9 rounded-full shadow-md bg-background/90 backdrop-blur-sm hover:bg-background"
               onClick={handleWishlist}
             >
-              <Heart className="h-4 w-4" />
+              <Heart className={`h-4 w-4 transition-colors ${inWishlist ? "fill-red-500 text-red-500" : ""}`} />
             </Button>
           </div>
           )}

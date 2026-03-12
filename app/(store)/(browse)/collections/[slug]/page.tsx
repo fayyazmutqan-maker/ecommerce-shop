@@ -20,7 +20,9 @@ import {
   inArray,
   gte,
   lte,
+  gt,
   count,
+  sql,
 } from "drizzle-orm";
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
@@ -75,6 +77,14 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const limit = 24;
   const minPrice = typeof sp.minPrice === "string" ? sp.minPrice : undefined;
   const maxPrice = typeof sp.maxPrice === "string" ? sp.maxPrice : undefined;
+  const featured = sp.featured === "true";
+  const onSale = sp.onSale === "true";
+  const inStock = sp.inStock === "true";
+  const newArrivals = sp.newArrivals === "true";
+  const minRating = typeof sp.minRating === "string" ? parseInt(sp.minRating) || undefined : undefined;
+  const vendorFilter = typeof sp.vendor === "string" ? sp.vendor.split(",").filter(Boolean) : [];
+  const productTypeFilter = typeof sp.productType === "string" ? sp.productType.split(",").filter(Boolean) : [];
+  const tagFilter = typeof sp.tags === "string" ? sp.tags.split(",").filter(Boolean) : [];
 
   // Extract attribute filters (attr_slug=value1,value2)
   const attrFilters: Record<string, string[]> = {};
@@ -132,19 +142,63 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const noProducts = matchingIds.length === 0;
 
   // Build WHERE conditions
-  const whereCondition = and(
+  const conditions = [
     eq(products.status, "ACTIVE"),
-    noProducts ? undefined : inArray(products.id, matchingIds),
-    search
-      ? or(
-          ilike(products.name, `%${search}%`),
-          ilike(products.description, `%${search}%`),
-          ilike(products.tags, `%${search}%`)
-        )
-      : undefined,
-    minPrice ? gte(products.price, minPrice) : undefined,
-    maxPrice ? lte(products.price, maxPrice) : undefined
-  );
+    noProducts ? sql`false` : inArray(products.id, matchingIds),
+  ];
+
+  if (search) {
+    conditions.push(
+      or(
+        ilike(products.name, `%${search}%`),
+        ilike(products.description, `%${search}%`),
+        ilike(products.tags, `%${search}%`)
+      )!
+    );
+  }
+
+  if (minPrice) conditions.push(gte(products.price, minPrice));
+  if (maxPrice) conditions.push(lte(products.price, maxPrice));
+
+  if (featured) conditions.push(eq(products.isFeatured, true));
+
+  if (onSale) {
+    conditions.push(sql`${products.compareAtPrice} IS NOT NULL AND ${products.compareAtPrice} > ${products.price}`);
+  }
+
+  if (inStock) {
+    conditions.push(
+      or(
+        gt(products.quantity, 0),
+        eq(products.trackInventory, false),
+      )!
+    );
+  }
+
+  if (newArrivals) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    conditions.push(gte(products.createdAt, thirtyDaysAgo));
+  }
+
+  if (minRating) {
+    conditions.push(gte(products.averageRating, minRating));
+  }
+
+  if (vendorFilter.length > 0) {
+    conditions.push(inArray(products.vendor, vendorFilter));
+  }
+
+  if (productTypeFilter.length > 0) {
+    conditions.push(inArray(products.productType, productTypeFilter));
+  }
+
+  if (tagFilter.length > 0) {
+    const tagConditions = tagFilter.map((t) => ilike(products.tags, `%${t}%`));
+    conditions.push(or(...tagConditions)!);
+  }
+
+  const whereCondition = and(...conditions);
 
   // Order by
   const orderByClause =
@@ -258,6 +312,14 @@ export default async function CollectionPage({ params, searchParams }: Props) {
               if (sort !== "newest") params.set("sort", sort);
               if (minPrice) params.set("minPrice", minPrice);
               if (maxPrice) params.set("maxPrice", maxPrice);
+              if (featured) params.set("featured", "true");
+              if (onSale) params.set("onSale", "true");
+              if (inStock) params.set("inStock", "true");
+              if (newArrivals) params.set("newArrivals", "true");
+              if (minRating) params.set("minRating", String(minRating));
+              if (vendorFilter.length) params.set("vendor", vendorFilter.join(","));
+              if (productTypeFilter.length) params.set("productType", productTypeFilter.join(","));
+              if (tagFilter.length) params.set("tags", tagFilter.join(","));
               Object.entries(attrFilters).forEach(([k, v]) => {
                 if (v.length) params.set(`attr_${k}`, v.join(","));
               });

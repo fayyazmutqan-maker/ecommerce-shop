@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { products, productAttributes, productAttributeValues, productCategories, categories } from "@/lib/schema";
-import { eq, and, sql, asc, inArray, isNull } from "drizzle-orm";
+import { eq, and, sql, asc, inArray, isNull, gt, gte, isNotNull } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { applyTranslationsBatch } from "@/lib/translations";
 
@@ -85,10 +85,85 @@ export async function GET(req: Request) {
       .from(products)
       .where(and(...priceConditions));
 
-    // Fetch root categories for sidebar
+    // Collect extra filter metadata from matching products
+    const matchingProducts = productIds.length > 0
+      ? await db
+          .select({
+            vendor: products.vendor,
+            productType: products.productType,
+            tags: products.tags,
+            quantity: products.quantity,
+            trackInventory: products.trackInventory,
+            compareAtPrice: products.compareAtPrice,
+            price: products.price,
+            isFeatured: products.isFeatured,
+            averageRating: products.averageRating,
+            createdAt: products.createdAt,
+          })
+          .from(products)
+          .where(and(eq(products.status, "ACTIVE"), inArray(products.id, productIds)))
+      : [];
+
+    // Build vendor counts
+    const vendorCounts: Record<string, number> = {};
+    matchingProducts.forEach((p) => {
+      if (p.vendor) vendorCounts[p.vendor] = (vendorCounts[p.vendor] || 0) + 1;
+    });
+    const vendors = Object.entries(vendorCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Build product type counts
+    const typeCounts: Record<string, number> = {};
+    matchingProducts.forEach((p) => {
+      if (p.productType) typeCounts[p.productType] = (typeCounts[p.productType] || 0) + 1;
+    });
+    const productTypes = Object.entries(typeCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Build tag counts
+    const tagCounts: Record<string, number> = {};
+    matchingProducts.forEach((p) => {
+      if (p.tags) {
+        p.tags.split(",").map((t) => t.trim()).filter(Boolean).forEach((tag) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      }
+    });
+    const tags = Object.entries(tagCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Quick filter counts
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const quickCounts = {
+      inStock: matchingProducts.filter((p) => !p.trackInventory || (p.quantity ?? 0) > 0).length,
+      onSale: matchingProducts.filter((p) => p.compareAtPrice && Number(p.compareAtPrice) > Number(p.price)).length,
+      featured: matchingProducts.filter((p) => p.isFeatured).length,
+      newArrivals: matchingProducts.filter((p) => new Date(p.createdAt) >= thirtyDaysAgo).length,
+    };
+
+    // Rating distribution
+    const ratingCounts: Record<string, number> = { "4": 0, "3": 0, "2": 0, "1": 0 };
+    matchingProducts.forEach((p) => {
+      const r = p.averageRating ?? 0;
+      if (r >= 4) ratingCounts["4"]++;
+      if (r >= 3) ratingCounts["3"]++;
+      if (r >= 2) ratingCounts["2"]++;
+      if (r >= 1) ratingCounts["1"]++;
+    });
+
+    // Fetch categories with children for hierarchical tree
     const allCategories = await db.query.categories.findMany({
       where: and(eq(categories.isActive, true), isNull(categories.parentId)),
       orderBy: [asc(categories.sortOrder)],
+      with: {
+        children: {
+          where: eq(categories.isActive, true),
+          orderBy: [asc(categories.sortOrder)],
+        },
+      },
     });
     const locale = await getLocale();
     const tCategories = await applyTranslationsBatch("category", allCategories as Record<string, unknown>[], locale) as typeof allCategories;
@@ -99,7 +174,18 @@ export async function GET(req: Request) {
         min: priceAgg?.minPrice ? parseFloat(priceAgg.minPrice) : 0,
         max: priceAgg?.maxPrice ? parseFloat(priceAgg.maxPrice) : 1000,
       },
-      categories: tCategories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
+      categories: tCategories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        children: (c.children ?? []).map((ch) => ({ id: ch.id, name: ch.name, slug: ch.slug })),
+      })),
+      vendors,
+      productTypes,
+      tags,
+      quickCounts,
+      ratingCounts,
+      totalProducts: matchingProducts.length,
     });
   } catch (error) {
     console.error("Filters GET error:", error);

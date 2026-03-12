@@ -4,7 +4,6 @@ import {
   Search,
   User,
   Menu,
-  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +16,7 @@ import {
 import { CartSheet } from "@/components/store/cart-sheet";
 import { LanguageSwitcher } from "@/components/store/language-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { WishlistNavIcon } from "@/components/store/wishlist-nav-icon";
 
 const navLinks = [
   { title: "Home", href: "/" },
@@ -124,16 +124,7 @@ export function StoreNavbar() {
                   <Search className="h-[18px] w-[18px]" />
                 </Link>
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <Link href="/account/wishlist">
-                  <Heart className="h-[18px] w-[18px]" />
-                </Link>
-              </Button>
+              <WishlistNavIcon />
               <Button
                 variant="ghost"
                 size="icon"

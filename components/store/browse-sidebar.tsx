@@ -17,7 +17,13 @@ interface FilterData {
     values: { value: string; count: number }[];
   }[];
   priceRange: { min: number; max: number };
-  categories: { id: string; name: string; slug: string }[];
+  categories: { id: string; name: string; slug: string; children?: { id: string; name: string; slug: string }[] }[];
+  vendors?: { name: string; count: number }[];
+  productTypes?: { name: string; count: number }[];
+  tags?: { name: string; count: number }[];
+  quickCounts?: { inStock: number; onSale: number; featured: number; newArrivals: number };
+  ratingCounts?: Record<string, number>;
+  totalProducts?: number;
 }
 
 function BrowseSidebarInner({
@@ -82,6 +88,12 @@ function BrowseSidebarInner({
       activeFilters={activeFilters}
       currentMinPrice={currentMinPrice}
       currentMaxPrice={currentMaxPrice}
+      vendors={filterData?.vendors}
+      productTypes={filterData?.productTypes}
+      tags={filterData?.tags}
+      quickCounts={filterData?.quickCounts}
+      ratingCounts={filterData?.ratingCounts}
+      totalProducts={filterData?.totalProducts}
     />
   );
 }

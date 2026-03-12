@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { products as productsTable, categories as categoriesTable, productImages, productCategories, productAttributes, productAttributeValues } from "@/lib/schema";
-import { eq, desc, asc, and, or, count, sql, ilike, inArray, gte, lte } from "drizzle-orm";
+import { eq, desc, asc, and, or, count, sql, ilike, inArray, gte, lte, gt, isNotNull } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { applyTranslationsBatch } from "@/lib/translations";
@@ -37,6 +37,12 @@ export default async function ProductsPage({ searchParams }: Props) {
     typeof params.category === "string" ? params.category : undefined;
   const featured = params.featured === "true";
   const onSale = params.onSale === "true";
+  const inStock = params.inStock === "true";
+  const newArrivals = params.newArrivals === "true";
+  const minRating = typeof params.minRating === "string" ? parseInt(params.minRating) || undefined : undefined;
+  const vendorFilter = typeof params.vendor === "string" ? params.vendor.split(",").filter(Boolean) : [];
+  const productTypeFilter = typeof params.productType === "string" ? params.productType.split(",").filter(Boolean) : [];
+  const tagFilter = typeof params.tags === "string" ? params.tags.split(",").filter(Boolean) : [];
   const page = Math.max(1, parseInt(typeof params.page === "string" ? params.page : "1") || 1);
   const limit = 24;
   const minPrice = typeof params.minPrice === "string" ? params.minPrice : undefined;
@@ -80,6 +86,38 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   if (onSale) {
     conditions.push(sql`${productsTable.compareAtPrice} IS NOT NULL AND ${productsTable.compareAtPrice} > ${productsTable.price}`);
+  }
+
+  if (inStock) {
+    conditions.push(
+      or(
+        gt(productsTable.quantity, 0),
+        eq(productsTable.trackInventory, false),
+      )!
+    );
+  }
+
+  if (newArrivals) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    conditions.push(gte(productsTable.createdAt, thirtyDaysAgo));
+  }
+
+  if (minRating) {
+    conditions.push(gte(productsTable.averageRating, minRating));
+  }
+
+  if (vendorFilter.length > 0) {
+    conditions.push(inArray(productsTable.vendor, vendorFilter));
+  }
+
+  if (productTypeFilter.length > 0) {
+    conditions.push(inArray(productsTable.productType, productTypeFilter));
+  }
+
+  if (tagFilter.length > 0) {
+    const tagConditions = tagFilter.map((t) => ilike(productsTable.tags, `%${t}%`));
+    conditions.push(or(...tagConditions)!);
   }
 
   // Category filter
@@ -216,6 +254,12 @@ export default async function ProductsPage({ searchParams }: Props) {
               if (category) sp.set("category", category);
               if (featured) sp.set("featured", "true");
               if (onSale) sp.set("onSale", "true");
+              if (inStock) sp.set("inStock", "true");
+              if (newArrivals) sp.set("newArrivals", "true");
+              if (minRating) sp.set("minRating", String(minRating));
+              if (vendorFilter.length) sp.set("vendor", vendorFilter.join(","));
+              if (productTypeFilter.length) sp.set("productType", productTypeFilter.join(","));
+              if (tagFilter.length) sp.set("tags", tagFilter.join(","));
               if (minPrice) sp.set("minPrice", minPrice);
               if (maxPrice) sp.set("maxPrice", maxPrice);
               Object.entries(attrFilters).forEach(([k, v]) => {
