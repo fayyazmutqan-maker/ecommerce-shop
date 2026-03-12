@@ -73,7 +73,8 @@ export default auth(async (req) => {
     // Exclude webhook endpoints (server-to-server)
     !pathname.startsWith("/api/payments/webhook") &&
     !pathname.startsWith("/api/payments/callback") &&
-    !pathname.startsWith("/api/channels/meta/webhook")
+    !pathname.startsWith("/api/channels/meta/webhook") &&
+    !pathname.startsWith("/api/channels/google/callback")
   ) {
     const origin = req.headers.get("origin");
     if (origin && !isOriginAllowed(origin)) {

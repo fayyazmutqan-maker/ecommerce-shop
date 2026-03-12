@@ -17,6 +17,7 @@ import {
 import { eq, and, inArray, asc, desc } from "drizzle-orm";
 import { syncProductsBatch, deleteProductsBatch, formatMetaPrice } from "@/lib/meta";
 import type { MetaCatalogItem, MetaCredentials } from "@/lib/meta";
+import { syncProductToAllGoogleChannels, removeProductFromGoogleChannels } from "@/lib/google-catalog-sync";
 import { env } from "@/lib/env";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -397,7 +398,8 @@ export async function removeProductFromChannels(productId: string): Promise<void
     const channel = await db.query.salesChannels.findFirst({
       where: eq(salesChannels.id, cp.channelId),
     });
-    if (!channel?.externalCatalogId || !cp.externalProductId) continue;
+    // Only handle Meta channels here; Google handled separately
+    if (channel?.platform === "GOOGLE" || !channel?.externalCatalogId || !cp.externalProductId) continue;
 
     let credentials: MetaCredentials;
     try {
@@ -419,6 +421,9 @@ export async function removeProductFromChannels(productId: string): Promise<void
     } catch { /* best effort */ }
   }
 
+  // Also remove from Google channels
+  await removeProductFromGoogleChannels(productId).catch(() => {});
+
   // Clean up the channelProducts records
   await db.delete(channelProducts).where(eq(channelProducts.productId, productId));
 }
@@ -426,13 +431,21 @@ export async function removeProductFromChannels(productId: string): Promise<void
 // ─── Sync All Active Channels ────────────────────────────────
 
 export async function syncProductToAllChannels(productId: string): Promise<void> {
+  // Sync to Meta channels
   const activeChannels = await db.query.salesChannels.findMany({
     where: eq(salesChannels.status, "ACTIVE"),
   });
 
-  await Promise.allSettled(
-    activeChannels.map((ch) => syncProduct(ch.id, productId)),
+  const metaChannels = activeChannels.filter(
+    (ch) => ch.platform === "FACEBOOK" || ch.platform === "INSTAGRAM",
   );
+
+  await Promise.allSettled([
+    // Meta channels
+    ...metaChannels.map((ch) => syncProduct(ch.id, productId)),
+    // Google channels
+    syncProductToAllGoogleChannels(productId),
+  ]);
 }
 
 // ─── Helper ──────────────────────────────────────────────────
