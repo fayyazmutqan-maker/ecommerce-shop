@@ -14,10 +14,12 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/store";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export function CartSheet() {
   const { items, removeItem, updateQuantity, getTotal, getItemCount } =
     useCartStore();
+  const t = useTranslations("common");
 
   return (
     <Sheet>
@@ -38,7 +40,7 @@ export function CartSheet() {
       <SheetContent className="flex flex-col w-full sm:max-w-md p-0">
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle className="text-lg font-bold">
-            Cart ({getItemCount()})
+            {t("cart")} ({getItemCount()})
           </SheetTitle>
         </SheetHeader>
 
@@ -47,10 +49,10 @@ export function CartSheet() {
             <div className="text-center space-y-4">
               <ShoppingCart className="h-14 w-14 text-muted-foreground/30 mx-auto" />
               <p className="text-muted-foreground font-medium">
-                Your cart is empty
+                {t("emptyCart")}
               </p>
               <Button asChild variant="outline" className="h-11 px-6">
-                <Link href="/products">Browse Products</Link>
+                <Link href="/products">{t("browseProducts")}</Link>
               </Button>
             </div>
           </div>
@@ -124,17 +126,17 @@ export function CartSheet() {
 
             <div className="border-t px-6 py-6 space-y-4">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-bold text-base">SAR {getTotal().toFixed(2)}</span>
+                <span className="text-muted-foreground">{t("subtotal")}</span>
+                <span className="font-bold text-base">{t("sar")} {getTotal().toFixed(2)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Shipping and taxes calculated at checkout
+                {t("shippingTaxAtCheckout")}
               </p>
               <Button asChild className="w-full h-12 font-semibold text-[15px]">
-                <Link href="/checkout">Proceed to Checkout</Link>
+                <Link href="/checkout">{t("proceedToCheckout")}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full h-11">
-                <Link href="/cart">View Cart</Link>
+                <Link href="/cart">{t("viewCart")}</Link>
               </Button>
             </div>
           </>

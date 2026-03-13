@@ -4,8 +4,11 @@ import { useState, FormEvent } from "react";
 import { Mail, Loader2, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export function NewsletterForm() {
+  const t = useTranslations("footer");
+  const tCommon = useTranslations("common");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -25,7 +28,7 @@ export function NewsletterForm() {
 
       if (!res.ok) {
         setStatus("error");
-        setMessage(data.error || "Something went wrong");
+        setMessage(data.error || tCommon("error"));
         return;
       }
 
@@ -35,7 +38,7 @@ export function NewsletterForm() {
       setTimeout(() => setStatus("idle"), 4000);
     } catch {
       setStatus("error");
-      setMessage("Failed to subscribe. Please try again.");
+      setMessage(t("failedToSubscribe"));
     }
   }
 
@@ -44,7 +47,7 @@ export function NewsletterForm() {
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           type="email"
-          placeholder="Your email"
+          placeholder={t("emailPlaceholder")}
           className="flex-1 h-10"
           value={email}
           onChange={(e) => setEmail(e.target.value)}

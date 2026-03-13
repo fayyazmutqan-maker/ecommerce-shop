@@ -1,10 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { NewsletterForm } from "@/components/store/newsletter-form";
+import { useTranslations } from "next-intl";
 
 export function StoreFooter() {
+  const t = useTranslations("footer");
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
+
   return (
     <footer className="border-t bg-card">
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 lg:py-20">
@@ -13,8 +20,7 @@ export function StoreFooter() {
           <div className="space-y-5 lg:pr-8">
             <h3 className="text-lg font-bold tracking-tight">ShopFlow</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Your one-stop destination for quality products at exceptional
-              value. Fast shipping across Saudi Arabia, easy returns, and outstanding support.
+              {t("shopInfo")}
             </p>
             <div className="flex gap-1">
               {[
@@ -41,15 +47,15 @@ export function StoreFooter() {
           {/* Shop */}
           <div className="space-y-5">
             <h4 className="text-sm font-semibold uppercase tracking-widest">
-              Shop
+              {t("shop")}
             </h4>
             <ul className="space-y-3">
               {[
-                { href: "/products", label: "All Products" },
-                { href: "/collections", label: "Collections" },
-                { href: "/products?sort=newest", label: "New Arrivals" },
-                { href: "/products?onSale=true", label: "Sale" },
-                { href: "/gift-cards", label: "Gift Cards" },
+                { href: "/products", label: t("allProducts") },
+                { href: "/collections", label: tNav("collections") },
+                { href: "/products?sort=newest", label: t("newArrivals") },
+                { href: "/products?onSale=true", label: t("sale") },
+                { href: "/gift-cards", label: tNav("giftCards") },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -66,15 +72,15 @@ export function StoreFooter() {
           {/* Support */}
           <div className="space-y-5">
             <h4 className="text-sm font-semibold uppercase tracking-widest">
-              Support
+              {t("support")}
             </h4>
             <ul className="space-y-3">
               {[
-                { href: "/search", label: "Search" },
-                { href: "/contact", label: "Contact Us" },
-                { href: "/returns", label: "Shipping & Returns" },
-                { href: "/privacy", label: "Privacy Policy" },
-                { href: "/terms", label: "Terms of Service" },
+                { href: "/search", label: tCommon("search") },
+                { href: "/contact", label: tNav("contact") },
+                { href: "/returns", label: t("shippingReturns") },
+                { href: "/privacy", label: t("privacyPolicy") },
+                { href: "/terms", label: t("termsOfService") },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -91,10 +97,10 @@ export function StoreFooter() {
           {/* Newsletter */}
           <div className="space-y-5">
             <h4 className="text-sm font-semibold uppercase tracking-widest">
-              Newsletter
+              {t("newsletter")}
             </h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Get special offers and updates delivered to your inbox.
+              {t("newsletterDesc")}
             </p>
             <NewsletterForm />
           </div>
@@ -105,48 +111,45 @@ export function StoreFooter() {
         {/* Saudi Compliance & Legal */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 text-xs text-muted-foreground">
           <div className="space-y-1">
-            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">Commercial Registration</p>
+            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("commercialReg")}</p>
             <p>CR No: 1010XXXXXX — Riyadh, Saudi Arabia</p>
           </div>
           <div className="space-y-1">
-            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">VAT Registration</p>
+            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("vatReg")}</p>
             <p>VAT No: 3XXXXXXXXXX003 — ZATCA Registered</p>
           </div>
           <div className="space-y-1">
-            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">E-Commerce License</p>
+            <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("ecommLicense")}</p>
             <p>Licensed and regulated by CITC (Ministry of Commerce)</p>
           </div>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed mb-8">
-          All prices are displayed in Saudi Riyal (SAR) and include 15% VAT as mandated by ZATCA.
-          Products comply with SASO (Saudi Standards, Metrology and Quality Organization) standards.
-          We adhere to Saudi e-commerce regulations under the Ministry of Commerce and CITC guidelines.
-          Consumer rights are protected under the Saudi E-Commerce Law. Returns accepted within 7 days of delivery.
+          {t("saudiCompliance")}
         </p>
 
         <Separator className="mb-8" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} ShopFlow. All rights reserved. Kingdom of Saudi Arabia.</p>
+          <p>&copy; {new Date().getFullYear()} ShopFlow. {t("allRightsReserved")}</p>
           <div className="flex items-center gap-6">
             <Link
               href="/privacy"
               className="hover:text-foreground transition-colors"
             >
-              Privacy
+              {t("privacy")}
             </Link>
             <Link
               href="/terms"
               className="hover:text-foreground transition-colors"
             >
-              Terms
+              {t("terms")}
             </Link>
             <Link
               href="/returns"
               className="hover:text-foreground transition-colors"
             >
-              Returns
+              {t("returns")}
             </Link>
           </div>
         </div>

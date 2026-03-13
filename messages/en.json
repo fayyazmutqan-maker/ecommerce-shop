@@ -49,7 +49,15 @@
     "noResults": "No results found",
     "language": "Language",
     "english": "English",
-    "arabic": "العربية"
+    "arabic": "العربية",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "announcement": "Free shipping on orders over SAR 200 — Use code {code} for 10% off your first order",
+    "browseProducts": "Browse Products",
+    "viewCart": "View Cart",
+    "proceedToCheckout": "Proceed to Checkout",
+    "shippingTaxAtCheckout": "Shipping and taxes calculated at checkout",
+    "emptyCart": "Your cart is empty"
   },
   "nav": {
     "home": "Home",
@@ -152,11 +160,30 @@
     "sentDescription": "We'll get back to you soon."
   },
   "footer": {
-    "shopInfo": "A comprehensive ecommerce platform with premium products, fast shipping, and exceptional customer service.",
+    "shopInfo": "Your one-stop destination for quality products at exceptional value. Fast shipping across Saudi Arabia, easy returns, and outstanding support.",
     "quickLinks": "Quick Links",
     "customerService": "Customer Service",
     "contactUs": "Contact Us",
-    "allRightsReserved": "All rights reserved."
+    "allRightsReserved": "All rights reserved.",
+    "shop": "Shop",
+    "support": "Support",
+    "newsletter": "Newsletter",
+    "allProducts": "All Products",
+    "newArrivals": "New Arrivals",
+    "sale": "Sale",
+    "shippingReturns": "Shipping & Returns",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "newsletterDesc": "Get special offers and updates delivered to your inbox.",
+    "emailPlaceholder": "Your email",
+    "commercialReg": "Commercial Registration",
+    "vatReg": "VAT Registration",
+    "ecommLicense": "E-Commerce License",
+    "saudiCompliance": "All prices are displayed in Saudi Riyal (SAR) and include 15% VAT as mandated by ZATCA. Products comply with SASO standards. We adhere to Saudi e-commerce regulations. Consumer rights are protected under the Saudi E-Commerce Law. Returns accepted within 7 days of delivery.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "returns": "Returns",
+    "failedToSubscribe": "Failed to subscribe. Please try again."
   },
   "search": {
     "title": "Search",

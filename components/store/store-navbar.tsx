@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ShoppingBag,
@@ -17,23 +19,25 @@ import { CartSheet } from "@/components/store/cart-sheet";
 import { LanguageSwitcher } from "@/components/store/language-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WishlistNavIcon } from "@/components/store/wishlist-nav-icon";
-
-const navLinks = [
-  { title: "Home", href: "/" },
-  { title: "Products", href: "/products" },
-  { title: "Collections", href: "/collections" },
-  { title: "Blog", href: "/blog" },
-  { title: "Contact", href: "/contact" },
-];
+import { useTranslations } from "next-intl";
 
 export function StoreNavbar() {
+  const t = useTranslations("common");
+  const tNav = useTranslations("nav");
+
+  const navLinks = [
+    { title: tNav("home"), href: "/" },
+    { title: tNav("products"), href: "/products" },
+    { title: tNav("collections"), href: "/collections" },
+    { title: tNav("blog"), href: "/blog" },
+    { title: tNav("contact"), href: "/contact" },
+  ];
+
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
       {/* Announcement Bar */}
       <div className="bg-foreground text-background text-center py-2.5 text-[13px] font-medium tracking-wide">
-        Free shipping on orders over SAR 200 &mdash; Use code{" "}
-        <span className="font-semibold">WELCOME10</span> for 10% off your first
-        order
+        {t("announcement", { code: "WELCOME10" })}
       </div>
 
       {/* Main Navbar */}
@@ -68,7 +72,7 @@ export function StoreNavbar() {
                     className="flex items-center px-4 py-3 text-[15px] font-medium rounded-lg hover:bg-accent transition-colors"
                   >
                     <Search className="h-4 w-4 mr-3" />
-                    Search
+                    {t("search")}
                   </Link>
                   {navLinks.map((link) => (
                     <Link
@@ -82,10 +86,10 @@ export function StoreNavbar() {
                 </nav>
                 <div className="mt-8 px-4 space-y-3">
                   <Button className="w-full h-11" asChild>
-                    <Link href="/login">Sign In</Link>
+                    <Link href="/login">{t("signIn")}</Link>
                   </Button>
                   <Button variant="outline" className="w-full h-11" asChild>
-                    <Link href="/register">Create Account</Link>
+                    <Link href="/register">{t("createAccount")}</Link>
                   </Button>
                 </div>
               </SheetContent>
