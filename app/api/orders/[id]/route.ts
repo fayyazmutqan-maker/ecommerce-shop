@@ -3,9 +3,12 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { eq, desc, sql } from "drizzle-orm";
-import { orders, orderItems, orderTimeline, productVariants, products } from "@/lib/schema";
+import { orders, orderItems, orderTimeline, productVariants, products, channelOrders, salesChannels, refunds, refundItems } from "@/lib/schema";
 import { sendShippingUpdate } from "@/lib/email";
+import { cancelOrder as metaCancelOrder } from "@/lib/meta";
+import type { MetaCredentials } from "@/lib/meta";
 import { serializeDecimal } from "@/lib/decimal";
+import { reportCreditNoteToZatca } from "@/lib/zatca/service";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -176,9 +179,107 @@ export async function PUT(req: Request, { params }: RouteParams) {
       }).catch((err) => console.error("Failed to send shipping update email:", err));
     }
 
+    // Sync cancellation to Meta Commerce if this is a Meta order (non-blocking)
+    if (data.status === "CANCELLED" && existing.status !== "CANCELLED") {
+      syncCancellationToMeta(id, data.cancelReason || "CUSTOMER_REQUESTED").catch((err) =>
+        console.error("Meta cancellation sync failed:", err)
+      );
+
+      // Issue ZATCA credit note if the invoice was already reported
+      if (existing.zatcaStatus === "REPORTED" || existing.zatcaStatus === "CLEARED") {
+        issueCancellationCreditNote(id, existing, session.user.id).catch((err) =>
+          console.error("ZATCA cancellation credit note failed:", err)
+        );
+      }
+    }
+
     return NextResponse.json(serializeDecimal(order));
   } catch (error) {
     console.error("Order PUT error:", error);
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
   }
+}
+
+// ─── Meta Cancellation Sync ─────────────────────────────────
+
+async function syncCancellationToMeta(orderId: string, reason: string) {
+  // Check if this order has a Meta channel mapping
+  const channelOrder = await db.query.channelOrders.findFirst({
+    where: eq(channelOrders.orderId, orderId),
+  });
+  if (!channelOrder?.externalOrderId) return;
+
+  const channel = await db.query.salesChannels.findFirst({
+    where: eq(salesChannels.id, channelOrder.channelId),
+  });
+  if (!channel) return;
+
+  let credentials: MetaCredentials;
+  try {
+    credentials = JSON.parse(channel.credentials || "{}");
+  } catch { return; }
+  if (!credentials.accessToken) return;
+
+  // Get order items to send to Meta
+  const items = await db.query.orderItems.findMany({
+    where: eq(orderItems.orderId, orderId),
+  });
+
+  const metaItems = items
+    .map((item) => ({
+      retailer_id: item.sku || item.productId,
+      quantity: item.quantity,
+    }))
+    .filter((i) => i.retailer_id);
+
+  if (metaItems.length === 0) return;
+
+  await metaCancelOrder(
+    channelOrder.externalOrderId,
+    reason,
+    metaItems,
+    credentials.accessToken,
+  );
+}
+
+// ─── ZATCA Cancellation Credit Note ─────────────────────────
+
+async function issueCancellationCreditNote(
+  orderId: string,
+  existing: { totalAmount: string | number; currency: string },
+  processedBy: string,
+) {
+  // Fetch order items to create refund line items
+  const items = await db.query.orderItems.findMany({
+    where: eq(orderItems.orderId, orderId),
+  });
+
+  if (items.length === 0) return;
+
+  const totalAmount = Number(existing.totalAmount);
+
+  // Create a full refund record (COMPLETED, no payment processing needed — cancellation reversal)
+  const [refund] = await db.insert(refunds).values({
+    orderId,
+    amount: totalAmount.toFixed(2),
+    reason: "Order cancelled",
+    notes: "Auto-generated credit note for cancelled order",
+    status: "COMPLETED",
+    type: "FULL",
+    restockItems: false, // Inventory already restocked in the cancellation logic
+    processedBy,
+  }).returning();
+
+  // Create refund items
+  await db.insert(refundItems).values(
+    items.map((item) => ({
+      refundId: refund.id,
+      orderItemId: item.id,
+      quantity: item.quantity,
+      amount: String(item.totalPrice),
+    })),
+  );
+
+  // Report credit note to ZATCA
+  await reportCreditNoteToZatca(refund.id);
 }

@@ -8,7 +8,7 @@ import {
   Hash, Keyboard, ChevronDown, Package, Wifi, WifiOff, Volume2, VolumeX,
   ArrowRightLeft, DollarSign, LogIn, LogOut, ClipboardList,
   AlertCircle, CheckCircle2, ScanLine, Settings2,
-  Maximize, Minimize, CloudOff, CloudUpload,
+  Maximize, Minimize, CloudOff, CloudUpload, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useSidebar } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
@@ -114,6 +116,40 @@ interface StoreConfig {
 
 type PaymentMethodType = "cash" | "card" | "split";
 
+// ── Refund Types ──
+interface RefundOrderItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  quantity: number;
+  price: number | string;
+  totalPrice: number | string;
+  variant?: { id: string; name: string } | null;
+  product?: { id: string; name: string; slug: string; images?: { url: string }[] } | null;
+}
+
+interface RefundOrder {
+  id: string;
+  orderNumber: string;
+  email: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number | string;
+  currency: string;
+  source: string;
+  createdAt: string;
+  items: RefundOrderItem[];
+}
+
+interface RefundSelection {
+  orderItemId: string;
+  quantity: number;
+  maxQuantity: number;
+  amount: number;
+  unitPrice: number;
+  name: string;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Component
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -154,6 +190,17 @@ export default function PosPage() {
   const [customItemPrice, setCustomItemPrice] = useState("");
   const [manualBarcodeOpen, setManualBarcodeOpen] = useState(false);
   const [manualBarcodeValue, setManualBarcodeValue] = useState("");
+
+  // ── Refund ──
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundOrderSearch, setRefundOrderSearch] = useState("");
+  const [refundSearchResults, setRefundSearchResults] = useState<RefundOrder[]>([]);
+  const [refundSearchLoading, setRefundSearchLoading] = useState(false);
+  const [refundOrder, setRefundOrder] = useState<RefundOrder | null>(null);
+  const [refundSelections, setRefundSelections] = useState<RefundSelection[]>([]);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundRestock, setRefundRestock] = useState(true);
+  const [refundProcessing, setRefundProcessing] = useState(false);
 
   // ── Receipt ──
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -543,6 +590,7 @@ export default function PosPage() {
       if (e.key === "F11") { e.preventDefault(); toggleFullscreen(); }
       if (e.key === "F12" && receiptData) { e.preventDefault(); printer.printReceipt(receiptData); }
       if (e.key === "Escape" && search) { setSearch(""); }
+      if (e.key === "r" && e.ctrlKey && !e.shiftKey) { e.preventDefault(); openRefundDialog(); }
     }
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
@@ -818,7 +866,7 @@ export default function PosPage() {
         postalCode: "00000",
         country: "Saudi Arabia",
       },
-      paymentMethod: paymentMethod === "cash" || paymentMethod === "split" ? "cod" : "tap",
+      paymentMethod: paymentMethod === "cash" ? "cod" : "pos_card",
       notes: payNotes,
       ...(giftCardCode && giftCardDeduction > 0 ? { giftCardCode } : {}),
     };
@@ -931,6 +979,185 @@ export default function PosPage() {
     manualScan(manualBarcodeValue.trim());
     setManualBarcodeValue("");
     setManualBarcodeOpen(false);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // POS Refund
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  function openRefundDialog() {
+    setRefundOpen(true);
+    setRefundOrderSearch("");
+    setRefundSearchResults([]);
+    setRefundOrder(null);
+    setRefundSelections([]);
+    setRefundReason("");
+    setRefundRestock(true);
+    setRefundProcessing(false);
+  }
+
+  async function searchRefundOrders(query: string) {
+    setRefundOrderSearch(query);
+    if (query.length < 2) { setRefundSearchResults([]); return; }
+    setRefundSearchLoading(true);
+    try {
+      const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        const eligible = (data.orders || []).filter(
+          (o: RefundOrder) => o.paymentStatus === "PAID" || o.paymentStatus === "PARTIALLY_PAID"
+        );
+        setRefundSearchResults(eligible);
+      }
+    } catch {
+      toast.error("Failed to search orders");
+    } finally {
+      setRefundSearchLoading(false);
+    }
+  }
+
+  function selectRefundOrder(order: RefundOrder) {
+    setRefundOrder(order);
+    setRefundSearchResults([]);
+    setRefundSelections([]);
+  }
+
+  function toggleRefundItem(item: RefundOrderItem, checked: boolean) {
+    if (checked) {
+      const unitPrice = Number(item.totalPrice) / item.quantity;
+      setRefundSelections((prev) => [
+        ...prev,
+        {
+          orderItemId: item.id,
+          quantity: item.quantity,
+          maxQuantity: item.quantity,
+          amount: Number(item.totalPrice),
+          unitPrice,
+          name: item.name,
+        },
+      ]);
+    } else {
+      setRefundSelections((prev) => prev.filter((s) => s.orderItemId !== item.id));
+    }
+  }
+
+  function updateRefundItemQty(orderItemId: string, qty: number) {
+    setRefundSelections((prev) =>
+      prev.map((s) =>
+        s.orderItemId === orderItemId
+          ? { ...s, quantity: Math.max(1, Math.min(qty, s.maxQuantity)), amount: Math.max(1, Math.min(qty, s.maxQuantity)) * s.unitPrice }
+          : s
+      )
+    );
+  }
+
+  function selectAllRefundItems() {
+    if (!refundOrder) return;
+    if (refundSelections.length === refundOrder.items.length) {
+      setRefundSelections([]);
+    } else {
+      setRefundSelections(
+        refundOrder.items.map((item) => {
+          const unitPrice = Number(item.totalPrice) / item.quantity;
+          return {
+            orderItemId: item.id,
+            quantity: item.quantity,
+            maxQuantity: item.quantity,
+            amount: Number(item.totalPrice),
+            unitPrice,
+            name: item.name,
+          };
+        })
+      );
+    }
+  }
+
+  const refundTotal = refundSelections.reduce((sum, s) => sum + s.amount, 0);
+  const isFullRefund = refundOrder
+    ? refundSelections.length === refundOrder.items.length &&
+      refundSelections.every((s) => s.quantity === s.maxQuantity)
+    : false;
+
+  async function processRefund() {
+    if (!refundOrder || refundSelections.length === 0) return;
+    setRefundProcessing(true);
+    try {
+      const payload = {
+        orderId: refundOrder.id,
+        type: isFullRefund ? "FULL" : "PARTIAL",
+        reason: refundReason || "POS Refund",
+        notes: `POS Refund by ${posSession?.staffName || "Staff"}`,
+        restockItems: refundRestock,
+        items: refundSelections.map((s) => ({
+          orderItemId: s.orderItemId,
+          quantity: s.quantity,
+          amount: s.amount,
+        })),
+      };
+
+      const res = await fetch("/api/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Refund failed" }));
+        throw new Error(err.error || "Refund failed");
+      }
+
+      const result = await res.json();
+
+      if (soundEnabled) playSound("success");
+
+      // Build & show refund receipt
+      const refundReceipt: ReceiptData = {
+        storeName: storeConfig.storeName,
+        storeAddress: storeConfig.storeAddress || undefined,
+        storePhone: storeConfig.storePhone || undefined,
+        vatNumber: storeConfig.vatNumber || undefined,
+        orderNumber: `REFUND — ${refundOrder.orderNumber}`,
+        date: new Date(),
+        cashier: posSession?.staffName || "Staff",
+        items: refundSelections.map((s) => ({
+          name: s.name,
+          quantity: s.quantity,
+          unitPrice: -s.unitPrice,
+          lineTotal: -s.amount,
+        })),
+        subtotal: -refundTotal,
+        discount: 0,
+        taxRate: storeConfig.taxRate,
+        taxAmount: -(refundTotal * storeConfig.taxRate / (1 + storeConfig.taxRate)),
+        total: -refundTotal,
+        paymentMethod: `Refund (${result.refund?.status || "Completed"})`,
+        currency: curr,
+        footerMessage: "Refund processed successfully",
+      };
+
+      setReceiptData(refundReceipt);
+
+      if (autoPrint) {
+        printer.printReceipt(refundReceipt);
+      }
+
+      // Open cash drawer for cash refunds
+      if (refundOrder.source === "POS") {
+        printer.openCashDrawer();
+        if (soundEnabled) playSound("drawer");
+      }
+
+      toast.success("Refund processed!", {
+        description: `${curr} ${refundTotal.toFixed(2)} refunded for ${refundOrder.orderNumber}`,
+      });
+
+      setRefundOpen(false);
+    } catch (error) {
+      if (soundEnabled) playSound("error");
+      toast.error(error instanceof Error ? error.message : "Refund failed");
+    } finally {
+      setRefundProcessing(false);
+    }
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1093,6 +1320,7 @@ export default function PosPage() {
           <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F7</kbd> Split</span>
           <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F8</kbd> Custom</span>
           <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F9</kbd> Drawer</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">Ctrl+R</kbd> Refund</span>
           <span className="ml-auto flex items-center gap-1.5">
             {isOnline
               ? <><Wifi className="h-3 w-3 text-green-500" /> Online</>
@@ -1218,6 +1446,9 @@ export default function PosPage() {
             {heldSales.length > 0 && <Badge variant="secondary" className="ml-1">{heldSales.length} held</Badge>}
           </h2>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={openRefundDialog} title="Refund (Ctrl+R)">
+              <RotateCcw className="h-3 w-3 mr-1" /> Refund
+            </Button>
             {cart.length > 0 && (
               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={holdSale} title="Hold (F4)">
                 <Pause className="h-3 w-3 mr-1" /> Hold
@@ -1421,8 +1652,13 @@ export default function PosPage() {
           </SheetTrigger>
           <SheetContent side="right" className="w-[min(400px,90vw)] flex flex-col p-0">
             <SheetHeader className="p-4 border-b">
-              <SheetTitle className="flex items-center gap-2">
-                <Receipt className="h-4 w-4" /> Cart — {curr} {total.toFixed(2)}
+              <SheetTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4" /> Cart — {curr} {total.toFixed(2)}
+                </span>
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={openRefundDialog}>
+                  <RotateCcw className="h-3 w-3 mr-1" /> Refund
+                </Button>
               </SheetTitle>
             </SheetHeader>
             <ScrollArea className="flex-1 px-4 py-2">
@@ -1749,6 +1985,203 @@ export default function PosPage() {
                 <LogIn className="h-4 w-4 mr-1.5" /> Open Register
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════ POS Refund Dialog ═══════════ */}
+      <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" /> POS Refund
+            </DialogTitle>
+            <DialogDescription>Search for an order and select items to refund</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto space-y-4">
+            {/* Step 1: Search for order */}
+            {!refundOrder && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Order Number</Label>
+                  <Input
+                    placeholder="Search by order number or email…"
+                    value={refundOrderSearch}
+                    onChange={(e) => searchRefundOrders(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+
+                {refundSearchLoading && (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+
+                {refundSearchResults.length > 0 && (
+                  <div className="space-y-1.5 max-h-64 overflow-auto">
+                    {refundSearchResults.map((order) => (
+                      <button
+                        key={order.id}
+                        className="w-full text-left p-3 rounded-lg border bg-background hover:bg-muted transition-colors"
+                        onClick={() => selectRefundOrder(order)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{order.orderNumber}</span>
+                          <Badge variant={order.source === "POS" ? "default" : "secondary"} className="text-[10px]">
+                            {order.source}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-muted-foreground">{order.email}</span>
+                          <span className="text-sm font-medium">{curr} {Number(order.totalAmount).toFixed(2)}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {new Date(order.createdAt).toLocaleDateString()} — {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {refundOrderSearch.length >= 2 && !refundSearchLoading && refundSearchResults.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No eligible orders found</p>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Select items to refund */}
+            {refundOrder && (
+              <div className="space-y-3">
+                {/* Order header */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                  <div>
+                    <p className="font-medium text-sm">{refundOrder.orderNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {refundOrder.email} — {new Date(refundOrder.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{curr} {Number(refundOrder.totalAmount).toFixed(2)}</p>
+                    <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => { setRefundOrder(null); setRefundSelections([]); }}>
+                      Change Order
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Select all */}
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Select Items to Refund</Label>
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectAllRefundItems}>
+                    {refundSelections.length === refundOrder.items.length ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
+
+                {/* Item list */}
+                <div className="space-y-2 max-h-48 overflow-auto">
+                  {refundOrder.items.map((item) => {
+                    const selected = refundSelections.find((s) => s.orderItemId === item.id);
+                    const unitPrice = Number(item.totalPrice) / item.quantity;
+                    return (
+                      <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-lg border bg-background">
+                        <Checkbox
+                          checked={!!selected}
+                          onCheckedChange={(checked) => toggleRefundItem(item, !!checked)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.name}</p>
+                          {item.variant && (
+                            <p className="text-[10px] text-muted-foreground">{item.variant.name}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {curr} {unitPrice.toFixed(2)} × {item.quantity}
+                          </p>
+                        </div>
+                        {selected && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Label className="text-[10px] text-muted-foreground">Qty:</Label>
+                            <div className="flex items-center border rounded">
+                              <Button
+                                variant="ghost" size="icon" className="h-6 w-6"
+                                onClick={() => updateRefundItemQty(item.id, selected.quantity - 1)}
+                                disabled={selected.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="text-xs w-6 text-center">{selected.quantity}</span>
+                              <Button
+                                variant="ghost" size="icon" className="h-6 w-6"
+                                onClick={() => updateRefundItemQty(item.id, selected.quantity + 1)}
+                                disabled={selected.quantity >= selected.maxQuantity}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <span className="text-sm font-medium w-20 text-right">
+                              {curr} {selected.amount.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Separator />
+
+                {/* Refund Options */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Reason</Label>
+                    <Textarea
+                      placeholder="Reason for refund (optional)"
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      className="h-16 resize-none text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="restock-toggle" className="flex items-center gap-2 cursor-pointer text-sm">
+                      <Package className="h-3.5 w-3.5" /> Restock Items
+                    </Label>
+                    <Switch id="restock-toggle" checked={refundRestock} onCheckedChange={setRefundRestock} />
+                  </div>
+                </div>
+
+                {/* Refund Summary */}
+                {refundSelections.length > 0 && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Refund Total</span>
+                      <span className="text-lg font-bold text-destructive">{curr} {refundTotal.toFixed(2)}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {refundSelections.length} item{refundSelections.length !== 1 ? "s" : ""} —{" "}
+                      {isFullRefund ? "Full Refund" : "Partial Refund"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundOpen(false)} disabled={refundProcessing}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={processRefund}
+              disabled={!refundOrder || refundSelections.length === 0 || refundProcessing}
+            >
+              {refundProcessing ? (
+                <><div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Processing…</>
+              ) : (
+                <><RotateCcw className="h-4 w-4 mr-1.5" /> Process Refund</>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

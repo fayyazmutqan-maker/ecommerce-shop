@@ -13,8 +13,12 @@ import {
   storeSettings,
   products,
   productVariants,
+  channelOrders,
+  salesChannels,
 } from "@/lib/schema";
 import { createTapRefund } from "@/lib/tap";
+import { refundOrder as metaRefundOrder } from "@/lib/meta";
+import type { MetaCredentials } from "@/lib/meta";
 import { serializeDecimal } from "@/lib/decimal";
 import { refundLimiter, dailyRefundLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { reportCreditNoteToZatca } from "@/lib/zatca/service";
@@ -194,10 +198,10 @@ export async function POST(req: Request) {
 
     if (paymentTx?.reference) {
       try {
-        const settings = await db.query.storeSettings.findFirst();
-        if (settings?.tapSecretKey) {
+        const tapSecretKey = process.env.TAP_SECRET_KEY;
+        if (tapSecretKey) {
           const tapRefund = await createTapRefund(
-            settings.tapSecretKey,
+            tapSecretKey,
             paymentTx.reference,
             refundAmount,
             order.currency,
@@ -311,9 +315,59 @@ export async function POST(req: Request) {
     // Track for anomaly detection (non-blocking)
     trackInvoiceEvent({ ip, type: "refund", userId: session.user.id, refundId: result.id });
 
+    // Sync refund to Meta Commerce if this is a Meta order (non-blocking)
+    syncRefundToMeta(data.orderId, refundItemsData, order.items, data.reason || "BUYERS_REMORSE").catch((err) =>
+      console.error("Meta refund sync failed:", err)
+    );
+
     return NextResponse.json(serializeDecimal(result), { status: 201 });
   } catch (error) {
     console.error("Refund POST error:", error);
     return NextResponse.json({ error: "Failed to process refund" }, { status: 500 });
   }
+}
+
+// ─── Meta Refund Sync ───────────────────────────────────────
+
+async function syncRefundToMeta(
+  orderId: string,
+  refundItemsData: { orderItemId: string; quantity: number; amount: number }[],
+  orderItemsList: { id: string; sku: string | null; productId: string }[],
+  reason: string,
+) {
+  // Check if this order has a Meta channel mapping
+  const channelOrder = await db.query.channelOrders.findFirst({
+    where: eq(channelOrders.orderId, orderId),
+  });
+  if (!channelOrder?.externalOrderId) return;
+
+  const channel = await db.query.salesChannels.findFirst({
+    where: eq(salesChannels.id, channelOrder.channelId),
+  });
+  if (!channel) return;
+
+  let credentials: MetaCredentials;
+  try {
+    credentials = JSON.parse(channel.credentials || "{}");
+  } catch { return; }
+  if (!credentials.accessToken) return;
+
+  // Map refund items to Meta retailer IDs
+  const itemMap = new Map(orderItemsList.map((i) => [i.id, i]));
+  const metaItems = refundItemsData
+    .map((item) => {
+      const oi = itemMap.get(item.orderItemId);
+      if (!oi) return null;
+      return { retailer_id: oi.sku || oi.productId, quantity: item.quantity };
+    })
+    .filter((i): i is { retailer_id: string; quantity: number } => i !== null);
+
+  if (metaItems.length === 0) return;
+
+  await metaRefundOrder(
+    channelOrder.externalOrderId,
+    metaItems,
+    reason,
+    credentials.accessToken,
+  );
 }

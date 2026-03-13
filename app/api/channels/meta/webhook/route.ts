@@ -28,6 +28,7 @@ import {
 import type { MetaCredentials, MetaOrderWebhookPayload } from "@/lib/meta";
 import { generateOrderNumber } from "@/lib/helpers";
 import { audit } from "@/lib/audit";
+import { reportOrderToZatca } from "@/lib/zatca/service";
 
 // GET — Webhook subscription verification
 export async function GET(req: Request) {
@@ -276,6 +277,11 @@ async function processOrderEvent(
       console.error(`[Meta Webhook] Failed to acknowledge order ${externalOrderId}:`, err);
     }
   }
+
+  // Report invoice to ZATCA (non-blocking — Meta orders arrive as PAID)
+  reportOrderToZatca(order.id).catch((err) =>
+    console.error(`[Meta Webhook] ZATCA reporting failed for order ${order.id}:`, err)
+  );
 
   audit({
     action: "CHANNEL_WEBHOOK",

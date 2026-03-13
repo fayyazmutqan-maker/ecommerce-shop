@@ -739,8 +739,6 @@ export const storeSettings = pgTable("StoreSettings", {
   posEnabled: boolean("posEnabled").notNull().default(true),
   tapEnabled: boolean("tapEnabled").notNull().default(false),
   tapTestMode: boolean("tapTestMode").notNull().default(true),
-  tapPublicKey: text("tapPublicKey"),
-  tapSecretKey: text("tapSecretKey"),
   codEnabled: boolean("codEnabled").notNull().default(true),
   // ZATCA e-invoicing
   zatcaEnabled: boolean("zatcaEnabled").notNull().default(true),
@@ -851,6 +849,25 @@ export const subscribers = pgTable("Subscriber", {
   status: text("status").notNull().default("ACTIVE"),
   subscribedAt: timestamp("subscribedAt", { mode: "date" }).notNull().defaultNow(),
   unsubscribedAt: timestamp("unsubscribedAt", { mode: "date" }),
+});
+
+// ============================================================
+// NEWSLETTER CAMPAIGNS
+// ============================================================
+
+export const newsletterCampaigns = pgTable("NewsletterCampaign", {
+  id: cuid(),
+  subject: text("subject").notNull(),
+  previewText: text("previewText"),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("DRAFT"), // DRAFT | SENDING | SENT | FAILED
+  sentAt: timestamp("sentAt", { mode: "date" }),
+  sentBy: text("sentBy"),
+  recipientCount: integer("recipientCount").notNull().default(0),
+  successCount: integer("successCount").notNull().default(0),
+  failureCount: integer("failureCount").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
 
 // ============================================================

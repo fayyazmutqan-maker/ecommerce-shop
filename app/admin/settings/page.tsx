@@ -21,16 +21,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Loader2, Eye, EyeOff, CheckCircle2, XCircle, ExternalLink, CreditCard, Banknote } from "lucide-react";
+import { Save, Loader2, ExternalLink, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showSecretKey, setShowSecretKey] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
   const [settings, setSettings] = useState({
     storeName: "ShopFlow",
     storeDescription: "",
@@ -60,8 +57,6 @@ export default function SettingsPage() {
     // Payment Gateway
     tapEnabled: false,
     tapTestMode: true,
-    tapPublicKey: "",
-    tapSecretKey: "",
     codEnabled: true,
   });
 
@@ -385,110 +380,6 @@ export default function SettingsPage() {
                       }
                     />
                   </div>
-                </div>
-
-                {/* API Keys */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold">API Keys</h4>
-                  <p className="text-xs text-muted-foreground -mt-2">
-                    Get your API keys from{" "}
-                    <a
-                      href="https://dashboard.tap.company"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline underline-offset-2 inline-flex items-center gap-0.5"
-                    >
-                      Tap Dashboard <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </p>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Public Key {settings.tapTestMode ? "(Test)" : "(Live)"}</Label>
-                      <Input
-                        value={settings.tapPublicKey}
-                        onChange={(e) =>
-                          setSettings({ ...settings, tapPublicKey: e.target.value })
-                        }
-                        placeholder={settings.tapTestMode ? "pk_test_..." : "pk_live_..."}
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Secret Key {settings.tapTestMode ? "(Test)" : "(Live)"}</Label>
-                      <div className="relative">
-                        <Input
-                          type={showSecretKey ? "text" : "password"}
-                          value={settings.tapSecretKey}
-                          onChange={(e) =>
-                            setSettings({ ...settings, tapSecretKey: e.target.value })
-                          }
-                          placeholder={settings.tapTestMode ? "sk_test_..." : "sk_live_..."}
-                          className="font-mono text-sm pr-10"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full w-10"
-                          onClick={() => setShowSecretKey(!showSecretKey)}
-                        >
-                          {showSecretKey ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Test Connection */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={testingConnection || !settings.tapSecretKey}
-                    onClick={async () => {
-                      setTestingConnection(true);
-                      setConnectionStatus("idle");
-                      try {
-                        const res = await fetch("/api/payments/test-connection", {
-                          method: "POST",
-                        });
-                        const data = await res.json();
-                        if (res.ok && data.status === "connected") {
-                          setConnectionStatus("success");
-                          toast.success("Connection successful! Tap API keys are valid.");
-                        } else {
-                          setConnectionStatus("error");
-                          toast.error(data.message || "Connection failed. Please save your keys first, then test.");
-                        }
-                      } catch {
-                        setConnectionStatus("error");
-                        toast.error("Connection failed. Please save your keys first, then test.");
-                      } finally {
-                        setTestingConnection(false);
-                      }
-                    }}
-                  >
-                    {testingConnection ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Test Connection
-                  </Button>
-                  <p className="text-xs text-muted-foreground">Save your keys first, then test</p>
-                  {connectionStatus === "success" && (
-                    <span className="flex items-center gap-1 text-sm text-green-600">
-                      <CheckCircle2 className="h-4 w-4" /> Connected
-                    </span>
-                  )}
-                  {connectionStatus === "error" && (
-                    <span className="flex items-center gap-1 text-sm text-red-600">
-                      <XCircle className="h-4 w-4" /> Failed
-                    </span>
-                  )}
                 </div>
 
                 {/* Webhook URL */}

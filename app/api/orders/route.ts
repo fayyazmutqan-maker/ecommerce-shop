@@ -52,7 +52,7 @@ const checkoutSchema = z.object({
   items: z.array(orderItemSchema).min(1).max(50),
   shippingAddress: addressSchema,
   notes: z.string().max(500).optional(),
-  paymentMethod: z.enum(["tap", "cod"]).optional().default("cod"),
+  paymentMethod: z.enum(["tap", "cod", "pos_card"]).optional().default("cod"),
   source: z.enum(["ONLINE", "POS"]).optional().default("ONLINE"),
   // ── New: server-side validated coupon & shipping ──
   couponCode: z.string().max(50).optional(),
@@ -457,6 +457,10 @@ export async function POST(req: Request) {
       }
 
       // Create the order
+      const isPosOrder = data.source === "POS";
+      const resolvedPaymentMethod = data.paymentMethod === "tap" ? "TAP"
+        : data.paymentMethod === "pos_card" ? "CARD_TERMINAL"
+        : "COD";
       const [newOrder] = await tx
         .insert(ordersTable)
         .values({
@@ -464,9 +468,9 @@ export async function POST(req: Request) {
           userId,
           email: data.email,
           phone: data.phone || null,
-          status: "PENDING",
-          paymentStatus: "PENDING",
-          paymentMethod: data.paymentMethod === "tap" ? "TAP" : "COD",
+          status: isPosOrder ? "CONFIRMED" : "PENDING",
+          paymentStatus: isPosOrder ? "PAID" : "PENDING",
+          paymentMethod: resolvedPaymentMethod,
           fulfillmentStatus: "UNFULFILLED",
           subtotal: String(subtotal),
           taxAmount: String(taxAmount),
@@ -715,8 +719,19 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+    const searchQuery = searchParams.get("search")?.trim();
 
     const conditions = isAdmin ? [] : [eq(ordersTable.userId, session.user.id)];
+
+    if (searchQuery) {
+      conditions.push(
+        or(
+          sql`${ordersTable.orderNumber} ILIKE ${`%${searchQuery}%`}`,
+          sql`${ordersTable.email} ILIKE ${`%${searchQuery}%`}`,
+        )!,
+      );
+    }
+
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [orderRows, totalRows] = await Promise.all([

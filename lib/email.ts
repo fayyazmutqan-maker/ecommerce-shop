@@ -555,3 +555,61 @@ export async function sendSecurityAlert(data: {
     tags: [{ name: "type", value: "security-alert" }],
   });
 }
+
+// ============================================================
+// NEWSLETTER CAMPAIGN
+// ============================================================
+
+export async function sendNewsletterEmail(data: {
+  to: string;
+  subject: string;
+  previewText?: string;
+  content: string;
+  campaignId: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const unsubscribeUrl = `${appUrl}/api/newsletter?email=${encodeURIComponent(data.to)}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${data.previewText ? `<span style="display:none;font-size:1px;color:#fff;max-height:0;overflow:hidden">${escapeHtml(data.previewText)}</span>` : ""}
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: #000; color: #fff; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+    .content { padding: 32px 24px; line-height: 1.6; }
+    .content h2 { color: #111; margin-top: 0; }
+    .content a { color: #000; font-weight: 600; }
+    .btn { display: inline-block; padding: 12px 24px; background: #000; color: #fff !important; text-decoration: none; border-radius: 6px; font-weight: 600; }
+    .footer { padding: 24px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; }
+    .footer a { color: #999; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>ShopFlow</h1></div>
+    <div class="content">${data.content}</div>
+    <div class="footer">
+      <p>ShopFlow — Kingdom of Saudi Arabia</p>
+      <p>You received this because you subscribed to our newsletter.</p>
+      <p><a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return sendEmail({
+    to: data.to,
+    subject: data.subject,
+    html,
+    tags: [
+      { name: "type", value: "newsletter" },
+      { name: "campaign", value: data.campaignId },
+    ],
+  });
+}

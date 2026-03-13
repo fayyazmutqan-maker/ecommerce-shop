@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { retrieveTapCharge, mapTapStatus } from "@/lib/tap";
-import { orders, storeSettings, transactions } from "@/lib/schema";
+import { orders, transactions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { webhookLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -33,10 +33,10 @@ export async function GET(req: Request) {
 
     // If we have a tap_id, verify the charge
     if (tapId) {
-      const settings = await db.query.storeSettings.findFirst();
-      if (settings?.tapSecretKey) {
+      const tapSecretKey = process.env.TAP_SECRET_KEY;
+      if (tapSecretKey) {
         try {
-          const charge = await retrieveTapCharge(settings.tapSecretKey, tapId);
+          const charge = await retrieveTapCharge(tapSecretKey, tapId);
           const paymentStatus = mapTapStatus(charge.status);
 
           // Cross-check: verify the charge's metadata order_id matches the URL param

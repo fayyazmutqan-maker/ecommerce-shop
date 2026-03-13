@@ -3,22 +3,18 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CreditCard, Save, TestTube } from "lucide-react";
+import { CreditCard, Save } from "lucide-react";
 
 export default function PaymentSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [form, setForm] = useState({
     tapEnabled: false,
     tapTestMode: true,
-    tapPublicKey: "",
-    tapSecretKey: "",
     codEnabled: true,
   });
 
@@ -29,8 +25,6 @@ export default function PaymentSettingsPage() {
         setForm({
           tapEnabled: data.tapEnabled ?? false,
           tapTestMode: data.tapTestMode ?? true,
-          tapPublicKey: data.tapPublicKey || "",
-          tapSecretKey: data.tapSecretKey || "",
           codEnabled: data.codEnabled ?? true,
         });
       })
@@ -41,14 +35,10 @@ export default function PaymentSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = { ...form };
-      if (payload.tapSecretKey.startsWith("sk_****")) {
-        delete (payload as Record<string, unknown>).tapSecretKey;
-      }
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(form),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -60,23 +50,6 @@ export default function PaymentSettingsPage() {
       toast.error("Failed to save settings");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleTest = async () => {
-    setTesting(true);
-    try {
-      const res = await fetch("/api/payments/test-connection", { method: "POST" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success("Connection successful!");
-      } else {
-        toast.error(data.error || "Connection failed");
-      }
-    } catch {
-      toast.error("Connection test failed");
-    } finally {
-      setTesting(false);
     }
   };
 
@@ -112,21 +85,7 @@ export default function PaymentSettingsPage() {
             </div>
             <Switch checked={form.tapTestMode} onCheckedChange={(v) => setForm((f) => ({ ...f, tapTestMode: v }))} />
           </div>
-          <div className="space-y-2">
-            <Label>Public Key</Label>
-            <Input value={form.tapPublicKey} onChange={(e) => setForm((f) => ({ ...f, tapPublicKey: e.target.value }))} placeholder="pk_test_..." />
-          </div>
-          <div className="space-y-2">
-            <Label>Secret Key</Label>
-            <Input value={form.tapSecretKey} onChange={(e) => setForm((f) => ({ ...f, tapSecretKey: e.target.value }))} placeholder="sk_test_..." type="password" />
-            <p className="text-xs text-muted-foreground">Secret keys are masked after saving for security</p>
-          </div>
-          {form.tapEnabled && (
-            <Button variant="outline" size="sm" onClick={handleTest} disabled={testing}>
-              <TestTube className="h-4 w-4 mr-2" />
-              {testing ? "Testing..." : "Test Connection"}
-            </Button>
-          )}
+          <p className="text-xs text-muted-foreground">API keys are configured via environment variables (TAP_SECRET_KEY, TAP_PUBLIC_KEY)</p>
         </CardContent>
       </Card>
 

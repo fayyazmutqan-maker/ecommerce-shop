@@ -12,7 +12,9 @@ import {
   products,
   productVariants,
   storeSettings,
+  transactions,
 } from "@/lib/schema";
+import { createTapCharge, parseSaudiPhone } from "@/lib/tap";
 
 /**
  * POST /api/draft-orders/convert — Convert a draft order into a real order
@@ -209,10 +211,66 @@ export async function POST(req: Request) {
       }).catch(console.error);
     }
 
+    // Generate Tap payment link for orders with tap payment method
+    let paymentUrl: string | null = null;
+    if (normalizedPM === "tap") {
+      try {
+        const settings = await db.query.storeSettings.findFirst();
+        const tapSecretKey = process.env.TAP_SECRET_KEY;
+        if (settings?.tapEnabled && tapSecretKey) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+          const charge = await createTapCharge(tapSecretKey, {
+            amount: Number(order.totalAmount),
+            currency: "SAR",
+            description: `Order ${order.orderNumber}`,
+            reference: { order: order.orderNumber },
+            receipt: { email: true, sms: false },
+            customer: {
+              first_name: draft.customerName?.split(" ")[0] || "Customer",
+              last_name: draft.customerName?.split(" ").slice(1).join(" ") || "",
+              email: draft.customerEmail || "",
+              phone: parseSaudiPhone(draft.customerPhone || undefined),
+            },
+            source: { id: "src_all" },
+            redirect: { url: `${baseUrl}/api/payments/callback?order_id=${order.id}` },
+            post: { url: `${baseUrl}/api/payments/webhook` },
+            metadata: { order_id: order.id, order_number: order.orderNumber },
+          });
+
+          paymentUrl = charge.transaction.url;
+
+          // Create transaction record
+          await db.insert(transactions).values({
+            orderId: order.id,
+            type: "CHARGE",
+            status: "PENDING",
+            amount: order.totalAmount,
+            currency: "SAR",
+            paymentMethod: "TAP",
+            reference: charge.id,
+            metadata: JSON.stringify({ tap_charge_id: charge.id, tap_status: charge.status }),
+          });
+
+          await db.insert(orderTimeline).values({
+            orderId: order.id,
+            title: "Payment Link Generated",
+            message: `Tap payment link created for draft conversion (Charge: ${charge.id})`,
+            type: "INFO",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to create Tap charge for draft order:", err);
+        // Non-fatal — order is still created, admin can manually create charge later
+      }
+    }
+
     return NextResponse.json({
       orderId: order.id,
       orderNumber: order.orderNumber,
-      message: "Draft order converted to order successfully",
+      paymentUrl,
+      message: paymentUrl
+        ? "Draft order converted — payment link generated"
+        : "Draft order converted to order successfully",
     }, { status: 201 });
   } catch (error) {
     console.error("Convert draft order error:", error);

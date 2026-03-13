@@ -18,7 +18,7 @@ async function main() {
   const existingAdmin = await db.query.users.findFirst({ where: eq(schema.users.email, "admin@store.com") });
   const admin = existingAdmin
     ? existingAdmin
-    : (await db.insert(schema.users).values({ email: "admin@store.com", name: "Store Admin", password: adminPassword, role: "ADMIN" }).returning())[0];
+    : (await db.insert(schema.users).values({ email: "admin@store.com", name: "Store Admin", password: adminPassword, role: "ADMIN", emailVerified: new Date() }).returning())[0];
   console.log("✅ Admin user created:", admin.email);
 
   // Create staff user
@@ -26,7 +26,7 @@ async function main() {
   const existingStaff = await db.query.users.findFirst({ where: eq(schema.users.email, "staff@store.com") });
   const staff = existingStaff
     ? existingStaff
-    : (await db.insert(schema.users).values({ email: "staff@store.com", name: "Staff Member", password: staffPassword, role: "STAFF" }).returning())[0];
+    : (await db.insert(schema.users).values({ email: "staff@store.com", name: "Staff Member", password: staffPassword, role: "STAFF", emailVerified: new Date() }).returning())[0];
   console.log("✅ Staff user created:", staff.email);
 
   // Create customer
@@ -34,7 +34,7 @@ async function main() {
   const existingCustomer = await db.query.users.findFirst({ where: eq(schema.users.email, "customer@example.com") });
   const customer = existingCustomer
     ? existingCustomer
-    : (await db.insert(schema.users).values({ email: "customer@example.com", name: "John Doe", password: customerPassword, role: "CUSTOMER", phone: "+1 555-0123" }).returning())[0];
+    : (await db.insert(schema.users).values({ email: "customer@example.com", name: "John Doe", password: customerPassword, role: "CUSTOMER", phone: "+1 555-0123", emailVerified: new Date() }).returning())[0];
   console.log("✅ Customer created:", customer.email);
 
   // Create Store Settings

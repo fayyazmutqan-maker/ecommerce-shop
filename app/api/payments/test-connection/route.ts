@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
 /**
@@ -14,10 +13,10 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const settings = await db.query.storeSettings.findFirst();
-    if (!settings?.tapSecretKey) {
+    const tapSecretKey = process.env.TAP_SECRET_KEY;
+    if (!tapSecretKey) {
       return NextResponse.json(
-        { error: "No secret key configured. Please save your keys first." },
+        { error: "TAP_SECRET_KEY not configured in environment variables." },
         { status: 400 }
       );
     }
@@ -26,7 +25,7 @@ export async function POST() {
     const res = await fetch("https://api.tap.company/v2/charges/list", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${settings.tapSecretKey}`,
+        Authorization: `Bearer ${tapSecretKey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },

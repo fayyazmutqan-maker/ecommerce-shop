@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { retrieveTapCharge, mapTapStatus, verifyTapWebhookSignature } from "@/lib/tap";
-import { orders, storeSettings, transactions, orderTimeline } from "@/lib/schema";
+import { orders, transactions, orderTimeline } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { webhookLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit } from "@/lib/audit";
@@ -44,10 +44,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get Tap secret key from settings to verify the charge
-    const settings = await db.query.storeSettings.findFirst();
-    if (!settings?.tapSecretKey) {
-      console.error("Webhook: Tap secret key not configured");
+    // Get Tap secret key from environment
+    const tapSecretKey = process.env.TAP_SECRET_KEY;
+    if (!tapSecretKey) {
+      console.error("Webhook: TAP_SECRET_KEY not configured in environment");
       return NextResponse.json(
         { error: "Payment gateway not configured" },
         { status: 500 }
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     // Verify webhook HMAC signature if provided by Tap
     // Log a warning if missing but still proceed (re-fetch provides secondary verification)
     if (hashString) {
-      const isValid = verifyTapWebhookSignature(settings.tapSecretKey, rawBody, hashString);
+      const isValid = verifyTapWebhookSignature(tapSecretKey, rawBody, hashString);
       if (!isValid) {
         console.error("Webhook: HMAC signature verification failed for charge", chargeId);
         return NextResponse.json(
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 
     // Always re-fetch the charge from Tap API to verify authenticity
     // This prevents spoofed webhook payloads
-    const charge = await retrieveTapCharge(settings.tapSecretKey, chargeId);
+    const charge = await retrieveTapCharge(tapSecretKey, chargeId);
 
     if (!charge || !charge.id) {
       console.error("Webhook: Could not verify charge", chargeId);

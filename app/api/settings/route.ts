@@ -28,8 +28,6 @@ const settingsSchema = z.object({
   // Payment Gateway
   tapEnabled: z.boolean().optional(),
   tapTestMode: z.boolean().optional(),
-  tapPublicKey: z.string().max(200).optional().nullable(),
-  tapSecretKey: z.string().max(200).optional().nullable(),
   codEnabled: z.boolean().optional(),
   // ZATCA
   zatcaEnabled: z.boolean().optional(),
@@ -37,7 +35,7 @@ const settingsSchema = z.object({
 }).strip();
 
 /** Fields that must NEVER be returned to non-admin callers */
-const SENSITIVE_FIELDS = ["tapSecretKey", "zatcaCsid", "zatcaSecret", "zatcaPcsid", "zatcaPcsidSecret"] as const;
+const SENSITIVE_FIELDS = ["zatcaCsid", "zatcaSecret", "zatcaPcsid", "zatcaPcsidSecret"] as const;
 
 export async function GET() {
   try {
@@ -62,10 +60,6 @@ export async function GET() {
 
     // Admin gets settings with secret keys masked (last 4 chars only)
     const adminSafe = { ...settings } as Record<string, unknown>;
-    if (typeof adminSafe.tapSecretKey === "string" && adminSafe.tapSecretKey) {
-      const key = adminSafe.tapSecretKey as string;
-      adminSafe.tapSecretKey = key.length > 4 ? `sk_****${key.slice(-4)}` : "sk_****";
-    }
     // For ZATCA certs, expose only whether they exist (not the actual values)
     adminSafe.zatcaCsid = !!adminSafe.zatcaCsid;
     adminSafe.zatcaSecret = !!adminSafe.zatcaSecret;
@@ -99,14 +93,6 @@ export async function PUT(req: Request) {
     }
     const data = parsed.data;
 
-    // Protect against overwriting secret key with its masked version
-    if (
-      typeof data.tapSecretKey === "string" &&
-      data.tapSecretKey.startsWith("sk_****")
-    ) {
-      delete (data as Record<string, unknown>).tapSecretKey;
-    }
-
     let settings = await db.query.storeSettings.findFirst();
     if (settings) {
       const [updated] = await db.update(storeSettings).set(data).where(eq(storeSettings.id, settings.id)).returning();
@@ -129,10 +115,6 @@ export async function PUT(req: Request) {
 
     // Mask sensitive fields before returning
     const safeSettings = { ...settings } as Record<string, unknown>;
-    if (typeof safeSettings.tapSecretKey === "string" && safeSettings.tapSecretKey) {
-      const key = safeSettings.tapSecretKey as string;
-      safeSettings.tapSecretKey = key.length > 4 ? `sk_****${key.slice(-4)}` : "sk_****";
-    }
     return NextResponse.json(serializeDecimal(safeSettings));
   } catch (error) {
     console.error("Settings PUT error:", error);

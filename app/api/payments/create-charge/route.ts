@@ -87,7 +87,8 @@ export async function POST(req: Request) {
 
     // Get Tap settings from store settings
     const settings = await db.query.storeSettings.findFirst();
-    if (!settings?.tapEnabled || !settings?.tapSecretKey) {
+    const tapSecretKey = process.env.TAP_SECRET_KEY;
+    if (!settings?.tapEnabled || !tapSecretKey) {
       return NextResponse.json(
         { error: "Payment gateway not configured" },
         { status: 500 }
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
 
     // Create the Tap charge
-    const charge = await createTapCharge(settings.tapSecretKey, {
+    const charge = await createTapCharge(tapSecretKey, {
       amount: Number(order.totalAmount),
       currency: order.currency || "SAR",
       description: `Order ${order.orderNumber}`,

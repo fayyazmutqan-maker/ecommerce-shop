@@ -40,7 +40,8 @@ export type AuditAction =
   | "CHANNEL_DISCONNECTED"
   | "CHANNEL_SYNC"
   | "CHANNEL_OAUTH_INITIATED"
-  | "CHANNEL_WEBHOOK";
+  | "CHANNEL_WEBHOOK"
+  | "NEWSLETTER_SENT";
 
 export interface AuditEntry {
   action: AuditAction;

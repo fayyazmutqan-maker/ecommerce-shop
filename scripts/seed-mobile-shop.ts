@@ -1407,7 +1407,7 @@ interface ProductSeed {
 async function upsertUser(data: { email: string; name: string; password: string; role: string; phone?: string }) {
   const existing = await db.query.users.findFirst({ where: eq(schema.users.email, data.email) });
   if (existing) return existing;
-  const [user] = await db.insert(schema.users).values(data).returning();
+  const [user] = await db.insert(schema.users).values({ ...data, emailVerified: new Date() }).returning();
   return user;
 }
 
