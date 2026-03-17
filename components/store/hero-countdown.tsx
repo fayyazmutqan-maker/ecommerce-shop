@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface HeroCountdownProps {
   endDate: string;
@@ -34,6 +35,7 @@ function pad(n: number): string {
 
 export function HeroCountdown({ endDate, label, className, variant = "default" }: HeroCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(endDate));
+  const t = useTranslations("countdown");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -77,10 +79,10 @@ export function HeroCountdown({ endDate, label, className, variant = "default" }
 
   // Default variant - boxed
   const units = [
-    ...(timeLeft.days > 0 ? [{ value: timeLeft.days, label: "Days" }] : []),
-    { value: timeLeft.hours, label: "Hrs" },
-    { value: timeLeft.minutes, label: "Min" },
-    { value: timeLeft.seconds, label: "Sec" },
+    ...(timeLeft.days > 0 ? [{ value: timeLeft.days, label: t("days") }] : []),
+    { value: timeLeft.hours, label: t("hrs") },
+    { value: timeLeft.minutes, label: t("min") },
+    { value: timeLeft.seconds, label: t("sec") },
   ];
 
   return (

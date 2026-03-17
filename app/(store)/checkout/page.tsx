@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 import { PhoneInputField } from "@/components/ui/phone-input";
+import { useTranslations } from "next-intl";
 
 interface PaymentSettings {
   tapEnabled: boolean;
@@ -52,6 +53,9 @@ interface AutoDiscountApplied {
 }
 
 export default function CheckoutPage() {
+  const t = useTranslations("checkoutPage");
+  const tCommon = useTranslations("common");
+  const tCheckout = useTranslations("checkout");
   const router = useRouter();
   const { items, getTotal, clearCart } = useCartStore();
   const [loading, setLoading] = useState(false);
@@ -159,13 +163,13 @@ export default function CheckoutPage() {
     return (
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
         <h1 className="text-3xl font-bold tracking-tight mb-3">
-          No items to checkout
+          {t("noItems")}
         </h1>
         <p className="text-muted-foreground text-base mb-8">
-          Add products to your cart first.
+          {t("addProductsFirst")}
         </p>
         <Button className="h-12 px-8" asChild>
-          <Link href="/products">Browse Products</Link>
+          <Link href="/products">{tCommon("browseProducts")}</Link>
         </Button>
       </div>
     );
@@ -190,7 +194,7 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setCouponError(data.error || "Invalid coupon");
+        setCouponError(data.error || t("invalidCoupon"));
         setCouponDiscount(0);
         setCouponFreeShipping(false);
         setAppliedCoupon(null);
@@ -199,9 +203,9 @@ export default function CheckoutPage() {
       setCouponDiscount(data.discountAmount || 0);
       setCouponFreeShipping(data.freeShipping || false);
       setAppliedCoupon(data.coupon.code);
-      toast.success(`Coupon "${data.coupon.code}" applied!`);
+      toast.success(t("couponApplied", { code: data.coupon.code }));
     } catch {
-      setCouponError("Failed to validate coupon");
+      setCouponError(t("failedValidateCoupon"));
     } finally {
       setCouponLoading(false);
     }
@@ -222,19 +226,19 @@ export default function CheckoutPage() {
 
     // Client-side validation
     const newErrors: Record<string, string> = {};
-    if (!email) newErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = "Invalid email";
-    if (!firstName) newErrors.firstName = "First name is required";
-    if (!lastName) newErrors.lastName = "Last name is required";
-    if (!address1) newErrors.address1 = "Address is required";
-    if (!city) newErrors.city = "City is required";
-    if (!region) newErrors.region = "Region is required";
-    if (!postalCode) newErrors.postalCode = "Postal code is required";
-    if (!agreeTerms) newErrors.terms = "You must agree to the terms and conditions";
+    if (!email) newErrors.email = t("emailRequired");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = t("invalidEmail");
+    if (!firstName) newErrors.firstName = t("firstNameRequired");
+    if (!lastName) newErrors.lastName = t("lastNameRequired");
+    if (!address1) newErrors.address1 = t("addressRequired");
+    if (!city) newErrors.city = t("cityRequired");
+    if (!region) newErrors.region = t("regionRequired");
+    if (!postalCode) newErrors.postalCode = t("postalCodeRequired");
+    if (!agreeTerms) newErrors.terms = t("agreeTermsRequired");
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Please fill in all required fields");
+      toast.error(t("fillRequired"));
       return;
     }
 
@@ -272,7 +276,7 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || "Failed to place order");
+        toast.error(data.error || t("failedPlaceOrder"));
         setLoading(false);
         return;
       }
@@ -290,7 +294,7 @@ export default function CheckoutPage() {
         if (!chargeRes.ok) {
           // Charge creation failed but order exists — tell user to retry
           toast.error(
-            chargeData.error || "Failed to initiate payment. Your order has been saved — you can retry payment later."
+            chargeData.error || t("failedPayment")
           );
           clearCart();
           router.push(`/order-confirmation?order=${data.orderNumber}&status=failed`);
@@ -305,10 +309,10 @@ export default function CheckoutPage() {
 
       // COD flow — go directly to confirmation
       clearCart();
-      toast.success(`Order ${data.orderNumber} placed successfully!`);
+      toast.success(t("orderPlaced", { orderNumber: data.orderNumber }));
       router.push(`/order-confirmation?order=${data.orderNumber}`);
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(tCommon("error"));
     } finally {
       setLoading(false);
     }
@@ -322,7 +326,7 @@ export default function CheckoutPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Checkout</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{tCheckout("title")}</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
@@ -332,14 +336,14 @@ export default function CheckoutPage() {
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-bold">
-                Contact Information
+                {tCheckout("contactInfo")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
-                    Email
+                    {tCheckout("email")}
                   </Label>
                   <Input
                     id="email"
@@ -354,7 +358,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-sm font-medium">
-                    Phone
+                    {tCheckout("phone")}
                   </Label>
                   <PhoneInputField
                     value={phone}
@@ -370,21 +374,21 @@ export default function CheckoutPage() {
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-bold">
-                Shipping Address
+                {tCheckout("shippingAddress")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName" className="text-sm font-medium">
-                    First Name
+                    {tCheckout("firstName")}
                   </Label>
                   <Input id="firstName" placeholder="Mohammed" className="h-11" value={form.firstName} onChange={(e) => updateForm("firstName", e.target.value)} required />
                   {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName" className="text-sm font-medium">
-                    Last Name
+                    {tCheckout("lastName")}
                   </Label>
                   <Input id="lastName" placeholder="Al-Salem" className="h-11" value={form.lastName} onChange={(e) => updateForm("lastName", e.target.value)} required />
                   {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
@@ -392,7 +396,7 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address1" className="text-sm font-medium">
-                  Address
+                  {tCheckout("address")}
                 </Label>
                 <Input
                   id="address1"
@@ -406,25 +410,25 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address2" className="text-sm font-medium">
-                  Apartment, suite, etc.
+                  {t("apartment")}
                 </Label>
                 <Input id="address2" placeholder="Floor 3, Office 301" className="h-11" value={form.address2} onChange={(e) => updateForm("address2", e.target.value)} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city" className="text-sm font-medium">
-                    City
+                    {tCheckout("city")}
                   </Label>
                   <Input id="city" placeholder="Riyadh" className="h-11" value={form.city} onChange={(e) => updateForm("city", e.target.value)} required />
                   {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="region" className="text-sm font-medium">
-                    Region
+                    {t("region")}
                   </Label>
                   <Select value={region} onValueChange={setRegion}>
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Riyadh">Riyadh</SelectItem>
@@ -446,14 +450,14 @@ export default function CheckoutPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="postalCode" className="text-sm font-medium">
-                    Postal Code
+                    {tCheckout("postalCode")}
                   </Label>
                   <Input id="postalCode" placeholder="12345" className="h-11" value={form.postalCode} onChange={(e) => updateForm("postalCode", e.target.value)} required />
                   {errors.postalCode && <p className="text-xs text-destructive">{errors.postalCode}</p>}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Country</Label>
+                <Label className="text-sm font-medium">{tCheckout("country")}</Label>
                 <Input value="Saudi Arabia" disabled className="h-11 bg-muted" />
               </div>
               <div className="flex items-center gap-2 pt-1">
@@ -462,7 +466,7 @@ export default function CheckoutPage() {
                   htmlFor="sameAsBilling"
                   className="text-sm text-muted-foreground"
                 >
-                  Billing address is the same as shipping
+                  {t("billingShippingSame")}
                 </Label>
               </div>
             </CardContent>
@@ -472,12 +476,12 @@ export default function CheckoutPage() {
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-bold">
-                Shipping Method
+                {t("shippingMethod")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {!region && (
-                <p className="text-sm text-muted-foreground py-4 text-center">Select your region above to see available shipping options.</p>
+                <p className="text-sm text-muted-foreground py-4 text-center">{t("selectRegionShipping")}</p>
               )}
               {region && loadingShipping && (
                 <div className="flex items-center justify-center py-4">
@@ -485,7 +489,7 @@ export default function CheckoutPage() {
                 </div>
               )}
               {region && !loadingShipping && shippingRates.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4 text-center">No shipping options available for your region. Standard rate will be applied.</p>
+                <p className="text-sm text-muted-foreground py-4 text-center">{t("noShippingOptions")}</p>
               )}
               {shippingRates.map((rate) => (
                 <label
@@ -509,7 +513,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <span className="text-sm font-semibold">
-                    {rate.price === 0 ? "Free" : `SAR ${rate.price.toFixed(2)}`}
+                    {rate.price === 0 ? tCommon("free") : `${tCommon("sar")} ${rate.price.toFixed(2)}`}
                   </span>
                 </label>
               ))}
@@ -521,7 +525,7 @@ export default function CheckoutPage() {
             <Card className="shadow-none border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2 text-green-700 dark:text-green-400">
-                  <Tag className="h-4 w-4" /> Automatic Discounts Applied
+                  <Tag className="h-4 w-4" /> {t("autoDiscounts")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -531,7 +535,7 @@ export default function CheckoutPage() {
                       <p className="font-medium text-green-700 dark:text-green-400">{d.name}</p>
                       <p className="text-xs text-green-600/70 dark:text-green-500/70">{d.description}</p>
                     </div>
-                    <span className="font-semibold text-green-700 dark:text-green-400">-SAR {d.savedAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-green-700 dark:text-green-400">-{tCommon("sar")} {d.savedAmount.toFixed(2)}</span>
                   </div>
                 ))}
               </CardContent>
@@ -542,10 +546,10 @@ export default function CheckoutPage() {
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <CreditCard className="h-4 w-4" /> Payment Method
+                <CreditCard className="h-4 w-4" /> {tCheckout("paymentMethod")}
               </CardTitle>
               <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Lock className="h-3 w-3" /> Secure 256-bit SSL encryption
+                <Lock className="h-3 w-3" /> {t("sslEncryption")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -569,14 +573,14 @@ export default function CheckoutPage() {
                       className="accent-foreground h-4 w-4"
                     />
                     <div>
-                      <p className="text-sm font-semibold">Online Payment</p>
+                      <p className="text-sm font-semibold">{t("onlinePayment")}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Visa, Mastercard, mada, Apple Pay, STC Pay
+                        {t("onlinePaymentMethods")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 px-2 py-0.5 rounded-full">Secure</span>
+                    <span className="text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 px-2 py-0.5 rounded-full">{t("secure")}</span>
                   </div>
                 </label>
               )}
@@ -601,9 +605,9 @@ export default function CheckoutPage() {
                       className="accent-foreground h-4 w-4"
                     />
                     <div>
-                      <p className="text-sm font-semibold">Cash on Delivery</p>
+                      <p className="text-sm font-semibold">{tCheckout("cod")}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Pay when your order is delivered
+                        {t("codDesc")}
                       </p>
                     </div>
                   </div>
@@ -616,7 +620,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
                   <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    You will be redirected to a secure payment page to complete your purchase.
+                    {t("securePaymentRedirect")}
                   </p>
                 </div>
               )}
@@ -625,7 +629,7 @@ export default function CheckoutPage() {
               {!paymentSettings.tapEnabled && !paymentSettings.codEnabled && (
                 <div className="flex items-center justify-center py-8 px-4 border-2 border-dashed rounded-lg bg-accent/30">
                   <p className="text-sm text-muted-foreground">
-                    No payment methods available. Please contact the store.
+                    {t("noPaymentMethods")}
                   </p>
                 </div>
               )}
@@ -638,7 +642,7 @@ export default function CheckoutPage() {
           <Card className="sticky top-28 shadow-none border">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-bold">
-                Order Summary
+                {tCheckout("orderSummary")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -665,11 +669,11 @@ export default function CheckoutPage() {
                         {item.name}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        SAR {item.price.toFixed(2)} × {item.quantity}
+                        {tCommon("sar")} {item.price.toFixed(2)} × {item.quantity}
                       </p>
                     </div>
                     <span className="text-sm font-semibold flex-shrink-0">
-                      SAR {(item.price * item.quantity).toFixed(2)}
+                      {tCommon("sar")} {(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -679,35 +683,35 @@ export default function CheckoutPage() {
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">SAR {subtotal.toFixed(2)}</span>
+                  <span className="text-muted-foreground">{tCommon("subtotal")}</span>
+                  <span className="font-medium">{tCommon("sar")} {subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping{selectedRate ? ` (${selectedRate.name})` : ""}</span>
+                  <span className="text-muted-foreground">{tCommon("shipping")}{selectedRate ? ` (${selectedRate.name})` : ""}</span>
                   <span className="font-medium">
-                    {shipping === 0 ? "Free" : `SAR ${shipping.toFixed(2)}`}
+                    {shipping === 0 ? tCommon("free") : `${tCommon("sar")} ${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">VAT (15%)</span>
-                  <span className="font-medium">SAR {tax.toFixed(2)}</span>
+                  <span className="text-muted-foreground">{t("vat15")}</span>
+                  <span className="font-medium">{tCommon("sar")} {tax.toFixed(2)}</span>
                 </div>
                 {autoDiscountTotal > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Auto Discounts</span>
-                    <span className="font-medium">-SAR {autoDiscountTotal.toFixed(2)}</span>
+                    <span className="font-medium">-{tCommon("sar")} {autoDiscountTotal.toFixed(2)}</span>
                   </div>
                 )}
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Coupon ({appliedCoupon})</span>
-                    <span className="font-medium">-SAR {couponDiscount.toFixed(2)}</span>
+                    <span className="font-medium">-{tCommon("sar")} {couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 {couponFreeShipping && !couponDiscount && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Coupon ({appliedCoupon})</span>
-                    <span className="font-medium">Free Shipping</span>
+                    <span className="font-medium">{t("freeShipping")}</span>
                   </div>
                 )}
               </div>
@@ -718,26 +722,26 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5" />
-                  Coupon Code
+                  {t("couponCode") || "Coupon Code"}
                 </Label>
                 {appliedCoupon ? (
                   <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
                     <span className="text-sm font-medium text-green-700 dark:text-green-300">{appliedCoupon}</span>
                     <Button variant="ghost" size="sm" onClick={handleRemoveCoupon} className="h-7 text-xs text-red-600 hover:text-red-700">
-                      Remove
+                      {t("remove")}
                     </Button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Enter code"
+                      placeholder={t("enterCode")}
                       className="h-10 uppercase"
                       value={couponCode}
                       onChange={(e) => { setCouponCode(e.target.value); setCouponError(null); }}
                       onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
                     />
                     <Button variant="outline" className="h-10 px-4" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : tCommon("apply") || "Apply"}
                     </Button>
                   </div>
                 )}
@@ -747,8 +751,8 @@ export default function CheckoutPage() {
               <Separator />
 
               <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>SAR {total.toFixed(2)}</span>
+                <span>{tCommon("total")}</span>
+                <span>{tCommon("sar")} {total.toFixed(2)}</span>
               </div>
 
               <Button
@@ -759,33 +763,33 @@ export default function CheckoutPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    {tCheckout("processing")}
                   </>
                 ) : paymentMethod === "tap" ? (
-                  `Pay SAR ${total.toFixed(2)}`
+                  t("pay", { amount: total.toFixed(2) })
                 ) : (
-                  `Place Order — SAR ${total.toFixed(2)}`
+                  t("placeOrder", { amount: total.toFixed(2) })
                 )}
               </Button>
 
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Secure checkout powered by ShopFlow
+                {t("secureCheckout")}
               </div>
 
               {/* Terms */}
               <div className="flex items-start gap-2">
                 <Checkbox id="agreeTerms" checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(v === true)} className="mt-0.5" />
                 <Label htmlFor="agreeTerms" className="text-xs text-muted-foreground leading-relaxed">
-                  I agree to the{" "}
-                  <Link href="/pages/terms" className="underline hover:text-foreground">Terms &amp; Conditions</Link>{" "}and{" "}
-                  <Link href="/pages/privacy" className="underline hover:text-foreground">Privacy Policy</Link>
+                  {t("agreeTerms")}{" "}
+                  <Link href="/pages/terms" className="underline hover:text-foreground">{t("termsConditions")}</Link>{" "}{t("and")}{" "}
+                  <Link href="/pages/privacy" className="underline hover:text-foreground">{t("privacyPolicy")}</Link>
                 </Label>
               </div>
               {errors.terms && <p className="text-xs text-destructive">{errors.terms}</p>}
 
               <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-                All prices are in Saudi Riyal (SAR) and include VAT as per ZATCA regulations.
+                {t("vatNotice")}
               </p>
             </CardContent>
           </Card>

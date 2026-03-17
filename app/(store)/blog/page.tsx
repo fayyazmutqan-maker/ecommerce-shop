@@ -1,10 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/schema";
 import { eq, desc, and } from "drizzle-orm";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations as getT } from "next-intl/server";
 import { applyTranslationsBatch } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,10 +13,13 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Blog | ShopFlow",
-  description: "Read the latest news, tips, and updates from our store",
-};
+export async function generateMetadata() {
+  const t = await getT("blog");
+  return {
+    title: `${t("title")} | ShopFlow`,
+    description: t("subtitle"),
+  };
+}
 
 export default async function BlogPage() {
   const rawPosts = await db.query.blogPosts.findMany({
@@ -29,6 +31,7 @@ export default async function BlogPage() {
   // Apply locale translations
   const locale = await getLocale();
   const posts = await applyTranslationsBatch("blogPost", rawPosts as Record<string, unknown>[], locale) as typeof rawPosts;
+  const t = await getT("blog");
 
   // Extract unique tags
   const allTags = [...new Set(
@@ -37,11 +40,11 @@ export default async function BlogPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "Blog" }]} />
+      <Breadcrumbs items={[{ label: t("title") }]} />
 
       <div className="mb-10">
-        <h1 className="text-4xl font-bold tracking-tight">Blog</h1>
-        <p className="text-lg text-muted-foreground mt-2">Latest news, tips, and updates</p>
+        <h1 className="text-4xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-lg text-muted-foreground mt-2">{t("subtitle")}</p>
       </div>
 
       {allTags.length > 0 && (
@@ -56,7 +59,7 @@ export default async function BlogPage() {
 
       {posts.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-lg text-muted-foreground">No blog posts yet. Check back soon!</p>
+          <p className="text-lg text-muted-foreground">{t("noPosts")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

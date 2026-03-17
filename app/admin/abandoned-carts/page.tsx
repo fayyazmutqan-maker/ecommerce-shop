@@ -43,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface CartItem {
   productId: string;
@@ -70,6 +71,7 @@ interface AbandonedCart {
 }
 
 export default function AbandonedCartsPage() {
+  const t = useTranslations("admin.abandonedCarts");
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -84,7 +86,7 @@ export default function AbandonedCartsPage() {
       const data = await res.json();
       setCarts(data.carts || []);
     } catch {
-      toast.error("Failed to load abandoned carts");
+      toast.error(t("failedLoad"));
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function AbandonedCartsPage() {
 
   const handleSendRecovery = async (cart: AbandonedCart) => {
     if (!cart.email) {
-      toast.error("No email address for this cart");
+      toast.error(t("noEmail"));
       return;
     }
 
@@ -111,24 +113,24 @@ export default function AbandonedCartsPage() {
         throw new Error(err.error || "Failed to send");
       }
 
-      toast.success(`Recovery email sent to ${cart.email}`);
+      toast.success(t("recoverySent", { email: cart.email }));
       fetchCarts();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send recovery email");
+      toast.error(e instanceof Error ? e.message : t("recoveryFailed"));
     } finally {
       setSendingEmail(null);
     }
   };
 
   const handleDelete = async (cart: AbandonedCart) => {
-    if (!confirm("Delete this abandoned cart record?")) return;
+    if (!confirm(t("deleteCart"))) return;
     try {
       const res = await fetch(`/api/abandoned-carts?id=${cart.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Abandoned cart deleted");
+      toast.success(t("cartDeleted"));
       fetchCarts();
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t("failedDelete"));
     }
   };
 
@@ -140,18 +142,18 @@ export default function AbandonedCartsPage() {
 
   const timeSince = (date: string) => {
     const hours = Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60));
-    if (hours < 1) return "< 1 hour ago";
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 1) return t("lessThanHour");
+    if (hours < 24) return t("hoursAgo", { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return t("daysAgo", { count: days });
   };
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "ABANDONED": return <Badge variant="destructive">Abandoned</Badge>;
-      case "EMAIL_SENT": return <Badge variant="outline" className="border-blue-500 text-blue-500">Email Sent</Badge>;
-      case "RECOVERED": return <Badge variant="outline" className="border-green-500 text-green-500">Recovered</Badge>;
-      case "EXPIRED": return <Badge variant="secondary">Expired</Badge>;
+      case "ABANDONED": return <Badge variant="destructive">{t("statusAbandoned")}</Badge>;
+      case "EMAIL_SENT": return <Badge variant="outline" className="border-blue-500 text-blue-500">{t("statusEmailSent")}</Badge>;
+      case "RECOVERED": return <Badge variant="outline" className="border-green-500 text-green-500">{t("statusRecovered")}</Badge>;
+      case "EXPIRED": return <Badge variant="secondary">{t("statusExpired")}</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -184,8 +186,8 @@ export default function AbandonedCartsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Abandoned Carts</h1>
-        <p className="text-muted-foreground">Recover lost sales by sending reminder emails</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Stats */}
@@ -198,7 +200,7 @@ export default function AbandonedCartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.abandoned}</p>
-                <p className="text-xs text-muted-foreground">Abandoned</p>
+                <p className="text-xs text-muted-foreground">{t("statsAbandoned")}</p>
               </div>
             </div>
           </CardContent>
@@ -211,7 +213,7 @@ export default function AbandonedCartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.emailSent}</p>
-                <p className="text-xs text-muted-foreground">Emails Sent</p>
+                <p className="text-xs text-muted-foreground">{t("statsEmailsSent")}</p>
               </div>
             </div>
           </CardContent>
@@ -224,7 +226,7 @@ export default function AbandonedCartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.recovered}</p>
-                <p className="text-xs text-muted-foreground">Recovered</p>
+                <p className="text-xs text-muted-foreground">{t("statsRecovered")}</p>
               </div>
             </div>
           </CardContent>
@@ -237,7 +239,7 @@ export default function AbandonedCartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">SAR {stats.totalValue.toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">Recoverable Value</p>
+                <p className="text-xs text-muted-foreground">{t("statsRecoverableValue")}</p>
               </div>
             </div>
           </CardContent>
@@ -248,14 +250,14 @@ export default function AbandonedCartsPage() {
       <div className="flex items-center gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder={t("filterPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Carts</SelectItem>
-            <SelectItem value="ABANDONED">Abandoned</SelectItem>
-            <SelectItem value="EMAIL_SENT">Email Sent</SelectItem>
-            <SelectItem value="RECOVERED">Recovered</SelectItem>
-            <SelectItem value="EXPIRED">Expired</SelectItem>
+            <SelectItem value="all">{t("allCarts")}</SelectItem>
+            <SelectItem value="ABANDONED">{t("statusAbandoned")}</SelectItem>
+            <SelectItem value="EMAIL_SENT">{t("statusEmailSent")}</SelectItem>
+            <SelectItem value="RECOVERED">{t("statusRecovered")}</SelectItem>
+            <SelectItem value="EXPIRED">{t("statusExpired")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -267,12 +269,12 @@ export default function AbandonedCartsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Abandoned</TableHead>
-                <TableHead className="w-28">Actions</TableHead>
+                <TableHead>{t("customer")}</TableHead>
+                <TableHead>{t("items")}</TableHead>
+                <TableHead>{t("value")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("abandonedTime")}</TableHead>
+                <TableHead className="w-28">{t("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -280,19 +282,19 @@ export default function AbandonedCartsPage() {
                 <TableRow key={cart.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium text-sm">{cart.email || "Unknown"}</p>
+                      <p className="font-medium text-sm">{cart.email || t("unknown")}</p>
                       {cart.phone && <p className="text-xs text-muted-foreground">{cart.phone}</p>}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {cart.items.length} item{cart.items.length !== 1 ? "s" : ""}
+                    {cart.items.length !== 1 ? t("itemsCount", { count: cart.items.length }) : t("itemCount", { count: cart.items.length })}
                   </TableCell>
                   <TableCell className="font-medium">SAR {cart.subtotal.toFixed(2)}</TableCell>
                   <TableCell>{statusBadge(cart.status)}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{timeSince(cart.createdAt)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="View Details" onClick={() => setSelectedCart(cart)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title={t("viewDetails")} onClick={() => setSelectedCart(cart)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       {(cart.status === "ABANDONED" || cart.status === "EMAIL_SENT") && cart.email && (
@@ -300,7 +302,7 @@ export default function AbandonedCartsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          title="Send Recovery Email"
+                          title={t("sendRecoveryEmail")}
                           onClick={() => handleSendRecovery(cart)}
                           disabled={sendingEmail === cart.id}
                         >
@@ -322,7 +324,7 @@ export default function AbandonedCartsPage() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <ShoppingCart className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-muted-foreground">No abandoned carts</p>
+                    <p className="text-muted-foreground">{t("noCarts")}</p>
                   </TableCell>
                 </TableRow>
               )}
@@ -336,50 +338,50 @@ export default function AbandonedCartsPage() {
       <Dialog open={!!selectedCart} onOpenChange={() => setSelectedCart(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Abandoned Cart Details</DialogTitle>
+            <DialogTitle>{t("cartDetails")}</DialogTitle>
           </DialogHeader>
 
           {selectedCart && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Email</p>
+                  <p className="text-muted-foreground">{t("email")}</p>
                   <p className="font-medium">{selectedCart.email || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Phone</p>
+                  <p className="text-muted-foreground">{t("phone")}</p>
                   <p className="font-medium">{selectedCart.phone || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Status</p>
+                  <p className="text-muted-foreground">{t("status")}</p>
                   <div className="mt-1">{statusBadge(selectedCart.status)}</div>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Created</p>
+                  <p className="text-muted-foreground">{t("created")}</p>
                   <p className="font-medium">{formatDate(selectedCart.createdAt)}</p>
                 </div>
                 {selectedCart.emailSentAt && (
                   <div>
-                    <p className="text-muted-foreground">Email Sent</p>
+                    <p className="text-muted-foreground">{t("emailSentAt")}</p>
                     <p className="font-medium">{formatDate(selectedCart.emailSentAt)}</p>
                   </div>
                 )}
                 {selectedCart.recoveredAt && (
                   <div>
-                    <p className="text-muted-foreground">Recovered</p>
+                    <p className="text-muted-foreground">{t("recoveredAt")}</p>
                     <p className="font-medium">{formatDate(selectedCart.recoveredAt)}</p>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold">Cart Items</p>
+                <p className="text-sm font-semibold">{t("cartItems")}</p>
                 {selectedCart.items.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div>
                       <p className="text-sm font-medium">{item.name}</p>
                       {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
-                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                      <p className="text-xs text-muted-foreground">{t("qty", { count: item.quantity })}</p>
                     </div>
                     <span className="text-sm font-medium">SAR {(item.price * item.quantity).toFixed(2)}</span>
                   </div>
@@ -387,7 +389,7 @@ export default function AbandonedCartsPage() {
               </div>
 
               <div className="flex justify-between font-bold text-lg border-t pt-3">
-                <span>Subtotal</span>
+                <span>{t("subtotal")}</span>
                 <span>SAR {selectedCart.subtotal.toFixed(2)}</span>
               </div>
 
@@ -397,7 +399,7 @@ export default function AbandonedCartsPage() {
                   onClick={() => { handleSendRecovery(selectedCart); setSelectedCart(null); }}
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  Send Recovery Email to {selectedCart.email}
+                  {t("sendRecoveryTo", { email: selectedCart.email })}
                 </Button>
               )}
             </div>

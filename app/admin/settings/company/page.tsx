@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { Building2, Save } from "lucide-react";
 
 export default function CompanySettingsPage() {
+  const t = useTranslations("admin.company");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -44,7 +46,7 @@ export default function CompanySettingsPage() {
           metaDescription: data.metaDescription || "",
         });
       })
-      .catch(() => toast.error("Failed to load settings"))
+      .catch(() => toast.error(t("toasts.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,54 +60,54 @@ export default function CompanySettingsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error || "Failed to save");
+        toast.error(err.error || t("toasts.saveError"));
         return;
       }
-      toast.success("Company settings saved");
+      toast.success(t("toasts.saved"));
     } catch {
-      toast.error("Failed to save settings");
+      toast.error(t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <p className="text-muted-foreground text-center py-12">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground text-center py-12">{t("loading")}</p>;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Company Information</h1>
-        <p className="text-muted-foreground">Manage your store identity and contact details</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> Store Details</CardTitle>
-          <CardDescription>Basic store information displayed to customers</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> {t("storeDetails")}</CardTitle>
+          <CardDescription>{t("storeDetailsDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Store Name</Label>
+              <Label>{t("storeName")}</Label>
               <Input value={form.storeName} onChange={(e) => setForm((f) => ({ ...f, storeName: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Contact Email</Label>
+              <Label>{t("contactEmail")}</Label>
               <Input value={form.storeEmail} onChange={(e) => setForm((f) => ({ ...f, storeEmail: e.target.value }))} type="email" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Contact Phone</Label>
+              <Label>{t("contactPhone")}</Label>
               <Input value={form.storePhone} onChange={(e) => setForm((f) => ({ ...f, storePhone: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>{t("address")}</Label>
               <Input value={form.storeAddress} onChange={(e) => setForm((f) => ({ ...f, storeAddress: e.target.value }))} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Store Description</Label>
+            <Label>{t("storeDescription")}</Label>
             <Textarea value={form.storeDescription} onChange={(e) => setForm((f) => ({ ...f, storeDescription: e.target.value }))} rows={3} />
           </div>
         </CardContent>
@@ -113,27 +115,27 @@ export default function CompanySettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Social Media</CardTitle>
-          <CardDescription>Links displayed in the store footer</CardDescription>
+          <CardTitle>{t("socialMedia")}</CardTitle>
+          <CardDescription>{t("socialMediaDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Facebook</Label>
+              <Label>{t("facebook")}</Label>
               <Input value={form.socialFacebook} onChange={(e) => setForm((f) => ({ ...f, socialFacebook: e.target.value }))} placeholder="https://facebook.com/..." />
             </div>
             <div className="space-y-2">
-              <Label>Instagram</Label>
+              <Label>{t("instagram")}</Label>
               <Input value={form.socialInstagram} onChange={(e) => setForm((f) => ({ ...f, socialInstagram: e.target.value }))} placeholder="https://instagram.com/..." />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Twitter / X</Label>
+              <Label>{t("twitterX")}</Label>
               <Input value={form.socialTwitter} onChange={(e) => setForm((f) => ({ ...f, socialTwitter: e.target.value }))} placeholder="https://x.com/..." />
             </div>
             <div className="space-y-2">
-              <Label>YouTube</Label>
+              <Label>{t("youtube")}</Label>
               <Input value={form.socialYoutube} onChange={(e) => setForm((f) => ({ ...f, socialYoutube: e.target.value }))} placeholder="https://youtube.com/..." />
             </div>
           </div>
@@ -142,16 +144,16 @@ export default function CompanySettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>SEO</CardTitle>
-          <CardDescription>Default meta tags for search engines</CardDescription>
+          <CardTitle>{t("seo")}</CardTitle>
+          <CardDescription>{t("seoDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Meta Title</Label>
+            <Label>{t("metaTitle")}</Label>
             <Input value={form.metaTitle} onChange={(e) => setForm((f) => ({ ...f, metaTitle: e.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label>Meta Description</Label>
+            <Label>{t("metaDescription")}</Label>
             <Textarea value={form.metaDescription} onChange={(e) => setForm((f) => ({ ...f, metaDescription: e.target.value }))} rows={2} />
           </div>
         </CardContent>
@@ -160,7 +162,7 @@ export default function CompanySettingsPage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" />
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("saving") : t("saveChanges")}
         </Button>
       </div>
     </div>

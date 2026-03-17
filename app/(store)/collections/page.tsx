@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { categories } from "@/lib/schema";
 import { eq, asc, and, isNull } from "drizzle-orm";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { applyTranslationsBatch } from "@/lib/translations";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,15 +21,17 @@ export default async function CollectionsPage() {
 
   // Apply locale translations
   const locale = await getLocale();
+  const t = await getTranslations("collectionsPage");
+  const tCommon = await getTranslations("common");
   const categoryList = await applyTranslationsBatch("category", rawCategoryList as Record<string, unknown>[], locale) as typeof rawCategoryList;
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "Collections" }]} />
+      <Breadcrumbs items={[{ label: tCommon("collections") }]} />
 
       <div className="mb-12">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">Browse</p>
-        <h1 className="text-3xl lg:text-4xl font-bold">Collections</h1>
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">{t("browse")}</p>
+        <h1 className="text-3xl lg:text-4xl font-bold">{tCommon("collections")}</h1>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -54,8 +56,7 @@ export default async function CollectionsPage() {
                   <div>
                     <h2 className="text-white text-xl font-bold">{cat.name}</h2>
                     <p className="text-white/80 text-sm mt-1">
-                      {cat.products.length} product
-                      {cat.products.length !== 1 ? "s" : ""}
+                      {t("products", { count: cat.products.length })}
                     </p>
                   </div>
                 </div>
@@ -74,7 +75,7 @@ export default async function CollectionsPage() {
 
       {categoryList.length === 0 && (
         <div className="text-center py-28">
-          <p className="text-muted-foreground font-medium">No collections found.</p>
+          <p className="text-muted-foreground font-medium">{t("noCollections")}</p>
         </div>
       )}
     </div>

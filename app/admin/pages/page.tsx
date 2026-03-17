@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { pages } from "@/lib/schema";
 import { desc } from "drizzle-orm";
@@ -18,6 +19,7 @@ import { PageCreateButton, PageEditButton, PageDeleteButton } from "@/components
 export const dynamic = "force-dynamic";
 
 export default async function PagesAdminPage() {
+  const t = await getTranslations("admin.pages");
   const allPages = await db.query.pages.findMany({
     orderBy: [desc(pages.createdAt)],
   });
@@ -26,9 +28,9 @@ export default async function PagesAdminPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pages</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage your store&apos;s content pages
+            {t("subtitle")}
           </p>
         </div>
         <PageCreateButton />
@@ -40,11 +42,11 @@ export default async function PagesAdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>URL</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+                <TableHead>{t("pageTitle")}</TableHead>
+                <TableHead>{t("url")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("lastUpdated")}</TableHead>
+                <TableHead className="w-20">{t("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -63,7 +65,7 @@ export default async function PagesAdminPage() {
                     <Badge
                       variant={page.isPublished ? "default" : "secondary"}
                     >
-                      {page.isPublished ? "Published" : "Draft"}
+                      {page.isPublished ? t("published") : t("draft")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -80,7 +82,7 @@ export default async function PagesAdminPage() {
               {allPages.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
-                    <p className="text-muted-foreground">No pages yet</p>
+                    <p className="text-muted-foreground">{t("noPages")}</p>
                   </TableCell>
                 </TableRow>
               )}

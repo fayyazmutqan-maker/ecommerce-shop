@@ -64,6 +64,35 @@ export default auth(async (req) => {
   const isStaff = req.auth?.user?.role === "STAFF";
   const isAdminOrStaff = isAdmin || isStaff;
 
+  // ── Redirect authenticated users away from auth pages ──
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password";
+  if (isAuthPage && isLoggedIn) {
+    // If they came with a callbackUrl, honour it; otherwise go to account
+    const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+    // Strict validation: must be relative path, no protocol-relative, no encoded tricks
+    const isSafeCallback = callbackUrl
+      && callbackUrl.startsWith("/")
+      && !callbackUrl.startsWith("//")
+      && !callbackUrl.includes("://")
+      && !/[\x00-\x1f]/.test(callbackUrl);
+    if (isSafeCallback) {
+      return NextResponse.redirect(new URL(callbackUrl, req.url));
+    }
+    if (isAdminOrStaff) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+    return NextResponse.redirect(new URL("/account", req.url));
+  }
+
+  // ── Protect /account routes — require authentication ──
+  if (pathname.startsWith("/account")) {
+    if (!isLoggedIn) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // ── CSRF origin check for mutating API requests ──
   if (
     pathname.startsWith("/api/") &&
@@ -285,17 +314,18 @@ export default auth(async (req) => {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdnjs.cloudflare.com https://goSellJSLib.b-cdn.net`,
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdnjs.cloudflare.com https://goSellJSLib.b-cdn.net https://challenges.cloudflare.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://*.amazonaws.com https://placehold.co https://lh3.googleusercontent.com",
       "font-src 'self' https://fonts.gstatic.com",
       `connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
-      "frame-src 'self' https://goSellJSLib.b-cdn.net",
+      "frame-src 'self' https://goSellJSLib.b-cdn.net https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-    ].join("; ")
+      isDev ? "" : "upgrade-insecure-requests",
+    ].filter(Boolean).join("; ")
   );
 
   return response;
@@ -305,5 +335,10 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/api/:path*",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/account/:path*",
   ],
 };

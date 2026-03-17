@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { FolderTree } from "lucide-react";
 import { CategoryCreateButton, CategoryEditButton, CategoryDeleteButton } from "@/components/admin/category-dialog";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +38,15 @@ export default async function CategoriesPage() {
     _count: { products: productCountMap.get(c.id) ?? 0, children: c.children.length },
   }));
 
+  const t = await getTranslations("admin.categories");
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Organize your products into categories
+            {t("subtitle")}
           </p>
         </div>
         <CategoryCreateButton categories={categoriesList.map(c => ({ id: c.id, name: c.name, slug: c.slug, description: c.description, isActive: c.isActive, parentId: c.parentId, sortOrder: c.sortOrder, image: c.image }))} />
@@ -55,11 +58,11 @@ export default async function CategoriesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead>Products</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("parent")}</TableHead>
+                <TableHead>{t("products")}</TableHead>
                 <TableHead>Subcategories</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("actions")}</TableHead>
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -105,7 +108,7 @@ export default async function CategoriesPage() {
               {categoriesList.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
-                    <p className="text-muted-foreground">No categories yet</p>
+                    <p className="text-muted-foreground">{t("noCategories")}</p>
                   </TableCell>
                 </TableRow>
               )}

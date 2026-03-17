@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/helpers";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function OrdersPage({
 }) {
   const { q, page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const t = await getTranslations("admin.orders");
 
   const whereClause = q
     ? or(
@@ -55,28 +57,28 @@ export default async function OrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">
-          Manage and fulfill customer orders ({totalItems} orders)
+          {t("subtitle", { count: totalItems })}
         </p>
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {[
           {
-            label: "Total Orders",
+            label: t("totalOrders"),
             value: allOrders.length,
           },
           {
-            label: "Pending",
+            label: t("pending"),
             value: allOrders.filter((o) => o.status === "PENDING").length,
           },
           {
-            label: "Processing",
+            label: t("processing"),
             value: allOrders.filter((o) => o.status === "PROCESSING").length,
           },
           {
-            label: "Delivered",
+            label: t("delivered"),
             value: allOrders.filter((o) => o.status === "DELIVERED").length,
           },
         ].map((stat) => (
@@ -91,21 +93,21 @@ export default async function OrdersPage({
 
       <Card>
         <CardHeader className="pb-3">
-          <AdminSearch placeholder="Search orders..." />
+          <AdminSearch placeholder={t("searchOrders")} />
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Fulfillment</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>{t("order")}</TableHead>
+                <TableHead>{t("customer")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("payment")}</TableHead>
+                <TableHead>{t("fulfillment")}</TableHead>
+                <TableHead>{t("items")}</TableHead>
+                <TableHead>{t("total")}</TableHead>
+                <TableHead>{t("date")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -127,7 +129,7 @@ export default async function OrdersPage({
                   <TableCell>
                     <div>
                       <p className="text-sm font-medium">
-                        {order.user?.name || "Guest"}
+                        {order.user?.name || t("guest")}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {order.email}
@@ -149,7 +151,7 @@ export default async function OrdersPage({
                       {order.fulfillmentStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell>{order.items.length} items</TableCell>
+                  <TableCell>{t("itemsCount", { count: order.items.length })}</TableCell>
                   <TableCell className="font-medium">
                     {formatCurrency(Number(order.totalAmount))}
                   </TableCell>
@@ -161,7 +163,7 @@ export default async function OrdersPage({
               {allOrders.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
-                    <p className="text-muted-foreground">No orders yet</p>
+                    <p className="text-muted-foreground">{t("noOrders")}</p>
                   </TableCell>
                 </TableRow>
               )}

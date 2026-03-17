@@ -6,6 +6,7 @@ import {
   Search,
   User,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +16,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CartSheet } from "@/components/store/cart-sheet";
 import { LanguageSwitcher } from "@/components/store/language-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WishlistNavIcon } from "@/components/store/wishlist-nav-icon";
+import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
 export function StoreNavbar() {
   const t = useTranslations("common");
   const tNav = useTranslations("nav");
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   const navLinks = [
     { title: tNav("home"), href: "/" },
@@ -57,7 +68,7 @@ export function StoreNavbar() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[min(320px,85vw)]">
                 <SheetHeader>
-                  <SheetTitle className="text-left">
+                  <SheetTitle className="text-start">
                     <Link href="/" className="flex items-center gap-2.5">
                       <ShoppingBag className="h-6 w-6" />
                       <span className="text-xl font-bold tracking-tight">
@@ -85,12 +96,29 @@ export function StoreNavbar() {
                   ))}
                 </nav>
                 <div className="mt-8 px-4 space-y-3">
-                  <Button className="w-full h-11" asChild>
-                    <Link href="/login">{t("signIn")}</Link>
-                  </Button>
-                  <Button variant="outline" className="w-full h-11" asChild>
-                    <Link href="/register">{t("createAccount")}</Link>
-                  </Button>
+                  {isAuthenticated ? (
+                    <>
+                      <Button className="w-full h-11" asChild>
+                        <Link href="/account">{t("account")}</Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full h-11"
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                      >
+                        {t("logout")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button className="w-full h-11" asChild>
+                        <Link href="/login">{t("signIn")}</Link>
+                      </Button>
+                      <Button variant="outline" className="w-full h-11" asChild>
+                        <Link href="/register">{t("createAccount")}</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
@@ -129,16 +157,50 @@ export function StoreNavbar() {
                 </Link>
               </Button>
               <WishlistNavIcon />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <Link href="/login">
-                  <User className="h-[18px] w-[18px]" />
-                </Link>
-              </Button>
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                    >
+                      <User className="h-[18px] w-[18px]" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium truncate">{session?.user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{session?.user?.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/account">{t("account")}</Link>
+                    </DropdownMenuItem>
+                    {(session?.user as { role?: string })?.role === "ADMIN" || (session?.user as { role?: string })?.role === "STAFF" ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin">{tNav("admin")}</Link>
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                      <LogOut className="h-4 w-4 me-2" />
+                      {t("logout")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                  asChild
+                >
+                  <Link href="/login">
+                    <User className="h-[18px] w-[18px]" />
+                  </Link>
+                </Button>
+              )}
               <ThemeToggle />
               <LanguageSwitcher />
               <CartSheet />

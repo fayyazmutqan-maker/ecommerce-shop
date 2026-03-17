@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/helpers";
+import { useTranslations } from "next-intl";
 
 interface SearchProduct {
   id: string;
@@ -20,6 +21,7 @@ interface SearchProduct {
 }
 
 export default function SearchPage() {
+  const t = useTranslations("searchPage");
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialQuery = searchParams.get("q") || "";
@@ -62,14 +64,14 @@ export default function SearchPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
       <div className="max-w-2xl mx-auto mb-10">
-        <h1 className="text-3xl font-bold text-center mb-6">Search Products</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">{t("title")}</h1>
         <form onSubmit={handleSubmit} className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for products..."
-            className="pl-12 h-12 text-lg"
+            placeholder={t("placeholder")}
+            className="ps-12 h-12 text-lg"
             autoFocus
           />
         </form>
@@ -82,14 +84,14 @@ export default function SearchPage() {
       ) : query.length >= 2 ? (
         <>
           <p className="text-sm text-muted-foreground mb-6">
-            {total} result{total !== 1 ? "s" : ""} for &quot;{query}&quot;
+            {t("results", { total, query })}
           </p>
 
           {products.length === 0 ? (
             <div className="text-center py-20">
               <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                No products found. Try a different search.
+                {t("noResults")}
               </p>
             </div>
           ) : (
@@ -138,7 +140,7 @@ export default function SearchPage() {
         </>
       ) : (
         <div className="text-center py-20 text-muted-foreground">
-          <p>Type at least 2 characters to search</p>
+          <p>{t("minCharacters")}</p>
         </div>
       )}
     </div>

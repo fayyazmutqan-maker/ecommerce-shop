@@ -1,15 +1,96 @@
-import { Metadata } from "next";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { getLocale, getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "Our privacy policy explains how we collect, use, and protect your personal information.",
-};
+export async function generateMetadata() {
+  const t = await getTranslations("nav");
+  return { title: t("privacy") };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getLocale();
+  const tNav = await getTranslations("nav");
+
+  const dateStr = new Date().toLocaleDateString(
+    locale === "ar" ? "ar-SA" : "en-US",
+    { year: "numeric", month: "long", day: "numeric" }
+  );
+
+  if (locale === "ar") {
+    return (
+      <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
+        <Breadcrumbs items={[{ label: tNav("privacy") }]} />
+        <article className="prose prose-neutral dark:prose-invert max-w-none">
+          <h1>سياسة الخصوصية</h1>
+          <p className="lead">آخر تحديث: {dateStr}</p>
+
+          <h2>1. المعلومات التي نجمعها</h2>
+          <h3>المعلومات الشخصية</h3>
+          <ul>
+            <li>الاسم والبريد الإلكتروني ورقم الهاتف</li>
+            <li>عناوين الفوترة والشحن</li>
+            <li>معلومات الدفع (تتم معالجتها بأمان عبر Tap Payments)</li>
+            <li>بيانات اعتماد الحساب</li>
+          </ul>
+
+          <h3>المعلومات المجمعة تلقائيًا</h3>
+          <ul>
+            <li>عنوان IP ونوع المتصفح ومعلومات الجهاز</li>
+            <li>الصفحات المزارة ووقت وتاريخ الزيارات</li>
+            <li>ملفات تعريف الارتباط وتقنيات التتبع المماثلة</li>
+          </ul>
+
+          <h2>2. كيف نستخدم معلوماتك</h2>
+          <ul>
+            <li>لمعالجة وتنفيذ طلباتك</li>
+            <li>للتواصل معك بشأن الطلبات والمنتجات والخدمات</li>
+            <li>لتحسين موقعنا وتجربة العملاء</li>
+            <li>لاكتشاف ومنع الاحتيال</li>
+            <li>للامتثال للالتزامات القانونية</li>
+          </ul>
+
+          <h2>3. مشاركة المعلومات</h2>
+          <p>لا نبيع معلوماتك الشخصية. قد نشارك بياناتك مع:</p>
+          <ul>
+            <li>معالجي الدفع (Tap Payments) لمعالجة المعاملات</li>
+            <li>شركاء الشحن والتوصيل</li>
+            <li>جهات إنفاذ القانون عند الاقتضاء</li>
+          </ul>
+
+          <h2>4. أمان البيانات</h2>
+          <p>ننفذ التدابير التقنية والتنظيمية المناسبة لحماية بياناتك الشخصية، بما في ذلك التشفير والخوادم الآمنة وضوابط الوصول.</p>
+
+          <h2>5. ملفات تعريف الارتباط</h2>
+          <p>نستخدم ملفات تعريف الارتباط لتحسين تجربة التصفح وتحليل حركة المرور وتخصيص المحتوى. يمكنك إدارة تفضيلات ملفات تعريف الارتباط من خلال إعدادات المتصفح.</p>
+
+          <h2>6. حقوقك</h2>
+          <p>بموجب نظام حماية البيانات الشخصية السعودي، لديك الحق في:</p>
+          <ul>
+            <li>الوصول إلى بياناتك الشخصية</li>
+            <li>طلب تصحيح البيانات غير الدقيقة</li>
+            <li>طلب حذف بياناتك</li>
+            <li>الاعتراض على معالجة بياناتك</li>
+            <li>نقل البيانات</li>
+          </ul>
+
+          <h2>7. الاحتفاظ بالبيانات</h2>
+          <p>نحتفظ ببياناتك الشخصية طالما كان ذلك ضروريًا لتحقيق الأغراض الموضحة في هذه السياسة، ما لم يكن القانون يتطلب فترة احتفاظ أطول.</p>
+
+          <h2>8. روابط الأطراف الثالثة</h2>
+          <p>قد يحتوي موقعنا على روابط لمواقع أطراف ثالثة. نحن غير مسؤولين عن ممارسات الخصوصية لتلك المواقع.</p>
+
+          <h2>9. التغييرات على هذه السياسة</h2>
+          <p>قد نقوم بتحديث سياسة الخصوصية هذه من وقت لآخر. سنبلغكم بالتغييرات الجوهرية بنشر السياسة الجديدة على هذه الصفحة.</p>
+
+          <h2>10. اتصل بنا</h2>
+          <p>للاستفسارات المتعلقة بالخصوصية، يرجى التواصل معنا عبر{" "}<a href="mailto:privacy@shopflow.sa">privacy@shopflow.sa</a>.</p>
+        </article>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "Privacy Policy" }]} />
+      <Breadcrumbs items={[{ label: tNav("privacy") }]} />
 
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <h1>Privacy Policy</h1>

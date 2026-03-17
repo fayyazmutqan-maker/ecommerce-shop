@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/components/store/add-to-cart-button";
+import { useTranslations } from "next-intl";
 
 interface Variant {
   id: string;
@@ -36,6 +37,8 @@ export function VariantSelector({
   variants,
 }: VariantSelectorProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+  const t = useTranslations("variant");
+  const tCommon = useTranslations("common");
 
   const activePrice = selectedVariant?.price ?? productPrice;
   const activeCompareAt = selectedVariant?.compareAtPrice ?? productCompareAtPrice;
@@ -52,16 +55,16 @@ export function VariantSelector({
       {/* Price */}
       <div className="flex items-baseline gap-4">
         <span className="text-3xl font-bold tracking-tight">
-          SAR {activePrice.toFixed(2)}
+          {tCommon("sar")} {activePrice.toFixed(2)}
         </span>
         {activeCompareAt && activeCompareAt > activePrice && (
           <span className="text-lg text-muted-foreground line-through">
-            SAR {activeCompareAt.toFixed(2)}
+            {tCommon("sar")} {activeCompareAt.toFixed(2)}
           </span>
         )}
         {discount && (
           <Badge className="bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive">
-            Save {discount}%
+            {t("save", { percent: discount })}
           </Badge>
         )}
       </div>
@@ -69,7 +72,7 @@ export function VariantSelector({
       {/* Variant Selector */}
       {variants.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm font-semibold">Options</p>
+          <p className="text-sm font-semibold">{t("options")}</p>
           <div className="flex flex-wrap gap-2">
             {variants.map((variant) => (
               <Badge
@@ -90,7 +93,7 @@ export function VariantSelector({
               >
                 {variant.name}
                 {variant.price !== productPrice && (
-                  <> — SAR {variant.price.toFixed(2)}</>
+                  <> — {tCommon("sar")} {variant.price.toFixed(2)}</>
                 )}
               </Badge>
             ))}
@@ -102,16 +105,16 @@ export function VariantSelector({
       <div className="flex items-center gap-3">
         {activeQuantity > 0 ? (
           <Badge variant="secondary" className="text-xs font-semibold px-3 py-1">
-            In Stock
+            {t("inStock")}
           </Badge>
         ) : (
           <Badge variant="destructive" className="text-xs font-semibold px-3 py-1">
-            Out of Stock
+            {t("outOfStock")}
           </Badge>
         )}
         {activeQuantity > 0 && activeQuantity <= 5 && (
           <span className="text-xs text-muted-foreground font-medium">
-            Only {activeQuantity} left
+            {t("onlyLeft", { count: activeQuantity })}
           </span>
         )}
       </div>

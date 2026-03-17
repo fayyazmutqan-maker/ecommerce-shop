@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
@@ -76,20 +77,21 @@ interface AutoDiscount {
 }
 
 const DISCOUNT_TYPES = [
-  { value: "BOGO", label: "Buy One Get One (BOGO)", icon: "🎁" },
-  { value: "BUY_X_GET_Y", label: "Buy X Get Y", icon: "🛒" },
-  { value: "SPEND_X_GET_Y", label: "Spend X Get Y", icon: "💰" },
-  { value: "PERCENTAGE_OFF", label: "Percentage Off", icon: "%" },
-  { value: "FIXED_OFF", label: "Fixed Amount Off", icon: "💵" },
+  { value: "BOGO", icon: "🎁" },
+  { value: "BUY_X_GET_Y", icon: "🛒" },
+  { value: "SPEND_X_GET_Y", icon: "💰" },
+  { value: "PERCENTAGE_OFF", icon: "%" },
+  { value: "FIXED_OFF", icon: "💵" },
 ];
 
 const REWARD_TYPES = [
-  { value: "PERCENTAGE", label: "Percentage %" },
-  { value: "FIXED_AMOUNT", label: "Fixed Amount (SAR)" },
-  { value: "FREE_ITEM", label: "Free Item" },
+  { value: "PERCENTAGE" },
+  { value: "FIXED_AMOUNT" },
+  { value: "FREE_ITEM" },
 ];
 
 export default function AutoDiscountsPage() {
+  const t = useTranslations("admin.autoDiscounts");
   const [discounts, setDiscounts] = useState<AutoDiscount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,7 +123,7 @@ export default function AutoDiscountsPage() {
       const data = await res.json();
       setDiscounts(Array.isArray(data) ? data : []);
     } catch {
-      toast.error("Failed to load auto discounts");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -162,7 +164,7 @@ export default function AutoDiscountsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    if (!form.name.trim()) { toast.error(t("toasts.nameRequired")); return; }
 
     setSaving(true);
     try {
@@ -195,26 +197,26 @@ export default function AutoDiscountsPage() {
         throw new Error(err.error || "Failed to save");
       }
 
-      toast.success(editingDiscount ? "Auto discount updated" : "Auto discount created");
+      toast.success(editingDiscount ? t("toasts.updated") : t("toasts.created"));
       setDialogOpen(false);
       resetForm();
       fetchDiscounts();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(e instanceof Error ? e.message : t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (d: AutoDiscount) => {
-    if (!confirm(`Delete "${d.name}"?`)) return;
+    if (!confirm(t("deleteConfirm", { name: d.name }))) return;
     try {
       const res = await fetch(`/api/auto-discounts?id=${d.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Auto discount deleted");
+      toast.success(t("toasts.deleted"));
       fetchDiscounts();
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t("toasts.deleteFailed"));
     }
   };
 
@@ -227,21 +229,21 @@ export default function AutoDiscountsPage() {
         body: JSON.stringify({ id: d.id, status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Discount ${newStatus === "ACTIVE" ? "enabled" : "disabled"}`);
+      toast.success(`${t(`statusBadges.${newStatus === "ACTIVE" ? "active" : "disabled"}`)}`);
       fetchDiscounts();
     } catch {
-      toast.error("Failed to update status");
+      toast.error(t("toasts.statusFailed"));
     }
   };
 
-  const typeInfo = (type: string) => DISCOUNT_TYPES.find(t => t.value === type);
+  const typeInfo = (type: string) => DISCOUNT_TYPES.find(dt => dt.value === type);
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case "ACTIVE": return <Badge>Active</Badge>;
-      case "SCHEDULED": return <Badge variant="outline" className="border-blue-500 text-blue-500">Scheduled</Badge>;
-      case "EXPIRED": return <Badge variant="secondary">Expired</Badge>;
-      case "DISABLED": return <Badge variant="secondary">Disabled</Badge>;
+      case "ACTIVE": return <Badge>{t("statusBadges.active")}</Badge>;
+      case "SCHEDULED": return <Badge variant="outline" className="border-blue-500 text-blue-500">{t("statusBadges.scheduled")}</Badge>;
+      case "EXPIRED": return <Badge variant="secondary">{t("statusBadges.expired")}</Badge>;
+      case "DISABLED": return <Badge variant="secondary">{t("statusBadges.disabled")}</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -275,11 +277,11 @@ export default function AutoDiscountsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automatic Discounts</h1>
-          <p className="text-muted-foreground">BOGO, Buy X Get Y, and auto-applied promotions</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Create Discount
+          <Plus className="mr-2 h-4 w-4" /> {t("createDiscount")}
         </Button>
       </div>
 
@@ -293,7 +295,7 @@ export default function AutoDiscountsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{discounts.length}</p>
-                <p className="text-xs text-muted-foreground">Total Discounts</p>
+                <p className="text-xs text-muted-foreground">{t("totalDiscounts")}</p>
               </div>
             </div>
           </CardContent>
@@ -306,7 +308,7 @@ export default function AutoDiscountsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeCount}</p>
-                <p className="text-xs text-muted-foreground">Active Now</p>
+                <p className="text-xs text-muted-foreground">{t("activeNow")}</p>
               </div>
             </div>
           </CardContent>
@@ -319,7 +321,7 @@ export default function AutoDiscountsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{discounts.reduce((s, d) => s + d.usedCount, 0)}</p>
-                <p className="text-xs text-muted-foreground">Total Uses</p>
+                <p className="text-xs text-muted-foreground">{t("totalUses")}</p>
               </div>
             </div>
           </CardContent>
@@ -333,12 +335,12 @@ export default function AutoDiscountsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Discount</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Usage</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
+                <TableHead>{t("tableHead.discount")}</TableHead>
+                <TableHead>{t("tableHead.type")}</TableHead>
+                <TableHead>{t("tableHead.description")}</TableHead>
+                <TableHead>{t("tableHead.usage")}</TableHead>
+                <TableHead>{t("tableHead.status")}</TableHead>
+                <TableHead className="w-24">{t("tableHead.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -347,12 +349,12 @@ export default function AutoDiscountsPage() {
                   <TableCell>
                     <div>
                       <p className="font-medium">{d.name}</p>
-                      <p className="text-xs text-muted-foreground">Priority: {d.priority}{d.combinesWith ? " · Stackable" : ""}</p>
+                      <p className="text-xs text-muted-foreground">{t("priority")}: {d.priority}{d.combinesWith ? ` · ${t("stackable")}` : ""}</p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {typeInfo(d.type)?.icon} {typeInfo(d.type)?.label || d.type}
+                      {typeInfo(d.type)?.icon} {t(`discountTypes.${d.type}`)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
@@ -381,7 +383,7 @@ export default function AutoDiscountsPage() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <Zap className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-muted-foreground">No automatic discounts yet</p>
+                    <p className="text-muted-foreground">{t("noAutoDiscountsEmpty")}</p>
                   </TableCell>
                 </TableRow>
               )}
@@ -395,9 +397,9 @@ export default function AutoDiscountsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingDiscount ? "Edit Auto Discount" : "Create Auto Discount"}</DialogTitle>
+            <DialogTitle>{editingDiscount ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
             <DialogDescription>
-              Automatic discounts are applied at checkout without a code.
+              {t("dialog.description")}
             </DialogDescription>
           </DialogHeader>
 
@@ -405,16 +407,16 @@ export default function AutoDiscountsPage() {
             {/* Name & Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Discount Name</Label>
-                <Input placeholder="e.g., Summer BOGO" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Label>{t("dialog.discountName")}</Label>
+                <Input placeholder={t("dialog.discountNamePlaceholder")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Type</Label>
+                <Label>{t("dialog.type")}</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {DISCOUNT_TYPES.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.icon} {t.label}</SelectItem>
+                    {DISCOUNT_TYPES.map(dt => (
+                      <SelectItem key={dt.value} value={dt.value}>{dt.icon} {t(`discountTypes.${dt.value}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -425,17 +427,17 @@ export default function AutoDiscountsPage() {
 
             {/* Conditions */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Conditions</h4>
+              <h4 className="text-sm font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> {t("dialog.conditions")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(form.type === "BOGO" || form.type === "BUY_X_GET_Y" || form.type === "PERCENTAGE_OFF") && (
                   <div className="space-y-2">
-                    <Label className="text-xs">Minimum Quantity</Label>
+                    <Label className="text-xs">{t("dialog.minQuantity")}</Label>
                     <Input type="number" min="1" placeholder="e.g., 2" value={form.minQuantity} onChange={(e) => setForm({ ...form, minQuantity: e.target.value })} />
                   </div>
                 )}
                 {(form.type === "SPEND_X_GET_Y" || form.type === "FIXED_OFF" || form.type === "PERCENTAGE_OFF") && (
                   <div className="space-y-2">
-                    <Label className="text-xs">Minimum Order Amount (SAR)</Label>
+                    <Label className="text-xs">{t("dialog.minOrderAmount")}</Label>
                     <Input type="number" min="0" step="0.01" placeholder="e.g., 200" value={form.minOrderAmount} onChange={(e) => setForm({ ...form, minOrderAmount: e.target.value })} />
                   </div>
                 )}
@@ -446,28 +448,28 @@ export default function AutoDiscountsPage() {
 
             {/* Reward */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold flex items-center gap-2"><Tag className="h-4 w-4" /> Reward</h4>
+              <h4 className="text-sm font-semibold flex items-center gap-2"><Tag className="h-4 w-4" /> {t("dialog.reward")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs">Discount Type</Label>
+                  <Label className="text-xs">{t("dialog.discountType")}</Label>
                   <Select value={form.discountType} onValueChange={(v) => setForm({ ...form, discountType: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {REWARD_TYPES.map(t => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      {REWARD_TYPES.map(rt => (
+                        <SelectItem key={rt.value} value={rt.value}>{t(`rewardTypes.${rt.value}`)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 {form.discountType !== "FREE_ITEM" && (
                   <div className="space-y-2">
-                    <Label className="text-xs">Discount Value</Label>
+                    <Label className="text-xs">{t("dialog.discountValue")}</Label>
                     <Input type="number" min="0" step="0.01" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: parseFloat(e.target.value) || 0 })} />
                   </div>
                 )}
                 {(form.type === "BOGO" || form.type === "BUY_X_GET_Y") && (
                   <div className="space-y-2">
-                    <Label className="text-xs">Free/Discounted Qty</Label>
+                    <Label className="text-xs">{t("dialog.freeDiscountedQty")}</Label>
                     <Input type="number" min="1" placeholder="e.g., 1" value={form.getQuantity} onChange={(e) => setForm({ ...form, getQuantity: e.target.value })} />
                   </div>
                 )}
@@ -478,22 +480,22 @@ export default function AutoDiscountsPage() {
 
             {/* Limits & Scheduling */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold flex items-center gap-2"><Calendar className="h-4 w-4" /> Limits & Schedule</h4>
+              <h4 className="text-sm font-semibold flex items-center gap-2"><Calendar className="h-4 w-4" /> {t("dialog.limitsSchedule")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs">Max Total Uses</Label>
-                  <Input type="number" min="1" placeholder="Unlimited" value={form.maxUsesTotal} onChange={(e) => setForm({ ...form, maxUsesTotal: e.target.value })} />
+                  <Label className="text-xs">{t("dialog.maxTotalUses")}</Label>
+                  <Input type="number" min="1" placeholder={t("dialog.unlimited")} value={form.maxUsesTotal} onChange={(e) => setForm({ ...form, maxUsesTotal: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Max Uses Per Customer</Label>
-                  <Input type="number" min="1" placeholder="Unlimited" value={form.maxUsesPerCustomer} onChange={(e) => setForm({ ...form, maxUsesPerCustomer: e.target.value })} />
+                  <Label className="text-xs">{t("dialog.maxUsesPerCustomer")}</Label>
+                  <Input type="number" min="1" placeholder={t("dialog.unlimited")} value={form.maxUsesPerCustomer} onChange={(e) => setForm({ ...form, maxUsesPerCustomer: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Starts At</Label>
+                  <Label className="text-xs">{t("dialog.startsAt")}</Label>
                   <Input type="datetime-local" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Expires At</Label>
+                  <Label className="text-xs">{t("dialog.expiresAt")}</Label>
                   <Input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />
                 </div>
               </div>
@@ -503,36 +505,36 @@ export default function AutoDiscountsPage() {
 
             {/* Advanced */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Advanced</h4>
+              <h4 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> {t("dialog.advanced")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs">Priority (higher = applied first)</Label>
+                  <Label className="text-xs">{t("dialog.priorityLabel")}</Label>
                   <Input type="number" min="0" value={form.priority} onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) || 0 })} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Status</Label>
+                  <Label className="text-xs">{t("dialog.statusLabel")}</Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="SCHEDULED">Scheduled</SelectItem>
-                      <SelectItem value="DISABLED">Disabled</SelectItem>
+                      <SelectItem value="ACTIVE">{t("statusBadges.active")}</SelectItem>
+                      <SelectItem value="SCHEDULED">{t("statusBadges.scheduled")}</SelectItem>
+                      <SelectItem value="DISABLED">{t("statusBadges.disabled")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Switch checked={form.combinesWith} onCheckedChange={(v) => setForm({ ...form, combinesWith: v })} />
-                <Label className="text-sm">Can combine with other discounts</Label>
+                <Label className="text-sm">{t("dialog.combineWithOthers")}</Label>
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("dialog.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingDiscount ? "Update Discount" : "Create Discount"}
+              {editingDiscount ? t("dialog.updateDiscount") : t("dialog.createDiscount")}
             </Button>
           </DialogFooter>
         </DialogContent>

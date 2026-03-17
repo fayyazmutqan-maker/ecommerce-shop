@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,21 +74,23 @@ function PostList({
   onEdit,
   onDelete,
   onNew,
+  t,
 }: {
   posts: BlogPost[];
   loading: boolean;
   onEdit: (post: BlogPost) => void;
   onDelete: (id: string) => void;
   onNew: () => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Blog</h1>
-          <p className="text-muted-foreground">Manage your blog posts and categories</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Button onClick={onNew}><Plus className="mr-2 h-4 w-4" /> New Post</Button>
+        <Button onClick={onNew}><Plus className="mr-2 h-4 w-4" /> {t("newPost")}</Button>
       </div>
 
       <Card>
@@ -110,12 +113,12 @@ function PostList({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Author</TableHead>
-                    <TableHead>Categories</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Published</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
+                    <TableHead>{t("tableHead.title")}</TableHead>
+                    <TableHead>{t("tableHead.author")}</TableHead>
+                    <TableHead>{t("tableHead.categories")}</TableHead>
+                    <TableHead>{t("tableHead.status")}</TableHead>
+                    <TableHead>{t("tableHead.published")}</TableHead>
+                    <TableHead className="w-24">{t("tableHead.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -145,7 +148,7 @@ function PostList({
                       </TableCell>
                       <TableCell>
                         <Badge variant={post.isPublished ? "default" : "secondary"}>
-                          {post.isPublished ? "Published" : "Draft"}
+                          {post.isPublished ? t("published") : t("draft")}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -166,7 +169,7 @@ function PostList({
                   {posts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No blog posts yet. Click &quot;New Post&quot; to create one.
+                        {t("emptyState")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -204,6 +207,7 @@ function PostEditor({
   const [newCatName, setNewCatName] = useState("");
   const [addingCat, setAddingCat] = useState(false);
   const [showCatForm, setShowCatForm] = useState(false);
+  const t = useTranslations("admin.blog");
 
   const toggleCategory = (id: string) => {
     setForm((p) => ({
@@ -229,13 +233,13 @@ function PostEditor({
         setNewCatName("");
         setShowCatForm(false);
         onCategoryCreated();
-        toast.success("Category created");
+        toast.success(t("toasts.categoryCreated"));
       } else {
         const err = await res.json();
         toast.error(err.error);
       }
     } catch {
-      toast.error("Failed to create category");
+      toast.error(t("toasts.categoryCreateFailed"));
     } finally {
       setAddingCat(false);
     }
@@ -246,13 +250,13 @@ function PostEditor({
       {/* Top bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> All Posts
+          <ArrowLeft className="mr-2 h-4 w-4" /> {t("allPosts")}
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onBack}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={onBack}>{t("cancel")}</Button>
           <Button size="sm" onClick={onSave} disabled={saving || !form.title.trim()}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {editingId ? "Update" : "Publish"}
+            {editingId ? t("update") : t("publish")}
           </Button>
         </div>
       </div>
@@ -264,7 +268,7 @@ function PostEditor({
           <Input
             value={form.title}
             onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-            placeholder="Post title"
+            placeholder={t("postTitlePlaceholder")}
             className="text-2xl h-14 border-0 shadow-none px-4 focus-visible:ring-0 placeholder:text-muted-foreground/50 bg-white dark:bg-zinc-950 text-foreground"
           />
 
@@ -272,20 +276,20 @@ function PostEditor({
           <RichTextEditor
             content={form.content}
             onChange={(html) => setForm((p) => ({ ...p, content: html }))}
-            placeholder="Start writing your post..."
+            placeholder={t("startWriting")}
           />
 
           {/* Excerpt */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium">Excerpt</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("excerpt")}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               <Textarea
                 rows={3}
                 value={form.excerpt}
                 onChange={(e) => setForm((p) => ({ ...p, excerpt: e.target.value }))}
-                placeholder="Brief summary of the post (displayed in listings)..."
+                placeholder={t("excerptPlaceholder")}
                 className="resize-none"
               />
             </CardContent>
@@ -295,14 +299,14 @@ function PostEditor({
           <Card>
             <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => setSeoOpen((o) => !o)}>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">SEO Settings</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("seoSettings")}</CardTitle>
                 {seoOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </div>
             </CardHeader>
             {seoOpen && (
               <CardContent className="px-4 pb-4 pt-0 space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">SEO Title</Label>
+                  <Label className="text-xs">{t("seoTitle")}</Label>
                   <Input
                     value={form.seoTitle}
                     onChange={(e) => setForm((p) => ({ ...p, seoTitle: e.target.value }))}
@@ -311,12 +315,12 @@ function PostEditor({
                   <p className="text-xs text-muted-foreground">{(form.seoTitle || form.title).length}/60</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Meta Description</Label>
+                  <Label className="text-xs">{t("metaDescription")}</Label>
                   <Textarea
                     rows={2}
                     value={form.seoDescription}
                     onChange={(e) => setForm((p) => ({ ...p, seoDescription: e.target.value }))}
-                    placeholder="Description for search engines..."
+                    placeholder={t("metaDescPlaceholder")}
                     className="resize-none"
                   />
                   <p className="text-xs text-muted-foreground">{form.seoDescription.length}/160</p>
@@ -331,23 +335,23 @@ function PostEditor({
           {/* Publish */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium">Publish</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("publishCard")}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm">Status</Label>
+                <Label className="text-sm">{t("statusLabel")}</Label>
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={form.isPublished}
                     onCheckedChange={(checked) => setForm((p) => ({ ...p, isPublished: checked }))}
                   />
-                  <span className="text-sm">{form.isPublished ? "Published" : "Draft"}</span>
+                  <span className="text-sm">{form.isPublished ? t("published") : t("draft")}</span>
                 </div>
               </div>
               <Separator />
               <Button className="w-full" onClick={onSave} disabled={saving || !form.title.trim()}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingId ? "Update Post" : form.isPublished ? "Publish" : "Save Draft"}
+                {editingId ? t("updatePost") : form.isPublished ? t("publish") : t("saveDraft")}
               </Button>
             </CardContent>
           </Card>
@@ -355,7 +359,7 @@ function PostEditor({
           {/* Categories */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("categoriesCard")}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-2">
               {categories.length > 0 ? (
@@ -371,7 +375,7 @@ function PostEditor({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">No categories yet</p>
+                <p className="text-xs text-muted-foreground">{t("noCategoriesYet")}</p>
               )}
               <Separator />
               {showCatForm ? (
@@ -379,20 +383,20 @@ function PostEditor({
                   <Input
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
-                    placeholder="Category name"
+                    placeholder={t("categoryName")}
                     className="h-8 text-sm"
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCategory())}
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowCatForm(false)}>Cancel</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowCatForm(false)}>{t("cancel")}</Button>
                     <Button size="sm" className="h-7 text-xs" onClick={addCategory} disabled={addingCat || !newCatName.trim()}>
-                      {addingCat ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
+                      {addingCat ? <Loader2 className="h-3 w-3 animate-spin" /> : t("add")}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <Button variant="ghost" size="sm" className="h-7 text-xs w-full" onClick={() => setShowCatForm(true)}>
-                  <FolderPlus className="h-3 w-3 mr-1" /> Add New Category
+                  <FolderPlus className="h-3 w-3 mr-1" /> {t("addNewCategory")}
                 </Button>
               )}
             </CardContent>
@@ -401,16 +405,16 @@ function PostEditor({
           {/* Tags */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium">Tags</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("tagsCard")}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-2">
               <Input
                 value={form.tags}
                 onChange={(e) => setForm((p) => ({ ...p, tags: e.target.value }))}
-                placeholder="news, updates, tips"
+                placeholder={t("tagsPlaceholder")}
                 className="h-8 text-sm"
               />
-              <p className="text-xs text-muted-foreground">Separate with commas</p>
+              <p className="text-xs text-muted-foreground">{t("separateWithCommas")}</p>
               {form.tags && (
                 <div className="flex flex-wrap gap-1">
                   {form.tags.split(",").filter(Boolean).map((tag) => (
@@ -436,7 +440,7 @@ function PostEditor({
           {/* Featured Image */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium">Featured Image</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("featuredImage")}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               <ImageUpload
@@ -455,6 +459,7 @@ function PostEditor({
 
 // ─── Main Page ──────────────────────────────────────────────
 export default function BlogAdminPage() {
+  const t = useTranslations("admin.blog");
   const { data, loading, refetch: fetchPosts } = useFetch<{ posts: BlogPost[]; total: number }>(
     "/api/blog?admin=true",
     { posts: [], total: 0 },
@@ -507,7 +512,7 @@ export default function BlogAdminPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        toast.success(editingId ? "Post updated" : "Post created");
+        toast.success(editingId ? t("toasts.postUpdated") : t("toasts.postCreated"));
         setView("list");
         fetchPosts();
       } else {
@@ -515,22 +520,22 @@ export default function BlogAdminPage() {
         toast.error(err.error);
       }
     } catch {
-      toast.error("Failed to save post");
+      toast.error(t("toasts.savePostFailed"));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this post?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/blog?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Post deleted");
+        toast.success(t("toasts.postDeleted"));
         fetchPosts();
       }
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t("toasts.deleteFailed"));
     }
   }
 
@@ -556,6 +561,7 @@ export default function BlogAdminPage() {
       onEdit={openEdit}
       onDelete={handleDelete}
       onNew={openCreate}
+      t={t}
     />
   );
 }

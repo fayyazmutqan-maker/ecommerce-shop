@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 import { Save, Calculator, ShieldCheck, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react";
 
 export default function TaxSettingsPage() {
+  const t = useTranslations("admin.taxes");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -60,7 +62,7 @@ export default function TaxSettingsPage() {
         setHasComplianceCsid(!!data.zatcaCsid);
         setHasProductionCsid(!!data.zatcaPcsid);
       })
-      .catch(() => toast.error("Failed to load settings"))
+      .catch(() => toast.error(t("toasts.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -81,12 +83,12 @@ export default function TaxSettingsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error || "Failed to save");
+        toast.error(err.error || t("toasts.saveError"));
         return;
       }
-      toast.success("Tax settings saved");
+      toast.success(t("toasts.saved"));
     } catch {
-      toast.error("Failed to save settings");
+      toast.error(t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -100,7 +102,7 @@ export default function TaxSettingsPage() {
       const payload: Record<string, string> = { step };
       if (step === "compliance-csid") {
         if (!csrInput.trim() || !otpInput.trim()) {
-          toast.error("CSR and OTP are required");
+          toast.error(t("toasts.csrOtpRequired"));
           return;
         }
         payload.csr = csrInput.trim();
@@ -108,7 +110,7 @@ export default function TaxSettingsPage() {
       }
       if (step === "production-csid") {
         if (!complianceRequestId) {
-          toast.error("Complete Step 1 first to get the Compliance Request ID");
+          toast.error(t("toasts.completeStep1"));
           return;
         }
         payload.requestId = complianceRequestId;
@@ -123,7 +125,7 @@ export default function TaxSettingsPage() {
       const data = await res.json();
       if (!res.ok) {
         setOnboardResult({ success: false, message: data.error || "Failed" });
-        toast.error(data.error || "Onboarding step failed");
+        toast.error(data.error || t("toasts.onboardFailed"));
         return;
       }
 
@@ -131,7 +133,7 @@ export default function TaxSettingsPage() {
         setComplianceRequestId(data.requestId || "");
         setHasComplianceCsid(true);
         setOnboardResult({ success: true, message: `Compliance CSID obtained. Request ID: ${data.requestId}` });
-        toast.success("Compliance CSID obtained successfully");
+        toast.success(t("toasts.complianceCsidObtained"));
       } else if (step === "compliance-check") {
         const passed = data.success;
         setOnboardResult({
@@ -140,39 +142,39 @@ export default function TaxSettingsPage() {
             ? `Compliance check passed (${data.validationStatus})`
             : `Compliance check failed: ${data.errors?.map((e: { message: string }) => e.message).join(", ") || "Unknown error"}`,
         });
-        if (passed) toast.success("Compliance check passed");
-        else toast.error("Compliance check failed");
+        if (passed) toast.success(t("toasts.complianceCheckPassed"));
+        else toast.error(t("toasts.complianceCheckFailed"));
       } else if (step === "production-csid") {
         setHasProductionCsid(true);
         setOnboardResult({ success: true, message: "Production CSID obtained. ZATCA integration is now active!" });
-        toast.success("Production CSID obtained — ZATCA integration active!");
+        toast.success(t("toasts.productionCsidObtained"));
       }
     } catch {
-      setOnboardResult({ success: false, message: "Network error" });
-      toast.error("Failed to connect to server");
+      setOnboardResult({ success: false, message: t("toasts.networkError") });
+      toast.error(t("toasts.networkError"));
     } finally {
       setOnboardLoading(false);
       setOnboardStep("idle");
     }
   };
 
-  if (loading) return <p className="text-muted-foreground text-center py-12">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground text-center py-12">{t("loading")}</p>;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Tax Settings</h1>
-        <p className="text-muted-foreground">Configure tax rates and VAT for your store</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> VAT Configuration</CardTitle>
-          <CardDescription>Saudi Arabia requires 15% VAT on most goods (ZATCA regulations)</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> {t("vatConfig")}</CardTitle>
+          <CardDescription>{t("vatConfigDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Tax Rate (%)</Label>
+            <Label>{t("taxRate")}</Label>
             <Input
               value={form.taxRate}
               onChange={(e) => setForm((f) => ({ ...f, taxRate: parseFloat(e.target.value) || 0 }))}
@@ -181,22 +183,22 @@ export default function TaxSettingsPage() {
               max={100}
               step={0.1}
             />
-            <p className="text-xs text-muted-foreground">Standard ZATCA VAT rate is 15%</p>
+            <p className="text-xs text-muted-foreground">{t("taxRateHelp")}</p>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label>Prices Include Tax</Label>
-              <p className="text-xs text-muted-foreground">If enabled, product prices are treated as tax-inclusive</p>
+              <Label>{t("pricesIncludeTax")}</Label>
+              <p className="text-xs text-muted-foreground">{t("pricesIncludeTaxHelp")}</p>
             </div>
             <Switch checked={form.taxIncluded} onCheckedChange={(v) => setForm((f) => ({ ...f, taxIncluded: v }))} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Currency Code</Label>
+              <Label>{t("currencyCode")}</Label>
               <Input value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Currency Symbol</Label>
+              <Label>{t("currencySymbol")}</Label>
               <Input value={form.currencySymbol} onChange={(e) => setForm((f) => ({ ...f, currencySymbol: e.target.value }))} />
             </div>
           </div>
@@ -205,51 +207,50 @@ export default function TaxSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tax Exemptions</CardTitle>
-          <CardDescription>Individual customers can be marked as tax-exempt from the customer detail page</CardDescription>
+          <CardTitle>{t("taxExemptions")}</CardTitle>
+          <CardDescription>{t("taxExemptionsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Products can be individually marked as non-taxable in the product editor.
-            Tax-exempt customers will not be charged VAT regardless of product settings.
+            {t("taxExemptionsInfo")}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> ZATCA E-Invoicing</CardTitle>
-          <CardDescription>Configure ZATCA Phase 2 compliance for Saudi e-invoicing (Fatoora). When enabled, invoices are reported to ZATCA automatically.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> {t("zatcaTitle")}</CardTitle>
+          <CardDescription>{t("zatcaDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label>Enable ZATCA E-Invoicing</Label>
-              <p className="text-xs text-muted-foreground">Generate ZATCA-compliant QR codes and report invoices to ZATCA</p>
+              <Label>{t("enableZatca")}</Label>
+              <p className="text-xs text-muted-foreground">{t("enableZatcaHelp")}</p>
             </div>
             <Switch checked={form.zatcaEnabled} onCheckedChange={(v) => setForm((f) => ({ ...f, zatcaEnabled: v }))} />
           </div>
           {form.zatcaEnabled && (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label>VAT Registration Number</Label>
+                <Label>{t("vatRegNumber")}</Label>
                 <Input
                   value={form.vatNumber}
                   onChange={(e) => setForm((f) => ({ ...f, vatNumber: e.target.value.replace(/\D/g, "").slice(0, 15) }))}
-                  placeholder="e.g. 300000000000003"
+                  placeholder={t("vatRegPlaceholder")}
                   maxLength={15}
                 />
-                <p className="text-xs text-muted-foreground">15-digit VAT number issued by ZATCA</p>
+                <p className="text-xs text-muted-foreground">{t("vatRegHelp")}</p>
               </div>
               <div className="space-y-2">
-                <Label>Commercial Registration Number</Label>
+                <Label>{t("commercialRegNo")}</Label>
                 <Input
                   value={form.commercialRegNo}
                   onChange={(e) => setForm((f) => ({ ...f, commercialRegNo: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                  placeholder="e.g. 1010000000"
+                  placeholder={t("commercialRegPlaceholder")}
                   maxLength={10}
                 />
-                <p className="text-xs text-muted-foreground">CR number from the Ministry of Commerce</p>
+                <p className="text-xs text-muted-foreground">{t("commercialRegHelp")}</p>
               </div>
 
               <Separator />
@@ -258,34 +259,34 @@ export default function TaxSettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-semibold">ZATCA API Integration</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">Connect to the ZATCA Fatoora platform for automatic invoice reporting</p>
+                    <Label className="text-base font-semibold">{t("zatcaApi")}</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("zatcaApiHelp")}</p>
                   </div>
                   <Badge variant={hasProductionCsid ? "default" : hasComplianceCsid ? "secondary" : "outline"}>
-                    {hasProductionCsid ? "Active" : hasComplianceCsid ? "Compliance Only" : "Not Connected"}
+                    {hasProductionCsid ? t("statusActive") : hasComplianceCsid ? t("statusCompliance") : t("statusNotConnected")}
                   </Badge>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Environment</Label>
+                  <Label>{t("environment")}</Label>
                   <Select value={form.zatcaEnvironment} onValueChange={(v) => setForm((f) => ({ ...f, zatcaEnvironment: v as typeof f.zatcaEnvironment }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                      <SelectItem value="simulation">Simulation</SelectItem>
-                      <SelectItem value="production">Production</SelectItem>
+                      <SelectItem value="sandbox">{t("envSandbox")}</SelectItem>
+                      <SelectItem value="simulation">{t("envSimulation")}</SelectItem>
+                      <SelectItem value="production">{t("envProduction")}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">Start with Sandbox for testing, then move to Production after verification</p>
+                  <p className="text-xs text-muted-foreground">{t("envHelp")}</p>
                 </div>
 
                 <Separator />
 
                 {/* Onboarding Steps */}
                 <div className="space-y-4">
-                  <p className="text-sm font-medium">Onboarding Steps</p>
+                  <p className="text-sm font-medium">{t("onboardingSteps")}</p>
 
                   {/* Step 1: Compliance CSID */}
                   <div className="border rounded-lg p-4 space-y-3">
@@ -295,29 +296,29 @@ export default function TaxSettingsPage() {
                       ) : (
                         <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
-                      <span className="font-medium">Step 1: Get Compliance CSID</span>
+                      <span className="font-medium">{t("step1Title")}</span>
                     </div>
                     <p className="text-xs text-muted-foreground ml-7">
-                      Submit your CSR (Certificate Signing Request) and OTP from ZATCA to receive a compliance certificate.
+                      {t("step1Desc")}
                     </p>
                     {!hasComplianceCsid && (
                       <div className="ml-7 space-y-3">
                         <div className="space-y-2">
-                          <Label>CSR (Base64)</Label>
+                          <Label>{t("csrLabel")}</Label>
                           <Textarea
                             value={csrInput}
                             onChange={(e) => setCsrInput(e.target.value)}
-                            placeholder="Paste your CSR here..."
+                            placeholder={t("csrPlaceholder")}
                             rows={3}
                             className="font-mono text-xs"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>OTP</Label>
+                          <Label>{t("otpLabel")}</Label>
                           <Input
                             value={otpInput}
                             onChange={(e) => setOtpInput(e.target.value)}
-                            placeholder="6-digit OTP from ZATCA"
+                            placeholder={t("otpPlaceholder")}
                             maxLength={6}
                           />
                         </div>
@@ -327,8 +328,8 @@ export default function TaxSettingsPage() {
                           disabled={onboardLoading || !csrInput.trim() || !otpInput.trim()}
                         >
                           {onboardLoading && onboardStep === "compliance-csid" ? (
-                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
-                          ) : "Submit to ZATCA"}
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("submitting")}</>
+                          ) : t("submitToZatca")}
                         </Button>
                       </div>
                     )}
@@ -338,10 +339,10 @@ export default function TaxSettingsPage() {
                   <div className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <Circle className="h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium">Step 2: Compliance Invoice Check</span>
+                      <span className="font-medium">{t("step2Title")}</span>
                     </div>
                     <p className="text-xs text-muted-foreground ml-7">
-                      Submit a test invoice to verify your setup is compliant with ZATCA requirements.
+                      {t("step2Desc")}
                     </p>
                     <div className="ml-7">
                       <Button
@@ -351,8 +352,8 @@ export default function TaxSettingsPage() {
                         disabled={onboardLoading || !hasComplianceCsid}
                       >
                         {onboardLoading && onboardStep === "compliance-check" ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking...</>
-                        ) : "Run Compliance Check"}
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("checking")}</>
+                        ) : t("runComplianceCheck")}
                       </Button>
                     </div>
                   </div>
@@ -365,10 +366,10 @@ export default function TaxSettingsPage() {
                       ) : (
                         <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
-                      <span className="font-medium">Step 3: Get Production CSID</span>
+                      <span className="font-medium">{t("step3Title")}</span>
                     </div>
                     <p className="text-xs text-muted-foreground ml-7">
-                      Exchange your compliance certificate for a production certificate to start reporting real invoices.
+                      {t("step3Desc")}
                     </p>
                     {!hasProductionCsid && (
                       <div className="ml-7">
@@ -378,8 +379,8 @@ export default function TaxSettingsPage() {
                           disabled={onboardLoading || !hasComplianceCsid || !complianceRequestId}
                         >
                           {onboardLoading && onboardStep === "production-csid" ? (
-                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Activating...</>
-                          ) : "Get Production Certificate"}
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("activating")}</>
+                          ) : t("getProductionCert")}
                         </Button>
                       </div>
                     )}
@@ -406,7 +407,7 @@ export default function TaxSettingsPage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" />
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("saving") : t("saveChanges")}
         </Button>
       </div>
     </div>

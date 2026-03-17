@@ -5,6 +5,7 @@ import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface AddToCartButtonProps {
   product: {
@@ -22,6 +23,7 @@ interface AddToCartButtonProps {
 export function AddToCartButton({ product, disabled }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore((state) => state.addItem);
+  const t = useTranslations("product");
 
   const maxQty = product.maxQuantity || 9999;
 
@@ -37,7 +39,7 @@ export function AddToCartButton({ product, disabled }: AddToCartButtonProps) {
       variantName: product.variantName,
       maxQuantity: product.maxQuantity,
     });
-    toast.success(`${product.name}${product.variantName ? ` (${product.variantName})` : ""} added to cart`);
+    toast.success(t("addedToCart", { name: product.name + (product.variantName ? ` (${product.variantName})` : "") }));
   };
 
   return (
@@ -71,7 +73,7 @@ export function AddToCartButton({ product, disabled }: AddToCartButtonProps) {
         disabled={disabled}
       >
         <ShoppingCart className="h-4 w-4 mr-2" />
-        {disabled ? "Out of Stock" : "Add to Cart"}
+        {disabled ? t("outOfStock") : t("addToCart")}
       </Button>
     </div>
   );

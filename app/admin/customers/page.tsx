@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { formatDate, getInitials } from "@/lib/helpers";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function CustomersPage({
 }) {
   const { q, page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const t = await getTranslations("admin.customers");
 
   const whereClause = q
     ? and(
@@ -60,26 +62,26 @@ export default async function CustomersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">
-          Manage your customer base ({totalItems} customers)
+          {t("subtitle")} ({totalItems})
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <AdminSearch placeholder="Search customers..." />
+          <AdminSearch placeholder={t("searchCustomers")} />
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Total Spent</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("email")}</TableHead>
+                <TableHead>{t("orders")}</TableHead>
+                <TableHead>{t("totalSpent")}</TableHead>
+                <TableHead>{t("joined")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,7 +121,7 @@ export default async function CustomersPage({
               {customers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
-                    <p className="text-muted-foreground">No customers yet</p>
+                    <p className="text-muted-foreground">{t("noCustomers")}</p>
                   </TableCell>
                 </TableRow>
               )}

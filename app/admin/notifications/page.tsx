@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const typeIcons: Record<string, any> = {
 };
 
 export default function NotificationsPage() {
+  const t = useTranslations("admin.notifications");
   const { data, loading, refetch: fetchNotifications } = useFetch<{ notifications: Notification[]; unreadCount: number }>(
     "/api/notifications",
     { notifications: [], unreadCount: 0 },
@@ -48,7 +50,7 @@ export default function NotificationsPage() {
       if (!res.ok) throw new Error();
       fetchNotifications();
     } catch {
-      toast.error("Failed to update");
+      toast.error(t("toasts.updateFailed"));
     }
   }
 
@@ -60,10 +62,10 @@ export default function NotificationsPage() {
         body: JSON.stringify({ markAllRead: true }),
       });
       if (!res.ok) throw new Error();
-      toast.success("All marked as read");
+      toast.success(t("toasts.allMarkedRead"));
       fetchNotifications();
     } catch {
-      toast.error("Failed to update");
+      toast.error(t("toasts.updateFailed"));
     }
   }
 
@@ -73,7 +75,7 @@ export default function NotificationsPage() {
       if (!res.ok) throw new Error();
       fetchNotifications();
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t("toasts.deleteFailed"));
     }
   }
 
@@ -81,14 +83,14 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}` : "All caught up!"}
+            {unreadCount > 0 ? t("unreadCount", { count: unreadCount }) : t("allCaughtUp")}
           </p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" onClick={markAllRead}>
-            <CheckCheck className="mr-2 h-4 w-4" /> Mark all read
+            <CheckCheck className="mr-2 h-4 w-4" /> {t("markAllRead")}
           </Button>
         )}
       </div>
@@ -112,8 +114,8 @@ export default function NotificationsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-lg font-medium">No notifications</p>
-            <p className="text-sm text-muted-foreground">You&apos;ll see new notifications here</p>
+            <p className="text-lg font-medium">{t("noNotifications")}</p>
+            <p className="text-sm text-muted-foreground">{t("youllSeeNew")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -129,18 +131,18 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className={`text-sm ${!notif.isRead ? "font-semibold" : "font-medium"}`}>{notif.title}</p>
-                      {!notif.isRead && <Badge variant="default" className="text-[10px] px-1.5 py-0">NEW</Badge>}
+                      {!notif.isRead && <Badge variant="default" className="text-[10px] px-1.5 py-0">{t("new")}</Badge>}
                     </div>
                     {notif.message && <p className="text-sm text-muted-foreground mt-0.5">{notif.message}</p>}
                     <p className="text-xs text-muted-foreground mt-1">{formatDateTime(notif.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     {!notif.isRead && (
-                      <Button variant="ghost" size="sm" onClick={() => markAsRead(notif.id)} title="Mark as read">
+                      <Button variant="ghost" size="sm" onClick={() => markAsRead(notif.id)} title={t("markAsRead")}>
                         <Check className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => deleteNotification(notif.id)} title="Delete">
+                    <Button variant="ghost" size="sm" onClick={() => deleteNotification(notif.id)} title={t("delete")}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

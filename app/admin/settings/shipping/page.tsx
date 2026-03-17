@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ interface ShippingZone {
 }
 
 export default function ShippingSettingsPage() {
+  const t = useTranslations("admin.shipping");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [zones, setZones] = useState<ShippingZone[]>([]);
@@ -55,7 +57,7 @@ export default function ShippingSettingsPage() {
         setZones(await zonesRes.json());
       }
     } catch {
-      toast.error("Failed to load data");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -81,44 +83,44 @@ export default function ShippingSettingsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error || "Failed to save");
+        toast.error(err.error || t("toasts.saveError"));
         return;
       }
-      toast.success("Shipping settings saved");
+      toast.success(t("toasts.saved"));
     } catch {
-      toast.error("Failed to save");
+      toast.error(t("toasts.saveError"));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <p className="text-muted-foreground text-center py-12">Loading...</p>;
+  if (loading) return <p className="text-muted-foreground text-center py-12">{t("loading")}</p>;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Shipping Settings</h1>
-        <p className="text-muted-foreground">Configure shipping rates, zones, and methods</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5" /> General Shipping</CardTitle>
-          <CardDescription>Global shipping configuration</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5" /> {t("generalShipping")}</CardTitle>
+          <CardDescription>{t("generalShippingDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label>Enable Shipping</Label>
+            <Label>{t("enableShipping")}</Label>
             <Switch checked={settings.shippingEnabled} onCheckedChange={(v) => setSettings((s) => ({ ...s, shippingEnabled: v }))} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Free Shipping Minimum (SAR)</Label>
-              <Input value={settings.freeShippingMin} onChange={(e) => setSettings((s) => ({ ...s, freeShippingMin: e.target.value }))} type="number" placeholder="e.g. 200" />
+              <Label>{t("freeShippingMin")}</Label>
+              <Input value={settings.freeShippingMin} onChange={(e) => setSettings((s) => ({ ...s, freeShippingMin: e.target.value }))} type="number" placeholder={t("freeShippingMinPlaceholder")} />
             </div>
             <div className="space-y-2">
-              <Label>Flat Shipping Rate (SAR)</Label>
-              <Input value={settings.flatShippingRate} onChange={(e) => setSettings((s) => ({ ...s, flatShippingRate: e.target.value }))} type="number" placeholder="e.g. 25" />
+              <Label>{t("flatShippingRate")}</Label>
+              <Input value={settings.flatShippingRate} onChange={(e) => setSettings((s) => ({ ...s, flatShippingRate: e.target.value }))} type="number" placeholder={t("flatShippingRatePlaceholder")} />
             </div>
           </div>
         </CardContent>
@@ -128,22 +130,22 @@ export default function ShippingSettingsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Shipping Zones ({zones.length})</CardTitle>
-              <CardDescription>Manage zones from the <a href="/admin/shipping-zones" className="text-primary underline">Shipping Zones</a> page</CardDescription>
+              <CardTitle>{t("shippingZones", { count: zones.length })}</CardTitle>
+              <CardDescription>{t.rich("shippingZonesDesc", { link: (chunks) => <a href="/admin/shipping-zones" className="text-primary underline">{chunks}</a> })}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {zones.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No shipping zones configured</p>
+            <p className="text-muted-foreground text-center py-4">{t("noZones")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Zone</TableHead>
-                  <TableHead>Countries</TableHead>
-                  <TableHead>Rates</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("zone")}</TableHead>
+                  <TableHead>{t("countries")}</TableHead>
+                  <TableHead>{t("rates")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -151,9 +153,9 @@ export default function ShippingSettingsPage() {
                   <TableRow key={z.id}>
                     <TableCell className="font-medium">{z.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{z.countries}</TableCell>
-                    <TableCell>{z.rates?.length || 0} rates</TableCell>
+                    <TableCell>{t("rateCount", { count: z.rates?.length || 0 })}</TableCell>
                     <TableCell>
-                      <Badge variant={z.isActive ? "default" : "secondary"}>{z.isActive ? "Active" : "Inactive"}</Badge>
+                      <Badge variant={z.isActive ? "default" : "secondary"}>{z.isActive ? t("active") : t("inactive")}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -166,7 +168,7 @@ export default function ShippingSettingsPage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" />
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? t("saving") : t("saveChanges")}
         </Button>
       </div>
     </div>

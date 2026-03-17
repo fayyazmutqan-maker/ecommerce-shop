@@ -23,6 +23,7 @@ import { eq, count, gte, lt, and, desc, asc, sql } from "drizzle-orm";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/helpers";
 import { DashboardChart } from "@/components/admin/dashboard-chart";
 import { RecentOrders } from "@/components/admin/recent-orders";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -156,40 +157,41 @@ async function getTopProducts() {
 }
 
 export default async function AdminDashboard() {
-  const [stats, recentOrders, topProducts, chartData] = await Promise.all([
+  const [stats, recentOrders, topProducts, chartData, t] = await Promise.all([
     getStats(),
     getRecentOrders(),
     getTopProducts(),
     getMonthlyRevenue(),
+    getTranslations("admin.dashboard"),
   ]);
 
   const statCards = [
     {
-      title: "Total Revenue",
+      title: t("totalRevenue"),
       value: formatCurrency(stats.totalRevenue),
       icon: DollarSign,
       change: `${parseFloat(stats.revenueChange) >= 0 ? "+" : ""}${stats.revenueChange}%`,
       trend: parseFloat(stats.revenueChange) >= 0 ? "up" as const : "down" as const,
     },
     {
-      title: "Orders",
+      title: t("orders"),
       value: stats.totalOrders.toString(),
       icon: ShoppingCart,
       change: `${parseFloat(stats.orderChange) >= 0 ? "+" : ""}${stats.orderChange}%`,
       trend: parseFloat(stats.orderChange) >= 0 ? "up" as const : "down" as const,
     },
     {
-      title: "Customers",
+      title: t("customers"),
       value: stats.totalCustomers.toString(),
       icon: Users,
       change: `${parseFloat(stats.customerChange) >= 0 ? "+" : ""}${stats.customerChange}%`,
       trend: parseFloat(stats.customerChange) >= 0 ? "up" as const : "down" as const,
     },
     {
-      title: "Products",
+      title: t("products"),
       value: stats.totalProducts.toString(),
       icon: Package,
-      change: "active",
+      change: t("active"),
       trend: "up" as const,
     },
   ];
@@ -197,9 +199,9 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">
-          Overview of your store performance
+          {t("subtitle")}
         </p>
       </div>
 
@@ -228,7 +230,7 @@ export default async function AdminDashboard() {
                 >
                   {stat.change}
                 </span>
-                <span className="ml-1">from last month</span>
+                <span className="ml-1">{t("fromLastMonth")}</span>
               </div>
             </CardContent>
           </Card>
@@ -240,14 +242,14 @@ export default async function AdminDashboard() {
         <Card className="lg:col-span-4">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Revenue Overview</CardTitle>
-              <CardDescription>Monthly revenue for the current year</CardDescription>
+              <CardTitle>{t("revenueOverview")}</CardTitle>
+              <CardDescription>{t("monthlyRevenue")}</CardDescription>
             </div>
             <Link
               href="/admin/analytics"
               className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
-              View Analytics
+              {t("viewAnalytics")}
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CardHeader>
@@ -258,8 +260,8 @@ export default async function AdminDashboard() {
 
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
-            <CardDescription>Latest orders from your store</CardDescription>
+            <CardTitle>{t("recentOrders")}</CardTitle>
+            <CardDescription>{t("latestOrders")}</CardDescription>
           </CardHeader>
           <CardContent>
             <RecentOrders orders={recentOrders.map(o => ({ ...o, totalAmount: Number(o.totalAmount), items: o.items.map(i => ({ ...i, quantity: i.quantity })) }))} />
@@ -270,8 +272,8 @@ export default async function AdminDashboard() {
       {/* Top Products */}
       <Card>
         <CardHeader>
-          <CardTitle>Top Products</CardTitle>
-          <CardDescription>Best performing products by stock</CardDescription>
+          <CardTitle>{t("topProducts")}</CardTitle>
+          <CardDescription>{t("topProductsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -287,7 +289,7 @@ export default async function AdminDashboard() {
                   <div>
                     <p className="text-sm font-medium">{product.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {product.sku || "No SKU"}
+                      {product.sku || t("noSKU")}
                     </p>
                   </div>
                 </div>
@@ -296,7 +298,7 @@ export default async function AdminDashboard() {
                     {formatCurrency(Number(product.price))}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {product.quantity} in stock
+                    {t("inStock", { count: product.quantity })}
                   </p>
                 </div>
               </div>

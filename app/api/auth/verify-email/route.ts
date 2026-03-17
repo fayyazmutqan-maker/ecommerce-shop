@@ -23,7 +23,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token");
 
-    if (!token) {
+    // Validate token format — prevent oversized/malformed inputs
+    if (!token || token.length > 64 || !/^[A-Za-z0-9_-]+$/.test(token)) {
+      audit({ action: "AUTH_EMAIL_VERIFIED", ip, resource: "verify-email", success: false });
       return redirectWithMessage("invalid");
     }
 
@@ -34,11 +36,13 @@ export async function GET(req: Request) {
     });
 
     if (!verToken || !verToken.identifier.startsWith("verify:")) {
+      audit({ action: "AUTH_EMAIL_VERIFIED", ip, resource: "verify-email", success: false });
       return redirectWithMessage("invalid");
     }
 
     if (new Date() > verToken.expires) {
       await db.delete(verificationTokens).where(eq(verificationTokens.token, hashedToken));
+      audit({ action: "AUTH_EMAIL_VERIFIED", ip, resource: "verify-email-expired", success: false });
       return redirectWithMessage("expired");
     }
 

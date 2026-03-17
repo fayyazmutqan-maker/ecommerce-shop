@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { formatCurrency, formatDateTime, getStatusColor } from "@/lib/helpers";
 
 interface Order {
@@ -158,6 +159,7 @@ interface Fulfillment {
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useTranslations("admin.orderDetail");
   const orderId = params.id as string;
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -247,7 +249,7 @@ export default function OrderDetailPage() {
       }
       setRefundItems(items);
     } catch {
-      toast.error("Failed to load order");
+      toast.error(t("toasts.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -275,9 +277,9 @@ export default function OrderDetailPage() {
 
       const updated = await res.json();
       setOrder(updated);
-      toast.success("Order updated successfully");
+      toast.success(t("toasts.updateSuccess"));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to update order");
+      toast.error(error instanceof Error ? error.message : t("toasts.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -285,7 +287,7 @@ export default function OrderDetailPage() {
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(t("toasts.copiedToClipboard"));
   }
 
   async function handleRefund() {
@@ -303,7 +305,7 @@ export default function OrderDetailPage() {
         : undefined;
 
       if (refundType === "PARTIAL" && (!selectedItems || selectedItems.length === 0)) {
-        toast.error("Please select at least one item to refund");
+        toast.error(t("toasts.selectRefundItem"));
         setRefundProcessing(false);
         return;
       }
@@ -325,7 +327,7 @@ export default function OrderDetailPage() {
         throw new Error(err.error || "Failed to process refund");
       }
 
-      toast.success(`${refundType === "FULL" ? "Full" : "Partial"} refund processed successfully`);
+      toast.success(refundType === "FULL" ? t("toasts.fullRefundSuccess") : t("toasts.partialRefundSuccess"));
       setRefundOpen(false);
       setRefundReason("");
       setRefundType("PARTIAL");
@@ -333,7 +335,7 @@ export default function OrderDetailPage() {
       setLoading(true);
       await fetchOrder();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to process refund");
+      toast.error(error instanceof Error ? error.message : t("toasts.refundFailed"));
     } finally {
       setRefundProcessing(false);
     }
@@ -363,7 +365,7 @@ export default function OrderDetailPage() {
         .map(([orderItemId, v]) => ({ orderItemId, quantity: v.quantity }));
 
       if (items.length === 0) {
-        toast.error("Select at least one item to fulfill");
+        toast.error(t("toasts.selectFulfillItem"));
         setFulfillProcessing(false);
         return;
       }
@@ -386,7 +388,7 @@ export default function OrderDetailPage() {
         throw new Error(err.error || "Failed to create fulfillment");
       }
 
-      toast.success("Fulfillment created");
+      toast.success(t("toasts.fulfillmentCreated"));
       setFulfillOpen(false);
       setFulfillTrackingNumber("");
       setFulfillTrackingUrl("");
@@ -395,7 +397,7 @@ export default function OrderDetailPage() {
       setLoading(true);
       await fetchOrder();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Fulfillment failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.fulfillmentFailed"));
     } finally {
       setFulfillProcessing(false);
     }
@@ -413,13 +415,13 @@ export default function OrderDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ZATCA retry failed");
       if (data.success) {
-        toast.success("Invoice reported to ZATCA successfully");
+        toast.success(t("toasts.zatcaInvoiceSuccess"));
       } else {
-        toast.error(data.errors?.[0] || "ZATCA reporting failed");
+        toast.error(data.errors?.[0] || t("toasts.zatcaRetryFailed"));
       }
       await fetchOrder();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "ZATCA retry failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.zatcaRetryFailed"));
     } finally {
       setZatcaRetrying(false);
     }
@@ -436,9 +438,9 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
-        <p className="text-muted-foreground">Order not found</p>
+        <p className="text-muted-foreground">{t("orderNotFound")}</p>
         <Button asChild variant="outline">
-          <Link href="/admin/orders">Back to Orders</Link>
+          <Link href="/admin/orders">{t("backToOrders")}</Link>
         </Button>
       </div>
     );
@@ -489,7 +491,7 @@ export default function OrderDetailPage() {
             onClick={() => window.open(`/api/orders/${orderId}/invoice`, "_blank")}
           >
             <FileText className="mr-2 h-4 w-4" />
-            Invoice
+            {t("invoice")}
           </Button>
           {(order.zatcaStatus === "FAILED" || order.zatcaStatus === "PENDING") && (
             <Button
@@ -499,9 +501,9 @@ export default function OrderDetailPage() {
               disabled={zatcaRetrying}
             >
               {zatcaRetrying ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("retrying")}</>
               ) : (
-                <><RotateCcw className="mr-2 h-4 w-4" /> Retry ZATCA</>
+                <><RotateCcw className="mr-2 h-4 w-4" /> {t("retryZatca")}</>
               )}
             </Button>
           )}
@@ -510,19 +512,19 @@ export default function OrderDetailPage() {
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Truck className="mr-2 h-4 w-4" />
-                  Fulfill
+                  {t("fulfill")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Create Fulfillment</DialogTitle>
+                  <DialogTitle>{t("fulfillDialog.title")}</DialogTitle>
                   <DialogDescription>
-                    Select items and add tracking info
+                    {t("fulfillDialog.description")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label className="mb-2 block">Items to Fulfill</Label>
+                    <Label className="mb-2 block">{t("fulfillDialog.itemsToFulfill")}</Label>
                     <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
                       {order?.items.map((item) => {
                         const fi = fulfillItems[item.id];
@@ -560,7 +562,7 @@ export default function OrderDetailPage() {
                                 className="w-16 h-8"
                               />
                             )}
-                            {!fi.selected && <span className="text-xs text-muted-foreground">{fi.max} remaining</span>}
+                            {!fi.selected && <span className="text-xs text-muted-foreground">{t("fulfillments.remaining", { count: fi.max })}</span>}
                           </div>
                         );
                       })}
@@ -568,45 +570,45 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>Carrier</Label>
+                      <Label>{t("fulfillDialog.carrier")}</Label>
                       <Input
                         value={fulfillCarrier}
                         onChange={(e) => setFulfillCarrier(e.target.value)}
-                        placeholder="e.g. Aramex, SMSA"
+                        placeholder={t("fulfillDialog.carrierPlaceholder")}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Tracking Number</Label>
+                      <Label>{t("fulfillDialog.trackingNumber")}</Label>
                       <Input
                         value={fulfillTrackingNumber}
                         onChange={(e) => setFulfillTrackingNumber(e.target.value)}
-                        placeholder="Tracking #"
+                        placeholder={t("fulfillDialog.trackingNumberPlaceholder")}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Tracking URL (optional)</Label>
+                    <Label>{t("fulfillDialog.trackingUrl")}</Label>
                     <Input
                       value={fulfillTrackingUrl}
                       onChange={(e) => setFulfillTrackingUrl(e.target.value)}
-                      placeholder="https://..."
+                      placeholder={t("fulfillDialog.trackingUrlPlaceholder")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Notes (optional)</Label>
+                    <Label>{t("fulfillDialog.notes")}</Label>
                     <Textarea
                       value={fulfillNotes}
                       onChange={(e) => setFulfillNotes(e.target.value)}
-                      placeholder="Internal notes..."
+                      placeholder={t("fulfillDialog.notesPlaceholder")}
                       rows={2}
                     />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setFulfillOpen(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setFulfillOpen(false)}>{t("cancel")}</Button>
                   <Button onClick={handleFulfill} disabled={fulfillProcessing}>
                     {fulfillProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Fulfillment
+                    {t("fulfillDialog.create")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -617,33 +619,33 @@ export default function OrderDetailPage() {
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Refund
+                  {t("refund")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Process Refund</DialogTitle>
+                  <DialogTitle>{t("refundDialog.title")}</DialogTitle>
                   <DialogDescription>
-                    Order {order?.orderNumber} — Max refundable: {formatCurrency(maxRefundable)}
+                    {t("refundDialog.description", { orderNumber: order?.orderNumber, maxAmount: formatCurrency(maxRefundable) })}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Refund Type</Label>
+                    <Label>{t("refundDialog.refundType")}</Label>
                     <Select value={refundType} onValueChange={(v) => setRefundType(v as "FULL" | "PARTIAL")}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="FULL">Full Refund ({formatCurrency(maxRefundable)})</SelectItem>
-                        <SelectItem value="PARTIAL">Partial Refund</SelectItem>
+                        <SelectItem value="FULL">{t("refundDialog.fullRefund", { amount: formatCurrency(maxRefundable) })}</SelectItem>
+                        <SelectItem value="PARTIAL">{t("refundDialog.partialRefund")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {refundType === "PARTIAL" && order && (
                     <div className="space-y-2">
-                      <Label>Select Items to Refund</Label>
+                      <Label>{t("refundDialog.selectItems")}</Label>
                       <div className="border rounded-md divide-y max-h-60 overflow-y-auto">
                         {order.items.map((item) => {
                           const ri = refundItems[item.id];
@@ -665,7 +667,7 @@ export default function OrderDetailPage() {
                                 )}
                               </div>
                               {ri?.selected && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                   <Input
                                     type="number"
                                     min={1}
@@ -681,13 +683,13 @@ export default function OrderDetailPage() {
                                     }}
                                     className="w-16 h-8"
                                   />
-                                  <span className="text-sm font-medium w-20 text-right">
+                                  <span className="text-sm font-medium whitespace-nowrap text-right">
                                     {formatCurrency(ri.amount)}
                                   </span>
                                 </div>
                               )}
                               {!ri?.selected && (
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">
                                   {item.quantity} × {formatCurrency(item.price)}
                                 </span>
                               )}
@@ -699,11 +701,11 @@ export default function OrderDetailPage() {
                   )}
 
                   <div className="space-y-2">
-                    <Label>Reason (optional)</Label>
+                    <Label>{t("refundDialog.reason")}</Label>
                     <Textarea
                       value={refundReason}
                       onChange={(e) => setRefundReason(e.target.value)}
-                      placeholder="Reason for refund..."
+                      placeholder={t("refundDialog.reasonPlaceholder")}
                       rows={2}
                     />
                   </div>
@@ -715,20 +717,20 @@ export default function OrderDetailPage() {
                       onCheckedChange={(checked) => setRefundRestock(!!checked)}
                     />
                     <Label htmlFor="restock" className="text-sm font-normal">
-                      Restock items back to inventory
+                      {t("refundDialog.restockItems")}
                     </Label>
                   </div>
 
                   <Separator />
 
                   <div className="flex justify-between font-semibold">
-                    <span>Refund Total</span>
+                    <span>{t("refundDialog.refundTotal")}</span>
                     <span>{formatCurrency(selectedRefundTotal)}</span>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setRefundOpen(false)}>
-                    Cancel
+                    {t("cancel")}
                   </Button>
                   <Button
                     variant="destructive"
@@ -736,7 +738,7 @@ export default function OrderDetailPage() {
                     disabled={refundProcessing || selectedRefundTotal <= 0}
                   >
                     {refundProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Process Refund
+                    {t("refundDialog.processRefund")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -744,7 +746,7 @@ export default function OrderDetailPage() {
           )}
           <Button onClick={handleSave} disabled={saving || !hasChanges}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </div>
       </div>
@@ -757,17 +759,17 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Items ({order.items.length})
+                {t("items.count", { count: order.items.length })}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t("items.product")}</TableHead>
+                    <TableHead className="text-center">{t("items.qty")}</TableHead>
+                    <TableHead className="text-right">{t("items.price")}</TableHead>
+                    <TableHead className="text-right">{t("items.total")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -796,7 +798,7 @@ export default function OrderDetailPage() {
                           )}
                           {item.sku && (
                             <p className="text-xs text-muted-foreground">
-                              SKU: {item.sku}
+                              {t("items.sku", { sku: item.sku })}
                             </p>
                           )}
                         </div>
@@ -817,30 +819,30 @@ export default function OrderDetailPage() {
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">{t("priceSummary.subtotal")}</span>
                   <span>{formatCurrency(order.subtotal)}</span>
                 </div>
                 {order.discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
+                    <span>{t("priceSummary.discount")}</span>
                     <span>-{formatCurrency(order.discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="text-muted-foreground">{t("priceSummary.shipping")}</span>
                   <span>
                     {order.shippingAmount > 0
                       ? formatCurrency(order.shippingAmount)
-                      : "Free"}
+                      : t("free")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax (15% VAT)</span>
+                  <span className="text-muted-foreground">{t("priceSummary.tax")}</span>
                   <span>{formatCurrency(order.taxAmount)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-base">
-                  <span>Total</span>
+                  <span>{t("priceSummary.total")}</span>
                   <span>{formatCurrency(order.totalAmount)}</span>
                 </div>
               </div>
@@ -850,12 +852,12 @@ export default function OrderDetailPage() {
           {/* Status Management */}
           <Card>
             <CardHeader>
-              <CardTitle>Order Management</CardTitle>
+              <CardTitle>{t("management.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Order Status</Label>
+                  <Label>{t("management.orderStatus")}</Label>
                   <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger>
                       <SelectValue />
@@ -864,7 +866,7 @@ export default function OrderDetailPage() {
                       {["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"].map(
                         (s) => (
                           <SelectItem key={s} value={s}>
-                            {s}
+                            {t(`orderStatuses.${s}`)}
                           </SelectItem>
                         )
                       )}
@@ -873,7 +875,7 @@ export default function OrderDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Payment Status</Label>
+                  <Label>{t("management.paymentStatus")}</Label>
                   <Select value={paymentStatus} onValueChange={setPaymentStatus}>
                     <SelectTrigger>
                       <SelectValue />
@@ -882,7 +884,7 @@ export default function OrderDetailPage() {
                       {["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"].map(
                         (s) => (
                           <SelectItem key={s} value={s}>
-                            {s}
+                            {t(`paymentStatuses.${s}`)}
                           </SelectItem>
                         )
                       )}
@@ -891,7 +893,7 @@ export default function OrderDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Fulfillment Status</Label>
+                  <Label>{t("management.fulfillmentStatus")}</Label>
                   <Select value={fulfillmentStatus} onValueChange={setFulfillmentStatus}>
                     <SelectTrigger>
                       <SelectValue />
@@ -905,7 +907,7 @@ export default function OrderDetailPage() {
                         "DELIVERED",
                       ].map((s) => (
                         <SelectItem key={s} value={s}>
-                          {s}
+                          {t(`fulfillmentStatuses.${s}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -914,20 +916,20 @@ export default function OrderDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Tracking Number</Label>
+                <Label>{t("management.trackingNumber")}</Label>
                 <Input
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Enter tracking number..."
+                  placeholder={t("management.trackingNumberPlaceholder")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Internal Notes</Label>
+                <Label>{t("management.internalNotes")}</Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add internal notes..."
+                  placeholder={t("management.internalNotesPlaceholder")}
                   rows={3}
                 />
               </div>
@@ -939,13 +941,13 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Timeline
+                {t("timeline.title")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {order.timeline.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">
-                  No timeline events yet
+                  {t("timeline.noEvents")}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -991,19 +993,19 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  Transactions
+                  {t("transactions.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Reference</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>{t("transactions.type")}</TableHead>
+                      <TableHead>{t("transactions.method")}</TableHead>
+                      <TableHead>{t("transactions.status")}</TableHead>
+                      <TableHead>{t("transactions.reference")}</TableHead>
+                      <TableHead className="text-right">{t("transactions.amount")}</TableHead>
+                      <TableHead>{t("transactions.date")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1041,19 +1043,19 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <RotateCcw className="h-4 w-4" />
-                  Refunds ({orderRefunds.length})
+                  {t("refunds.count", { count: orderRefunds.length })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>ZATCA</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>{t("refunds.type")}</TableHead>
+                      <TableHead>{t("refunds.status")}</TableHead>
+                      <TableHead>{t("refunds.zatca")}</TableHead>
+                      <TableHead className="text-right">{t("refunds.amount")}</TableHead>
+                      <TableHead>{t("refunds.reason")}</TableHead>
+                      <TableHead>{t("refunds.date")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1090,11 +1092,11 @@ export default function OrderDetailPage() {
                                         body: JSON.stringify({ refundId: refund.id }),
                                       });
                                       const data = await res.json();
-                                      if (data.success) toast.success("Credit note reported to ZATCA");
-                                      else toast.error(data.errors?.[0] || "ZATCA retry failed");
+                                      if (data.success) toast.success(t("toasts.zatcaCreditNoteSuccess"));
+                                      else toast.error(data.errors?.[0] || t("toasts.zatcaCreditNoteFailed"));
                                       await fetchOrder();
                                     } catch {
-                                      toast.error("ZATCA retry failed");
+                                      toast.error(t("toasts.zatcaCreditNoteFailed"));
                                     }
                                   }}
                                 >
@@ -1121,7 +1123,7 @@ export default function OrderDetailPage() {
                 </Table>
                 {totalRefunded > 0 && (
                   <div className="flex justify-between font-medium mt-4 pt-4 border-t text-sm">
-                    <span>Total Refunded</span>
+                    <span>{t("refunds.totalRefunded")}</span>
                     <span className="text-destructive">{formatCurrency(totalRefunded)}</span>
                   </div>
                 )}
@@ -1135,7 +1137,7 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-4 w-4" />
-                  Fulfillments ({orderFulfillments.length})
+                  {t("fulfillments.count", { count: orderFulfillments.length })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1148,11 +1150,11 @@ export default function OrderDetailPage() {
                       <span className="text-xs text-muted-foreground">{formatDateTime(f.createdAt)}</span>
                     </div>
                     {f.carrier && (
-                      <p className="text-sm"><span className="text-muted-foreground">Carrier:</span> {f.carrier}</p>
+                      <p className="text-sm"><span className="text-muted-foreground">{t("fulfillments.carrier")}</span> {f.carrier}</p>
                     )}
                     {f.trackingNumber && (
                       <p className="text-sm">
-                        <span className="text-muted-foreground">Tracking:</span>{" "}
+                        <span className="text-muted-foreground">{t("fulfillments.tracking")}</span>{" "}
                         {f.trackingUrl ? (
                           <a href={f.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                             {f.trackingNumber} <ExternalLink className="inline h-3 w-3" />
@@ -1179,13 +1181,13 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Customer
+                {t("customer.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-medium">
-                  {order.user?.name || "Guest"}
+                  {order.user?.name || t("customer.guest")}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -1207,8 +1209,8 @@ export default function OrderDetailPage() {
                 </div>
               )}
               <div className="text-xs text-muted-foreground">
-                Payment: {order.paymentMethod?.toUpperCase() || "N/A"}
-                {order.shippingMethod && ` • Shipping: ${order.shippingMethod}`}
+                {order.paymentMethod ? t("customer.payment", { method: order.paymentMethod.toUpperCase() }) : t("customer.paymentNA")}
+                {order.shippingMethod && ` • ${t("customer.shipping", { method: order.shippingMethod })}`}
               </div>
             </CardContent>
           </Card>
@@ -1219,7 +1221,7 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-4 w-4" />
-                  Shipping Address
+                  {t("shippingAddress.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
@@ -1260,7 +1262,7 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  Billing Address
+                  {t("billingAddress.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
@@ -1288,7 +1290,7 @@ export default function OrderDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-destructive">
-                  Cancellation Reason
+                  {t("cancellation.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>

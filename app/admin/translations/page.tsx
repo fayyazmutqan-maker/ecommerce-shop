@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import {
   Globe,
@@ -58,12 +59,12 @@ interface EntitiesResponse {
 
 // ─── Constants ───────────────────────────────────────────────
 
-const ENTITY_TABS: { value: EntityType; label: string; icon: typeof Package }[] = [
-  { value: "product", label: "Products", icon: Package },
-  { value: "category", label: "Categories", icon: FolderOpen },
-  { value: "page", label: "Pages", icon: FileText },
-  { value: "blogPost", label: "Blog Posts", icon: PenTool },
-  { value: "smartCollection", label: "Collections", icon: FolderKanban },
+const ENTITY_TABS: { value: EntityType; icon: typeof Package }[] = [
+  { value: "product", icon: Package },
+  { value: "category", icon: FolderOpen },
+  { value: "page", icon: FileText },
+  { value: "blogPost", icon: PenTool },
+  { value: "smartCollection", icon: FolderKanban },
 ];
 
 const FIELD_LABELS: Record<string, string> = {
@@ -93,6 +94,7 @@ const LOCALE = "ar";
 // ─── Main Page ───────────────────────────────────────────────
 
 export default function TranslationsPage() {
+  const t = useTranslations("admin.translationsPage");
   const [activeTab, setActiveTab] = useState<EntityType>("product");
   const [entities, setEntities] = useState<EntityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,10 @@ export default function TranslationsPage() {
     setExpandedId(null);
     try {
       const res = await fetch(`/api/translations/entities?type=${type}&locale=${LOCALE}`);
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`${res.status}: ${body}`);
+      }
       const data: EntitiesResponse = await res.json();
       setEntities(data.entities);
       setStats({
@@ -113,12 +118,13 @@ export default function TranslationsPage() {
         translated: data.fullyTranslated,
         totalFields: data.totalFields,
       });
-    } catch {
-      toast.error("Failed to load entities");
+    } catch (error) {
+      console.error("[translations] Failed to load entities:", error);
+      toast.error(t("toasts.loadEntitiesFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchEntities(activeTab);
@@ -142,16 +148,16 @@ export default function TranslationsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <Languages className="h-8 w-8" />
-            Translations
+            {t("title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage Arabic translations for all store content
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1.5 text-sm gap-1.5">
             <Globe className="h-3.5 w-3.5" />
-            Arabic (العربية)
+            {t("arabicBadge")}
           </Badge>
         </div>
       </div>
@@ -163,10 +169,10 @@ export default function TranslationsPage() {
             <div className="flex-1 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Overall Translation Progress — {ENTITY_TABS.find((t) => t.value === activeTab)?.label}
+                  {t("overallProgress", { type: t(`entityTabs.${activeTab}`) })}
                 </span>
                 <span className="font-medium">
-                  {stats.translated}/{stats.total} fully translated
+                  {t("fullyTranslated", { translated: stats.translated, total: stats.total })}
                 </span>
               </div>
               <Progress value={overallProgress} className="h-2.5" />
@@ -174,17 +180,17 @@ export default function TranslationsPage() {
             <div className="flex gap-6 text-center">
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">{t("total")}</p>
               </div>
               <Separator orientation="vertical" className="h-12" />
               <div>
                 <p className="text-2xl font-bold text-green-600">{stats.translated}</p>
-                <p className="text-xs text-muted-foreground">Complete</p>
+                <p className="text-xs text-muted-foreground">{t("complete")}</p>
               </div>
               <Separator orientation="vertical" className="h-12" />
               <div>
                 <p className="text-2xl font-bold text-amber-600">{stats.total - stats.translated}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-xs text-muted-foreground">{t("pending")}</p>
               </div>
             </div>
           </div>
@@ -198,14 +204,14 @@ export default function TranslationsPage() {
             {ENTITY_TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5 px-3">
                 <tab.icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden sm:inline">{t(`entityTabs.${tab.value}`)}</span>
               </TabsTrigger>
             ))}
           </TabsList>
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              placeholder={t("search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -230,7 +236,7 @@ export default function TranslationsPage() {
             ) : filtered.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-16 text-muted-foreground">
-                  {search ? "No matching items found." : `No ${tab.label.toLowerCase()} exist yet.`}
+                  {search ? t("noMatchingItems") : t("noEntitiesYet", { type: t(`entityTabs.${tab.value}`).toLowerCase() })}
                 </CardContent>
               </Card>
             ) : (
@@ -267,6 +273,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, entityType, isExpanded, onToggle, onSaved }: EntityRowProps) {
+  const t = useTranslations("admin.translationsPage");
   const isComplete = entity.progress === 100;
 
   return (
@@ -311,7 +318,7 @@ function EntityRow({ entity, entityType, isExpanded, onToggle, onSaved }: Entity
             <AlertCircle className="h-4 w-4 text-muted-foreground/40" />
           )}
           <span className="text-xs text-muted-foreground w-16 text-right">
-            {entity.translatedFields}/{entity.totalFields} fields
+            {t("fields", { translated: entity.translatedFields, total: entity.totalFields })}
           </span>
           <Progress value={entity.progress} className="w-16 h-1.5" />
         </div>
@@ -340,6 +347,7 @@ interface InlineEditorProps {
 }
 
 function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }: InlineEditorProps) {
+  const t = useTranslations("admin.translationsPage");
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [originalValues, setOriginalValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -400,7 +408,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
           }
         }
       } catch {
-        toast.error("Failed to load translations");
+        toast.error(t("toasts.loadTranslationsFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -408,7 +416,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
 
     load();
     return () => { cancelled = true; };
-  }, [entityType, entityId]);
+  }, [entityType, entityId, t]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -424,10 +432,10 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Saved translations for "${entityLabel}"`);
+      toast.success(t("toasts.saved", { label: entityLabel }));
       onSaved();
     } catch {
-      toast.error("Failed to save translations");
+      toast.error(t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -465,7 +473,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
             >
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium text-muted-foreground">
-                  {FIELD_LABELS[field] || field}
+                  {t.has(`fieldLabels.${field}`) ? t(`fieldLabels.${field}`) : field}
                 </Label>
                 {value && value.trim() ? (
                   <Check className="h-3 w-3 text-green-600" />
@@ -481,7 +489,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
                   dir="rtl"
                   value={value}
                   onChange={(e) => updateField(field, e.target.value)}
-                  placeholder={`Arabic ${FIELD_LABELS[field] || field}...`}
+                  placeholder={`${t.has(`fieldLabels.${field}`) ? t(`fieldLabels.${field}`) : field}...`}
                   rows={field === "content" ? 6 : 3}
                   className="font-[family-name:var(--font-arabic)] text-sm"
                 />
@@ -490,7 +498,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
                   dir="rtl"
                   value={value}
                   onChange={(e) => updateField(field, e.target.value)}
-                  placeholder={`Arabic ${FIELD_LABELS[field] || field}...`}
+                  placeholder={`${t.has(`fieldLabels.${field}`) ? t(`fieldLabels.${field}`) : field}...`}
                   className="font-[family-name:var(--font-arabic)] text-sm"
                 />
               )}
@@ -502,7 +510,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
       {/* Save bar */}
       <div className="flex items-center justify-between pt-2">
         <p className="text-xs text-muted-foreground">
-          {filledCount}/{totalCount} fields translated
+          {t("fieldsTranslated", { filled: filledCount, total: totalCount })}
         </p>
         <Button size="sm" onClick={handleSave} disabled={saving}>
           {saving ? (
@@ -510,7 +518,7 @@ function InlineTranslationEditor({ entityType, entityId, entityLabel, onSaved }:
           ) : (
             <Check className="mr-1.5 h-3.5 w-3.5" />
           )}
-          {saving ? "Saving..." : "Save Translations"}
+          {saving ? t("saving") : t("saveTranslations")}
         </Button>
       </div>
     </div>

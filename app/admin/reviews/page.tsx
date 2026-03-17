@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Star, Check, X, Trash2, Loader2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -31,6 +32,7 @@ interface Review {
 }
 
 export default function ReviewsPage() {
+  const t = useTranslations("admin.reviews");
   const { data: reviews, loading, setData: setReviews, refetch: fetchReviews } = useFetch<Review[]>(
     "/api/reviews?admin=true",
     [],
@@ -46,22 +48,22 @@ export default function ReviewsPage() {
         body: JSON.stringify({ id, isApproved: approve }),
       });
       if (!res.ok) throw new Error();
-      toast.success(approve ? "Review approved" : "Review rejected");
+      toast.success(approve ? t("toasts.reviewApproved") : t("toasts.reviewRejected"));
       setReviews((prev) => prev.map((r) => r.id === id ? { ...r, isApproved: approve } : r));
     } catch {
-      toast.error("Failed to update review");
+      toast.error(t("toasts.updateFailed"));
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this review permanently?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Review deleted");
+      toast.success(t("toasts.reviewDeleted"));
       setReviews((prev) => prev.filter((r) => r.id !== id));
     } catch {
-      toast.error("Failed to delete review");
+      toast.error(t("toasts.deleteFailed"));
     }
   }
 
@@ -78,21 +80,21 @@ export default function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
-          <p className="text-muted-foreground">Moderate and manage product reviews</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Badge variant="secondary" className="text-sm px-3 py-1">{reviews.length} Total</Badge>
-          <Badge variant="outline" className="text-sm px-3 py-1 text-yellow-600">{pendingCount} Pending</Badge>
-          <Badge variant="outline" className="text-sm px-3 py-1 text-green-600">{approvedCount} Approved</Badge>
+          <Badge variant="secondary" className="text-sm px-3 py-1">{t("total", { count: reviews.length })}</Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 text-yellow-600">{t("pending", { count: pendingCount })}</Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 text-green-600">{t("approvedCount", { count: approvedCount })}</Badge>
         </div>
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
-          <TabsTrigger value="all">All ({reviews.length})</TabsTrigger>
-          <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({approvedCount})</TabsTrigger>
+          <TabsTrigger value="all">{t("all", { count: reviews.length })}</TabsTrigger>
+          <TabsTrigger value="pending">{t("pendingTab", { count: pendingCount })}</TabsTrigger>
+          <TabsTrigger value="approved">{t("approvedTab", { count: approvedCount })}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -113,19 +115,19 @@ export default function ReviewsPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">No reviews found</div>
+            <div className="text-center py-20 text-muted-foreground">{t("noReviewsFound")}</div>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead className="max-w-[300px]">Review</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="w-[140px]">Actions</TableHead>
+                  <TableHead>{t("product")}</TableHead>
+                  <TableHead>{t("customer")}</TableHead>
+                  <TableHead>{t("rating")}</TableHead>
+                  <TableHead className="max-w-[300px]">{t("review")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                  <TableHead>{t("date")}</TableHead>
+                  <TableHead className="w-[140px]">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -137,9 +139,9 @@ export default function ReviewsPage() {
                           {review.product.name}
                           <ExternalLink className="h-3 w-3" />
                         </Link>
-                      ) : <span className="text-muted-foreground text-sm">Deleted product</span>}
+                      ) : <span className="text-muted-foreground text-sm">{t("deletedProduct")}</span>}
                     </TableCell>
-                    <TableCell className="text-sm">{review.user?.name || "Anonymous"}</TableCell>
+                    <TableCell className="text-sm">{review.user?.name || t("anonymous")}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-0.5">
                         {Array.from({ length: 5 }, (_, i) => (
@@ -153,7 +155,7 @@ export default function ReviewsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={review.isApproved ? "default" : "secondary"}>
-                        {review.isApproved ? "Approved" : "Pending"}
+                        {review.isApproved ? t("approved") : t("pendingReview")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

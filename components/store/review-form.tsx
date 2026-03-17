@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface ReviewFormProps {
   productId: string;
@@ -23,6 +24,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const t = useTranslations("review");
 
   if (status === "loading") return null;
 
@@ -30,10 +32,10 @@ export function ReviewForm({ productId }: ReviewFormProps) {
     return (
       <div className="border rounded-xl p-6 text-center space-y-3 bg-accent/30">
         <p className="text-sm text-muted-foreground">
-          Sign in to leave a review
+          {t("signInToReview")}
         </p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{t("signIn")}</Link>
         </Button>
       </div>
     );
@@ -43,9 +45,9 @@ export function ReviewForm({ productId }: ReviewFormProps) {
     return (
       <div className="border rounded-xl p-6 text-center space-y-3 bg-green-50 dark:bg-green-950/20">
         <CheckCircle className="h-8 w-8 text-green-600 mx-auto" />
-        <p className="text-sm font-medium">Thank you for your review!</p>
+        <p className="text-sm font-medium">{t("thankYou")}</p>
         <p className="text-xs text-muted-foreground">
-          Your review has been submitted and is pending approval.
+          {t("pendingApproval")}
         </p>
       </div>
     );
@@ -55,10 +57,10 @@ export function ReviewForm({ productId }: ReviewFormProps) {
     return (
       <div className="border rounded-xl p-6 text-center space-y-3 bg-accent/30">
         <p className="text-sm text-muted-foreground">
-          Have you used this product?
+          {t("haveYouUsed")}
         </p>
         <Button variant="outline" size="sm" onClick={() => setIsOpen(true)}>
-          Write a Review
+          {t("writeReview")}
         </Button>
       </div>
     );
@@ -67,7 +69,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (rating === 0) {
-      toast.error("Please select a rating");
+      toast.error(t("selectRating"));
       return;
     }
 
@@ -87,7 +89,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
       if (!res.ok) {
         const err = await res.json();
         if (res.status === 409) {
-          toast.error("You have already reviewed this product");
+          toast.error(t("alreadyReviewed"));
         } else {
           throw new Error(err.error || "Failed to submit review");
         }
@@ -95,10 +97,10 @@ export function ReviewForm({ productId }: ReviewFormProps) {
       }
 
       setSubmitted(true);
-      toast.success("Review submitted successfully!");
+      toast.success(t("reviewSubmitted"));
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to submit review"
+        error instanceof Error ? error.message : t("failedSubmit")
       );
     } finally {
       setSubmitting(false);
@@ -111,7 +113,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
       className="border rounded-xl p-6 space-y-4 bg-accent/30"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Write a Review</h3>
+        <h3 className="text-sm font-semibold">{t("writeReview")}</h3>
         <Button
           type="button"
           variant="ghost"
@@ -119,13 +121,13 @@ export function ReviewForm({ productId }: ReviewFormProps) {
           className="text-xs"
           onClick={() => setIsOpen(false)}
         >
-          Cancel
+          {t("cancel")}
         </Button>
       </div>
 
       {/* Star Rating */}
       <div className="space-y-2">
-        <Label>Rating *</Label>
+        <Label>{t("ratingRequired")}</Label>
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
@@ -147,11 +149,11 @@ export function ReviewForm({ productId }: ReviewFormProps) {
           ))}
           {rating > 0 && (
             <span className="ml-2 text-sm text-muted-foreground">
-              {rating === 1 && "Poor"}
-              {rating === 2 && "Fair"}
-              {rating === 3 && "Good"}
-              {rating === 4 && "Very Good"}
-              {rating === 5 && "Excellent"}
+              {rating === 1 && t("poor")}
+              {rating === 2 && t("fair")}
+              {rating === 3 && t("good")}
+              {rating === 4 && t("veryGood")}
+              {rating === 5 && t("excellent")}
             </span>
           )}
         </div>
@@ -159,22 +161,22 @@ export function ReviewForm({ productId }: ReviewFormProps) {
 
       {/* Title */}
       <div className="space-y-2">
-        <Label>Title (optional)</Label>
+        <Label>{t("titleOptional")}</Label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Summarize your experience"
+          placeholder={t("titlePlaceholder")}
           maxLength={200}
         />
       </div>
 
       {/* Comment */}
       <div className="space-y-2">
-        <Label>Review (optional)</Label>
+        <Label>{t("reviewOptional")}</Label>
         <Textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Share your thoughts about this product..."
+          placeholder={t("reviewPlaceholder")}
           rows={4}
           maxLength={2000}
         />
@@ -187,7 +189,7 @@ export function ReviewForm({ productId }: ReviewFormProps) {
         {submitting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : null}
-        Submit Review
+        {t("submitReview")}
       </Button>
     </form>
   );

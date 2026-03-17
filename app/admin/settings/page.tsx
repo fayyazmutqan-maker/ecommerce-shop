@@ -23,10 +23,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, ExternalLink, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
+  const t = useTranslations("admin.settings");
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     storeName: "ShopFlow",
@@ -72,7 +74,7 @@ export default function SettingsPage() {
         }
       })
       .catch(() => {
-        toast.error("Failed to load settings");
+        toast.error(t("loadFailed"));
       });
   }, []);
 
@@ -85,12 +87,12 @@ export default function SettingsPage() {
         body: JSON.stringify(settings),
       });
       if (res.ok) {
-        toast.success("Settings saved successfully");
+        toast.success(t("saved"));
       } else {
-        toast.error("Failed to save settings");
+        toast.error(t("saveFailed"));
       }
     } catch {
-      toast.error("Failed to save settings");
+      toast.error(t("saveFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -100,9 +102,9 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Configure your store settings
+            {t("subtitle")}
           </p>
         </div>
         <Button onClick={handleSave} disabled={isLoading}>
@@ -111,31 +113,31 @@ export default function SettingsPage() {
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Changes
+          {t("saveChanges")}
         </Button>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="payments">Payments & Tax</TabsTrigger>
-          <TabsTrigger value="shipping">Shipping</TabsTrigger>
-          <TabsTrigger value="social">Social & SEO</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+          <TabsTrigger value="payments">{t("tabs.paymentsTax")}</TabsTrigger>
+          <TabsTrigger value="shipping">{t("tabs.shipping")}</TabsTrigger>
+          <TabsTrigger value="social">{t("tabs.socialSeo")}</TabsTrigger>
+          <TabsTrigger value="advanced">{t("tabs.advanced")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Store Information</CardTitle>
+              <CardTitle>{t("storeInfo")}</CardTitle>
               <CardDescription>
-                Basic information about your store
+                {t("storeInfoDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Store Name</Label>
+                  <Label>{t("storeName")}</Label>
                   <Input
                     value={settings.storeName}
                     onChange={(e) =>
@@ -144,7 +146,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Store Email</Label>
+                  <Label>{t("storeEmail")}</Label>
                   <Input
                     type="email"
                     value={settings.storeEmail}
@@ -155,7 +157,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Store Description</Label>
+                <Label>{t("storeDescription")}</Label>
                 <Textarea
                   value={settings.storeDescription}
                   onChange={(e) =>
@@ -169,7 +171,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Phone</Label>
+                  <Label>{t("phone")}</Label>
                   <Input
                     value={settings.storePhone}
                     onChange={(e) =>
@@ -178,7 +180,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Timezone</Label>
+                  <Label>{t("timezone")}</Label>
                   <Select
                     value={settings.timezone}
                     onValueChange={(v) =>
@@ -189,32 +191,32 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UTC">UTC</SelectItem>
+                      <SelectItem value="UTC">{t("timezones.utc")}</SelectItem>
                       <SelectItem value="Asia/Riyadh">
-                        Arabia Standard Time (Riyadh)
+                        {t("timezones.riyadh")}
                       </SelectItem>
                       <SelectItem value="America/New_York">
-                        Eastern Time
+                        {t("timezones.eastern")}
                       </SelectItem>
                       <SelectItem value="America/Chicago">
-                        Central Time
+                        {t("timezones.central")}
                       </SelectItem>
                       <SelectItem value="America/Denver">
-                        Mountain Time
+                        {t("timezones.mountain")}
                       </SelectItem>
                       <SelectItem value="America/Los_Angeles">
-                        Pacific Time
+                        {t("timezones.pacific")}
                       </SelectItem>
-                      <SelectItem value="Europe/London">London</SelectItem>
-                      <SelectItem value="Europe/Paris">Paris</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                      <SelectItem value="Asia/Dubai">Dubai</SelectItem>
+                      <SelectItem value="Europe/London">{t("timezones.london")}</SelectItem>
+                      <SelectItem value="Europe/Paris">{t("timezones.paris")}</SelectItem>
+                      <SelectItem value="Asia/Tokyo">{t("timezones.tokyo")}</SelectItem>
+                      <SelectItem value="Asia/Dubai">{t("timezones.dubai")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>{t("address")}</Label>
                 <Textarea
                   value={settings.storeAddress}
                   onChange={(e) =>
@@ -228,14 +230,14 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Store Branding</CardTitle>
+              <CardTitle>{t("storeBranding")}</CardTitle>
               <CardDescription>
-                Upload your store logo and favicon
+                {t("storeBrandingDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Store Logo</Label>
+                <Label>{t("storeLogo")}</Label>
                 <ImageUpload
                   value={settings.storeLogo ? [settings.storeLogo] : []}
                   onChange={(urls) =>
@@ -246,7 +248,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Favicon</Label>
+                <Label>{t("favicon")}</Label>
                 <ImageUpload
                   value={settings.storeFavicon ? [settings.storeFavicon] : []}
                   onChange={(urls) =>
@@ -261,15 +263,15 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Currency</CardTitle>
+              <CardTitle>{t("currency")}</CardTitle>
               <CardDescription>
-                Set your store&apos;s default currency
+                {t("currencyDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label>Currency</Label>
+                  <Label>{t("currency")}</Label>
                   <Select
                     value={settings.currency}
                     onValueChange={(v) =>
@@ -280,20 +282,20 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD - US Dollar</SelectItem>
-                      <SelectItem value="EUR">EUR - Euro</SelectItem>
-                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                      <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                      <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
-                      <SelectItem value="AED">AED - UAE Dirham</SelectItem>
-                      <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
-                      <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                      <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                      <SelectItem value="USD">{t("currencies.usd")}</SelectItem>
+                      <SelectItem value="EUR">{t("currencies.eur")}</SelectItem>
+                      <SelectItem value="GBP">{t("currencies.gbp")}</SelectItem>
+                      <SelectItem value="CAD">{t("currencies.cad")}</SelectItem>
+                      <SelectItem value="AUD">{t("currencies.aud")}</SelectItem>
+                      <SelectItem value="AED">{t("currencies.aed")}</SelectItem>
+                      <SelectItem value="SAR">{t("currencies.sar")}</SelectItem>
+                      <SelectItem value="INR">{t("currencies.inr")}</SelectItem>
+                      <SelectItem value="JPY">{t("currencies.jpy")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Currency Symbol</Label>
+                  <Label>{t("currencySymbol")}</Label>
                   <Input
                     value={settings.currencySymbol}
                     onChange={(e) =>
@@ -305,7 +307,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Weight Unit</Label>
+                  <Label>{t("weightUnit")}</Label>
                   <Select
                     value={settings.weightUnit}
                     onValueChange={(v) =>
@@ -316,10 +318,10 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                      <SelectItem value="lb">Pounds (lb)</SelectItem>
-                      <SelectItem value="g">Grams (g)</SelectItem>
-                      <SelectItem value="oz">Ounces (oz)</SelectItem>
+                      <SelectItem value="kg">{t("weightUnits.kg")}</SelectItem>
+                      <SelectItem value="lb">{t("weightUnits.lb")}</SelectItem>
+                      <SelectItem value="g">{t("weightUnits.g")}</SelectItem>
+                      <SelectItem value="oz">{t("weightUnits.oz")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -336,15 +338,15 @@ export default function SettingsPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
-                    Tap Payments
+                    {t("tapPayments")}
                     {settings.tapEnabled ? (
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">Active</Badge>
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">{t("active")}</Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                      <Badge variant="secondary" className="text-xs">{t("disabled")}</Badge>
                     )}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Accept Visa, Mastercard, mada, Apple Pay, and STC Pay
+                    {t("tapDesc")}
                   </CardDescription>
                 </div>
                 <Switch
@@ -360,18 +362,18 @@ export default function SettingsPage() {
                 {/* Mode Toggle */}
                 <div className="flex items-center justify-between p-4 rounded-lg border bg-accent/30">
                   <div>
-                    <Label className="font-semibold">Test Mode</Label>
+                    <Label className="font-semibold">{t("testMode")}</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {settings.tapTestMode
-                        ? "Using sandbox — no real charges will be made"
-                        : "Live mode — real payments will be processed"}
+                        ? t("sandboxDesc")
+                        : t("liveDesc")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {settings.tapTestMode ? (
-                      <Badge variant="outline" className="text-orange-600 border-orange-300">Sandbox</Badge>
+                      <Badge variant="outline" className="text-orange-600 border-orange-300">{t("sandbox")}</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-green-600 border-green-300">Live</Badge>
+                      <Badge variant="outline" className="text-green-600 border-green-300">{t("live")}</Badge>
                     )}
                     <Switch
                       checked={settings.tapTestMode}
@@ -384,9 +386,9 @@ export default function SettingsPage() {
 
                 {/* Webhook URL */}
                 <div className="space-y-2">
-                  <Label>Webhook URL</Label>
+                  <Label>{t("webhookUrl")}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Add this URL in your Tap Dashboard → Webhooks settings
+                    {t("webhookUrlDesc")}
                   </p>
                   <div className="flex gap-2">
                     <Input
@@ -402,17 +404,17 @@ export default function SettingsPage() {
                         navigator.clipboard.writeText(
                           `${window.location.origin}/api/payments/webhook`
                         );
-                        toast.success("Webhook URL copied!");
+                        toast.success(t("webhookCopied"));
                       }}
                     >
-                      Copy
+                      {t("copy")}
                     </Button>
                   </div>
                 </div>
 
                 {/* Supported Methods Info */}
                 <div className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">Supported Payment Methods</p>
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">{t("supportedMethods")}</p>
                   <div className="flex flex-wrap gap-2">
                     {["Visa", "Mastercard", "mada", "Apple Pay", "STC Pay", "KNET"].map((method) => (
                       <Badge key={method} variant="secondary" className="text-xs">
@@ -432,15 +434,15 @@ export default function SettingsPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Banknote className="h-5 w-5" />
-                    Cash on Delivery
+                    {t("cashOnDelivery")}
                     {settings.codEnabled ? (
-                      <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">Active</Badge>
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-600 text-xs">{t("active")}</Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                      <Badge variant="secondary" className="text-xs">{t("disabled")}</Badge>
                     )}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Allow customers to pay when their order is delivered
+                    {t("codDesc")}
                   </CardDescription>
                 </div>
                 <Switch
@@ -456,15 +458,15 @@ export default function SettingsPage() {
           {/* Tax Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Tax Settings</CardTitle>
+              <CardTitle>{t("taxSettings")}</CardTitle>
               <CardDescription>
-                Configure tax rates for your store
+                {t("taxSettingsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Default Tax Rate (%)</Label>
+                  <Label>{t("defaultTaxRate")}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -485,7 +487,7 @@ export default function SettingsPage() {
                     setSettings({ ...settings, taxIncluded: v })
                   }
                 />
-                <Label>Prices include tax</Label>
+                <Label>{t("pricesIncludeTax")}</Label>
               </div>
             </CardContent>
           </Card>
@@ -494,9 +496,9 @@ export default function SettingsPage() {
         <TabsContent value="shipping" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Shipping Settings</CardTitle>
+              <CardTitle>{t("shippingSettings")}</CardTitle>
               <CardDescription>
-                Configure shipping options for your store
+                {t("shippingSettingsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -507,12 +509,12 @@ export default function SettingsPage() {
                     setSettings({ ...settings, shippingEnabled: v })
                   }
                 />
-                <Label>Enable shipping</Label>
+                <Label>{t("enableShipping")}</Label>
               </div>
               {settings.shippingEnabled && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Flat Shipping Rate (SAR)</Label>
+                    <Label>{t("flatShippingRate")}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -526,7 +528,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Free Shipping Minimum (SAR)</Label>
+                    <Label>{t("freeShippingMin")}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -548,15 +550,15 @@ export default function SettingsPage() {
         <TabsContent value="social" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Social Media</CardTitle>
+              <CardTitle>{t("socialMedia")}</CardTitle>
               <CardDescription>
-                Connect your social media accounts
+                {t("socialDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Facebook URL</Label>
+                  <Label>{t("facebookUrl")}</Label>
                   <Input
                     value={settings.socialFacebook}
                     onChange={(e) =>
@@ -569,7 +571,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Instagram URL</Label>
+                  <Label>{t("instagramUrl")}</Label>
                   <Input
                     value={settings.socialInstagram}
                     onChange={(e) =>
@@ -582,7 +584,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Twitter / X URL</Label>
+                  <Label>{t("twitterUrl")}</Label>
                   <Input
                     value={settings.socialTwitter}
                     onChange={(e) =>
@@ -595,7 +597,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>YouTube URL</Label>
+                  <Label>{t("youtubeUrl")}</Label>
                   <Input
                     value={settings.socialYoutube}
                     onChange={(e) =>
@@ -613,14 +615,14 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>SEO</CardTitle>
+              <CardTitle>{t("seo")}</CardTitle>
               <CardDescription>
-                Default SEO settings for your store
+                {t("seoDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Meta Title</Label>
+                <Label>{t("metaTitle")}</Label>
                 <Input
                   value={settings.metaTitle}
                   onChange={(e) =>
@@ -630,7 +632,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Meta Description</Label>
+                <Label>{t("metaDescription")}</Label>
                 <Textarea
                   value={settings.metaDescription}
                   onChange={(e) =>
@@ -644,7 +646,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Google Analytics ID</Label>
+                <Label>{t("googleAnalyticsId")}</Label>
                 <Input
                   value={settings.googleAnalyticsId}
                   onChange={(e) =>
@@ -663,17 +665,17 @@ export default function SettingsPage() {
         <TabsContent value="advanced" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Advanced Settings</CardTitle>
+              <CardTitle>{t("advancedSettings")}</CardTitle>
               <CardDescription>
-                POS and maintenance settings
+                {t("advancedDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>POS System</Label>
+                  <Label>{t("posSystem")}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enable Point of Sale for in-store transactions
+                    {t("posDesc")}
                   </p>
                 </div>
                 <Switch
@@ -685,9 +687,9 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Maintenance Mode</Label>
+                  <Label>{t("maintenanceMode")}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Show a maintenance page to visitors
+                    {t("maintenanceDesc")}
                   </p>
                 </div>
                 <Switch

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   Search, Plus, Minus, Trash2, CreditCard, Banknote, Receipt, X,
   ShoppingBag, Barcode, User, Pause, Play, Gift, Wallet, Printer,
@@ -155,6 +156,7 @@ interface RefundSelection {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function PosPage() {
+  const t = useTranslations("admin.pos");
   // ── Core State ──
   const [products, setProducts] = useState<PosProduct[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -353,7 +355,7 @@ export default function PosPage() {
       const remaining = await getPendingCount().catch(() => 0);
       setPendingOrderCount(remaining);
       if (result.failed > 0) {
-        toast.error(`${result.failed} order${result.failed > 1 ? "s" : ""} failed to sync — will retry`);
+        toast.error(t("toasts.syncFailed", { count: result.failed }));
       }
     } catch {
       // Sync will retry on next sale or when online status changes
@@ -382,8 +384,8 @@ export default function PosPage() {
 
     if (!product) {
       if (soundEnabled) playSound("error");
-      toast.error(`Product not found: ${code}`, {
-        description: "Check the barcode or add the product to your inventory.",
+      toast.error(t("toasts.productNotFound", { code }), {
+        description: t("toasts.productNotFoundDesc"),
       });
       return;
     }
@@ -399,7 +401,7 @@ export default function PosPage() {
 
     if (soundEnabled) playSound("scan");
     setLastScan({ code, time: Date.now() });
-    toast.success(`Scanned: ${product.name}`);
+    toast.success(t("toasts.scanned", { name: product.name }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, soundEnabled]);
 
@@ -468,7 +470,7 @@ export default function PosPage() {
       }));
       setProducts(mapped);
     } catch {
-      toast.error("Failed to load products");
+      toast.error(t("toasts.failedLoadProducts"));
     } finally {
       setLoading(false);
     }
@@ -531,11 +533,11 @@ export default function PosPage() {
       setOpeningBalance("");
       if (soundEnabled) playSound("drawer");
       printer.openCashDrawer();
-      toast.success("Register opened", {
-        description: `Opening balance: ${storeConfig.currency} ${balance.toFixed(2)}`,
+      toast.success(t("toasts.registerOpened"), {
+        description: t("toasts.registerOpenedDesc", { curr: storeConfig.currency, balance: balance.toFixed(2) }),
       });
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to open register");
+      toast.error(error instanceof Error ? error.message : t("toasts.failedOpenRegister"));
     }
   }
 
@@ -558,11 +560,11 @@ export default function PosPage() {
       setPosSession(null);
       setRegisterOpen(false);
       setClosingBalance("");
-      toast.success("Register closed", {
-        description: `Closing balance: ${storeConfig.currency} ${balance.toFixed(2)}`,
+      toast.success(t("toasts.registerClosed"), {
+        description: t("toasts.registerClosedDesc", { curr: storeConfig.currency, balance: balance.toFixed(2) }),
       });
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to close register");
+      toast.error(error instanceof Error ? error.message : t("toasts.failedCloseRegister"));
     }
   }
 
@@ -584,7 +586,7 @@ export default function PosPage() {
         e.preventDefault();
         printer.openCashDrawer();
         if (soundEnabled) playSound("drawer");
-        toast.success("Cash drawer opened");
+        toast.success(t("toasts.cashDrawerOpened"));
       }
       if (e.key === "F10" && receiptData) { e.preventDefault(); setReceiptData(null); }
       if (e.key === "F11") { e.preventDefault(); toggleFullscreen(); }
@@ -639,17 +641,17 @@ export default function PosPage() {
         const card = data.giftCards?.[0] || data;
         if (card && Number(card.balance) > 0) {
           setGiftCardBalance(Number(card.balance));
-          toast.success(`Gift card balance: ${storeConfig.currency} ${Number(card.balance).toFixed(2)}`);
+          toast.success(t("toasts.giftCardBalance", { curr: storeConfig.currency, balance: Number(card.balance).toFixed(2) }));
         } else {
-          toast.error("Gift card has no balance or not found");
+          toast.error(t("toasts.giftCardNoBalance"));
           setGiftCardBalance(null);
         }
       } else {
-        toast.error("Gift card not found");
+        toast.error(t("toasts.giftCardNotFound"));
         setGiftCardBalance(null);
       }
     } catch {
-      toast.error("Failed to check gift card");
+      toast.error(t("toasts.giftCardFailed"));
     }
   }
 
@@ -762,7 +764,7 @@ export default function PosPage() {
     };
     setHeldSales((prev) => [...prev, held]);
     clearCart();
-    toast.success("Sale held");
+    toast.success(t("toasts.saleHeld"));
   }
 
   function recallSale(held: HeldSale) {
@@ -772,7 +774,7 @@ export default function PosPage() {
     setDiscount(held.discount);
     setHeldSales((prev) => prev.filter((h) => h.id !== held.id));
     setHoldDialogOpen(false);
-    toast.success("Sale recalled");
+    toast.success(t("toasts.saleRecalled"));
   }
 
   function clearCart() {
@@ -850,7 +852,7 @@ export default function PosPage() {
     ].filter(Boolean).join(" | ");
 
     if (orderItems.length === 0 && customItems.length > 0) {
-      toast.error("Cannot create POS order with only custom items");
+      toast.error(t("toasts.cannotCustomOnly"));
       return;
     }
 
@@ -934,7 +936,7 @@ export default function PosPage() {
       storeCreditUsed: storeCreditDeduction > 0 ? storeCreditDeduction : undefined,
       currency: curr,
       zatcaQrData: zatcaQr,
-      footerMessage: "Thank you for your purchase!",
+      footerMessage: t("toasts.thankYou"),
     };
 
     setReceiptData(receipt);
@@ -950,8 +952,8 @@ export default function PosPage() {
 
     if (soundEnabled) playSound("success");
 
-    toast.success("Sale completed!", {
-      description: `${curr} ${total.toFixed(2)} — syncing in background`,
+    toast.success(t("toasts.saleCompleted"), {
+      description: t("toasts.saleCompletedDesc", { curr, total: total.toFixed(2) }),
     });
 
     setCart([]);
@@ -1010,7 +1012,7 @@ export default function PosPage() {
         setRefundSearchResults(eligible);
       }
     } catch {
-      toast.error("Failed to search orders");
+      toast.error(t("toasts.failedSearchOrders"));
     } finally {
       setRefundSearchLoading(false);
     }
@@ -1132,7 +1134,7 @@ export default function PosPage() {
         total: -refundTotal,
         paymentMethod: `Refund (${result.refund?.status || "Completed"})`,
         currency: curr,
-        footerMessage: "Refund processed successfully",
+        footerMessage: t("toasts.refundReceipt"),
       };
 
       setReceiptData(refundReceipt);
@@ -1147,14 +1149,14 @@ export default function PosPage() {
         if (soundEnabled) playSound("drawer");
       }
 
-      toast.success("Refund processed!", {
-        description: `${curr} ${refundTotal.toFixed(2)} refunded for ${refundOrder.orderNumber}`,
+      toast.success(t("toasts.refundProcessed"), {
+        description: t("toasts.refundProcessedDesc", { curr, amount: refundTotal.toFixed(2), orderNumber: refundOrder.orderNumber }),
       });
 
       setRefundOpen(false);
     } catch (error) {
       if (soundEnabled) playSound("error");
-      toast.error(error instanceof Error ? error.message : "Refund failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.refundFailed"));
     } finally {
       setRefundProcessing(false);
     }
@@ -1169,7 +1171,7 @@ export default function PosPage() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-3">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading POS...</p>
+          <p className="text-sm text-muted-foreground">{t("loadingPos")}</p>
         </div>
       </div>
     );
@@ -1191,72 +1193,72 @@ export default function PosPage() {
             <Input
               ref={searchRef}
               className="pl-9"
-              placeholder="Search by name, SKU, barcode, or category… (F1)"
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon" title="Manual barcode entry (F6)" onClick={() => setManualBarcodeOpen(true)}>
+          <Button variant="outline" size="icon" title={t("manualBarcodeTitle")} onClick={() => setManualBarcodeOpen(true)}>
             <Barcode className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" title="Custom item (F8)" onClick={() => setCustomItemOpen(true)}>
+          <Button variant="outline" size="icon" title={t("customItemTitle")} onClick={() => setCustomItemOpen(true)}>
             <Hash className="h-4 w-4" />
           </Button>
 
           {/* POS Settings Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" title="POS Settings">
+              <Button variant="outline" size="icon" title={t("posSettings")}>
                 <Settings2 className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">Device Status</div>
+              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">{t("deviceStatus")}</div>
               <div className="px-3 py-1.5 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2"><ScanLine className="h-3.5 w-3.5" /> Barcode Scanner</span>
+                <span className="flex items-center gap-2"><ScanLine className="h-3.5 w-3.5" /> {t("barcodeScanner")}</span>
                 <Badge variant={scannerReady ? "default" : "secondary"} className="text-[10px]">
-                  {scannerReady ? "Ready" : "Off"}
+                  {scannerReady ? t("ready") : t("off")}
                 </Badge>
               </div>
               <div className="px-3 py-1.5 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2"><Printer className="h-3.5 w-3.5" /> Receipt Printer</span>
+                <span className="flex items-center gap-2"><Printer className="h-3.5 w-3.5" /> {t("receiptPrinter")}</span>
                 <Badge
                   variant={printer.connected ? "default" : "secondary"}
                   className="text-[10px] cursor-pointer"
                   onClick={printer.connected ? printer.disconnect : printer.connect}
                 >
-                  {printer.connected ? "Connected" : printer.serialSupported ? "Connect" : "Browser"}
+                  {printer.connected ? t("connected") : printer.serialSupported ? t("connect") : t("browser")}
                 </Badge>
               </div>
               <div className="px-3 py-1.5 flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   {isOnline ? <Wifi className="h-3.5 w-3.5 text-green-500" /> : <WifiOff className="h-3.5 w-3.5 text-destructive" />}
-                  Network
+                  {t("network")}
                 </span>
                 <Badge variant={isOnline ? "default" : "destructive"} className="text-[10px]">
-                  {isOnline ? "Online" : "Offline"}
+                  {isOnline ? t("online") : t("offline")}
                 </Badge>
               </div>
               {pendingOrderCount > 0 && (
                 <div className="px-3 py-1.5 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2"><CloudOff className="h-3.5 w-3.5 text-amber-500" /> Pending Orders</span>
+                  <span className="flex items-center gap-2"><CloudOff className="h-3.5 w-3.5 text-amber-500" /> {t("pendingOrders")}</span>
                   <Badge variant="outline" className="text-[10px] text-amber-600">
                     {pendingOrderCount}
                   </Badge>
                 </div>
               )}
               <DropdownMenuSeparator />
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">Options</div>
+              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">{t("options")}</div>
               <div className="px-3 py-1.5 flex items-center justify-between text-sm">
                 <Label htmlFor="sound-toggle" className="flex items-center gap-2 cursor-pointer">
                   {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                  Sound Effects
+                  {t("soundEffects")}
                 </Label>
                 <Switch id="sound-toggle" checked={soundEnabled} onCheckedChange={setSoundEnabled} />
               </div>
               <div className="px-3 py-1.5 flex items-center justify-between text-sm">
                 <Label htmlFor="autoprint-toggle" className="flex items-center gap-2 cursor-pointer">
-                  <Printer className="h-3.5 w-3.5" /> Auto-Print Receipt
+                  <Printer className="h-3.5 w-3.5" /> {t("autoPrintReceipt")}
                 </Label>
                 <Switch id="autoprint-toggle" checked={autoPrint} onCheckedChange={setAutoPrint} />
               </div>
@@ -1264,23 +1266,23 @@ export default function PosPage() {
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => printer.testPrint()}>
-                    <Printer className="h-3.5 w-3.5 mr-2" /> Test Print
+                    <Printer className="h-3.5 w-3.5 mr-2" /> {t("testPrint")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { printer.openCashDrawer(); if (soundEnabled) playSound("drawer"); }}>
-                    <DollarSign className="h-3.5 w-3.5 mr-2" /> Open Cash Drawer (F9)
+                    <DollarSign className="h-3.5 w-3.5 mr-2" /> {t("openCashDrawer")}
                   </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
                 {posSession
-                  ? <><LogOut className="h-3.5 w-3.5 mr-2" /> Close Register</>
-                  : <><LogIn className="h-3.5 w-3.5 mr-2" /> Open Register</>
+                  ? <><LogOut className="h-3.5 w-3.5 mr-2" /> {t("closeRegister")}</>
+                  : <><LogIn className="h-3.5 w-3.5 mr-2" /> {t("openRegister")}</>
                 }
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="icon" title={isFullscreen ? "Exit fullscreen" : "Fullscreen (F11)"} onClick={toggleFullscreen}>
+          <Button variant="outline" size="icon" title={isFullscreen ? t("exitFullscreen") : t("fullscreen")} onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
         </div>
@@ -1293,17 +1295,17 @@ export default function PosPage() {
             {!isOnline ? (
               <>
                 <CloudOff className="h-3.5 w-3.5" />
-                Offline mode — orders will be saved locally and synced when internet returns
+                {t("offlineBanner")}
               </>
             ) : syncing ? (
               <>
                 <CloudUpload className="h-3.5 w-3.5 animate-pulse" />
-                Syncing {pendingOrderCount} pending order{pendingOrderCount !== 1 ? "s" : ""}…
+                {t("syncingOrders", { count: pendingOrderCount })}
               </>
             ) : (
               <>
                 <CloudOff className="h-3.5 w-3.5" />
-                {pendingOrderCount} pending order{pendingOrderCount !== 1 ? "s" : ""} to sync
+                {t("pendingToSync", { count: pendingOrderCount })}
               </>
             )}
           </div>
@@ -1311,32 +1313,32 @@ export default function PosPage() {
 
         {/* Keyboard Shortcuts Bar */}
         <div className="hidden md:flex px-3 py-1.5 border-b bg-muted/30 items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F1</kbd> Search</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F2</kbd> Cash</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F3</kbd> Card</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F4</kbd> Hold</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F5</kbd> Recall</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F6</kbd> Barcode</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F7</kbd> Split</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F8</kbd> Custom</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F9</kbd> Drawer</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">Ctrl+R</kbd> Refund</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F1</kbd> {t("shortcutSearch")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F2</kbd> {t("shortcutCash")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F3</kbd> {t("shortcutCard")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F4</kbd> {t("shortcutHold")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F5</kbd> {t("shortcutRecall")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F6</kbd> {t("shortcutBarcode")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F7</kbd> {t("shortcutSplit")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F8</kbd> {t("shortcutCustom")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">F9</kbd> {t("shortcutDrawer")}</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[9px]">Ctrl+R</kbd> {t("shortcutRefund")}</span>
           <span className="ml-auto flex items-center gap-1.5">
             {isOnline
-              ? <><Wifi className="h-3 w-3 text-green-500" /> Online</>
-              : <><WifiOff className="h-3 w-3 text-destructive" /> Offline</>
+              ? <><Wifi className="h-3 w-3 text-green-500" /> {t("online")}</>
+              : <><WifiOff className="h-3 w-3 text-destructive" /> {t("offline")}</>
             }
             <span className="mx-1">|</span>
             {printer.connected
-              ? <><Printer className="h-3 w-3 text-green-500" /> Printer</>
-              : <><Printer className="h-3 w-3" /> No Printer</>
+              ? <><Printer className="h-3 w-3 text-green-500" /> {t("printer")}</>
+              : <><Printer className="h-3 w-3" /> {t("noPrinter")}</>
             }
             <span className="mx-1">|</span>
-            <Barcode className="h-3 w-3" /> Scanner {lastScan ? "✓" : "Ready"}
+            <Barcode className="h-3 w-3" /> {t("scanner")} {lastScan ? "✓" : t("ready")}
             {posSession && (
               <>
                 <span className="mx-1">|</span>
-                <span className="text-green-600">● Register Open</span>
+                <span className="text-green-600">● {t("registerOpen")}</span>
               </>
             )}
           </span>
@@ -1355,7 +1357,7 @@ export default function PosPage() {
                     className="text-xs h-9 shrink-0"
                     onClick={() => setCategoryFilter(cat)}
                   >
-                    {cat === "ALL" ? "All Products" : cat}
+                    {cat === "ALL" ? t("allProducts") : cat}
                     {cat !== "ALL" && (
                       <Badge variant="secondary" className="ml-1 text-[9px] h-4 px-1">
                         {products.filter((p) => p.category === cat).length}
@@ -1386,8 +1388,8 @@ export default function PosPage() {
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p>No products found</p>
-                {search && <p className="text-xs mt-1">Try a different search term or scan a barcode</p>}
+                <p>{t("noProducts")}</p>
+                {search && <p className="text-xs mt-1">{t("tryDifferentSearch")}</p>}
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -1406,11 +1408,11 @@ export default function PosPage() {
                         </div>
                       )}
                       {product.quantity <= 0 && (
-                        <Badge variant="destructive" className="absolute top-1 right-1 text-[10px]">Out</Badge>
+                        <Badge variant="destructive" className="absolute top-1 right-1 text-[10px]">{t("outBadge")}</Badge>
                       )}
                       {product.variants.length > 0 && (
                         <Badge variant="secondary" className="absolute bottom-1 left-1 text-[10px]">
-                          {product.variants.length} variants
+                          {t("variants", { count: product.variants.length })}
                         </Badge>
                       )}
                       {product.barcode && (
@@ -1426,7 +1428,7 @@ export default function PosPage() {
                         {product.sku && <span className="text-[10px] text-muted-foreground">{product.sku}</span>}
                       </div>
                       <span className={`text-[10px] ${product.quantity > 0 ? "text-muted-foreground" : "text-destructive"}`}>
-                        {product.quantity > 0 ? `${product.quantity} in stock` : "Out of stock"}
+                        {product.quantity > 0 ? t("inStock", { count: product.quantity }) : t("outOfStock")}
                       </span>
                     </CardContent>
                   </Card>
@@ -1442,26 +1444,26 @@ export default function PosPage() {
         {/* Cart Header */}
         <div className="p-3 border-b flex items-center justify-between">
           <h2 className="font-semibold flex items-center gap-2">
-            <Receipt className="h-4 w-4" /> Current Sale
-            {heldSales.length > 0 && <Badge variant="secondary" className="ml-1">{heldSales.length} held</Badge>}
+            <Receipt className="h-4 w-4" /> {t("currentSale")}
+            {heldSales.length > 0 && <Badge variant="secondary" className="ml-1">{t("held", { count: heldSales.length })}</Badge>}
           </h2>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" className="text-xs h-7" onClick={openRefundDialog} title="Refund (Ctrl+R)">
-              <RotateCcw className="h-3 w-3 mr-1" /> Refund
+              <RotateCcw className="h-3 w-3 mr-1" /> {t("refund")}
             </Button>
             {cart.length > 0 && (
               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={holdSale} title="Hold (F4)">
-                <Pause className="h-3 w-3 mr-1" /> Hold
+                <Pause className="h-3 w-3 mr-1" /> {t("hold")}
               </Button>
             )}
             {heldSales.length > 0 && (
               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setHoldDialogOpen(true)} title="Recall (F5)">
-                <Play className="h-3 w-3 mr-1" /> Recall
+                <Play className="h-3 w-3 mr-1" /> {t("recall")}
               </Button>
             )}
             {cart.length > 0 && (
               <Button variant="ghost" size="sm" className="text-xs text-destructive h-7" onClick={clearCart}>
-                <X className="h-3 w-3 mr-1" /> Clear
+                <X className="h-3 w-3 mr-1" /> {t("clear")}
               </Button>
             )}
           </div>
@@ -1476,7 +1478,7 @@ export default function PosPage() {
                 <div>
                   <p className="text-sm font-medium">{selectedCustomer.name || selectedCustomer.email}</p>
                   {selectedCustomer.storeCredit > 0 && (
-                    <p className="text-[10px] text-green-600">Credit: {curr} {selectedCustomer.storeCredit.toFixed(2)}</p>
+                    <p className="text-[10px] text-green-600">{t("credit", { curr, amount: selectedCustomer.storeCredit.toFixed(2) })}</p>
                   )}
                 </div>
                 <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setSelectedCustomer(null); setCustomerEmail(""); }}>
@@ -1486,7 +1488,7 @@ export default function PosPage() {
             ) : (
               <div className="flex-1 relative">
                 <Input
-                  placeholder="Search customer…"
+                  placeholder={t("searchCustomer")}
                   className="h-8 text-sm"
                   value={customerSearch || customerEmail}
                   onChange={(e) => { setCustomerEmail(e.target.value); searchCustomers(e.target.value); }}
@@ -1511,10 +1513,10 @@ export default function PosPage() {
           {cart.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <ShoppingBag className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No items in cart</p>
-              <p className="text-xs mt-1">Click products or scan barcodes</p>
+              <p className="text-sm">{t("noItemsInCart")}</p>
+              <p className="text-xs mt-1">{t("clickProductsOrScan")}</p>
               <div className="mt-3 flex items-center justify-center gap-1 text-[10px]">
-                <Keyboard className="h-3 w-3" /> Keyboard shortcuts available
+                <Keyboard className="h-3 w-3" /> {t("keyboardShortcuts")}
               </div>
             </div>
           ) : (
@@ -1529,7 +1531,7 @@ export default function PosPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.product.name}</p>
                         {item.variant && <p className="text-[10px] text-muted-foreground">{item.variant.name}</p>}
-                        <p className="text-xs text-muted-foreground">{curr} {unitPrice.toFixed(2)} each</p>
+                        <p className="text-xs text-muted-foreground">{t("each", { curr, price: unitPrice.toFixed(2) })}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => updateCartQty(item.id, item.quantity - 1)}>
@@ -1551,15 +1553,15 @@ export default function PosPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 text-xs px-2 text-muted-foreground">
-                          <ChevronDown className="h-3 w-3 mr-0.5" /> Options
+                          <ChevronDown className="h-3 w-3 mr-0.5" /> {t("options")}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onClick={() => {
-                          const disc = prompt("Item discount %", String(item.discount));
+                          const disc = prompt(t("itemDiscountPrompt"), String(item.discount));
                           if (disc !== null) updateItemDiscount(item.id, parseFloat(disc) || 0);
-                        }}>Set Item Discount</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => removeFromCart(item.id)}>Remove Item</DropdownMenuItem>
+                        }}>{t("setItemDiscount")}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => removeFromCart(item.id)}>{t("removeItem")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -1575,62 +1577,62 @@ export default function PosPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Gift className="h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Gift card code" className="h-9 text-sm flex-1" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value)} />
-                <Button size="sm" variant="outline" className="h-9 text-xs" onClick={checkGiftCard}>Apply</Button>
+                <Input placeholder={t("giftCardCode")} className="h-9 text-sm flex-1" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value)} />
+                <Button size="sm" variant="outline" className="h-9 text-xs" onClick={checkGiftCard}>{t("apply")}</Button>
               </div>
               {selectedCustomer && selectedCustomer.storeCredit > 0 && (
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <input type="checkbox" checked={useStoreCredit} onChange={(e) => setUseStoreCredit(e.target.checked)} className="rounded" />
-                  <Wallet className="h-3.5 w-3.5" /> Use store credit ({curr} {selectedCustomer.storeCredit.toFixed(2)})
+                  <Wallet className="h-3.5 w-3.5" /> {t("useStoreCredit", { curr, amount: selectedCustomer.storeCredit.toFixed(2) })}
                 </label>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Input type="number" inputMode="numeric" placeholder="Discount %" className="h-9 text-sm w-24" value={discount || ""} onChange={(e) => setDiscount(Math.min(100, Math.max(0, +e.target.value)))} />
-              <span className="text-xs text-muted-foreground">% off entire order</span>
+              <Input type="number" inputMode="numeric" placeholder={t("discountPercent")} className="h-9 text-sm w-24" value={discount || ""} onChange={(e) => setDiscount(Math.min(100, Math.max(0, +e.target.value)))} />
+              <span className="text-xs text-muted-foreground">{t("percentOffOrder")}</span>
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} items)</span>
+                <span className="text-muted-foreground">{t("subtotalItems", { count: cart.reduce((s, i) => s + i.quantity, 0) })}</span>
                 <span>{curr} {subtotal.toFixed(2)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Order Discount ({discount}%)</span>
+                  <span>{t("orderDiscount", { pct: discount })}</span>
                   <span>-{curr} {discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">VAT ({(taxRate * 100).toFixed(0)}%)</span>
+                <span className="text-muted-foreground">{t("vat", { pct: (taxRate * 100).toFixed(0) })}</span>
                 <span>{curr} {tax.toFixed(2)}</span>
               </div>
               {giftCardDeduction > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Gift Card</span>
+                  <span>{t("giftCard")}</span>
                   <span>-{curr} {giftCardDeduction.toFixed(2)}</span>
                 </div>
               )}
               {storeCreditDeduction > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Store Credit</span>
+                  <span>{t("storeCredit")}</span>
                   <span>-{curr} {storeCreditDeduction.toFixed(2)}</span>
                 </div>
               )}
             </div>
             <Separator />
             <div className="flex justify-between font-bold text-lg">
-              <span>Total</span>
+              <span>{t("total")}</span>
               <span>{curr} {total.toFixed(2)}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <Button className="w-full" onClick={() => { setPaymentMethod("cash"); setPaymentOpen(true); }}>
-                <Banknote className="h-4 w-4 mr-1" /> Cash
+                <Banknote className="h-4 w-4 mr-1" /> {t("cash")}
               </Button>
               <Button className="w-full" variant="secondary" onClick={() => { setPaymentMethod("card"); setPaymentOpen(true); }}>
-                <CreditCard className="h-4 w-4 mr-1" /> Card
+                <CreditCard className="h-4 w-4 mr-1" /> {t("card")}
               </Button>
               <Button className="w-full" variant="outline" onClick={() => { setPaymentMethod("split"); setPaymentOpen(true); }}>
-                <ArrowRightLeft className="h-4 w-4 mr-1" /> Split
+                <ArrowRightLeft className="h-4 w-4 mr-1" /> {t("split")}
               </Button>
             </div>
           </div>
@@ -1654,16 +1656,16 @@ export default function PosPage() {
             <SheetHeader className="p-4 border-b">
               <SheetTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4" /> Cart — {curr} {total.toFixed(2)}
+                  <Receipt className="h-4 w-4" /> {t("cartTitle", { curr, total: total.toFixed(2) })}
                 </span>
                 <Button variant="ghost" size="sm" className="text-xs h-7" onClick={openRefundDialog}>
-                  <RotateCcw className="h-3 w-3 mr-1" /> Refund
+                  <RotateCcw className="h-3 w-3 mr-1" /> {t("refund")}
                 </Button>
               </SheetTitle>
             </SheetHeader>
             <ScrollArea className="flex-1 px-4 py-2">
               {cart.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8 text-sm">Cart is empty</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">{t("cartEmpty")}</p>
               ) : (
                 <div className="space-y-3">
                   {cart.map((item) => (
@@ -1693,18 +1695,18 @@ export default function PosPage() {
             {cart.length > 0 && (
               <div className="p-4 border-t space-y-3">
                 <div className="flex justify-between font-bold">
-                  <span>Total</span>
+                  <span>{t("total")}</span>
                   <span>{curr} {total.toFixed(2)}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Button onClick={() => { setPaymentMethod("cash"); setPaymentOpen(true); }}>
-                    <Banknote className="h-4 w-4 mr-1" /> Cash
+                    <Banknote className="h-4 w-4 mr-1" /> {t("cash")}
                   </Button>
                   <Button variant="secondary" onClick={() => { setPaymentMethod("card"); setPaymentOpen(true); }}>
-                    <CreditCard className="h-4 w-4 mr-1" /> Card
+                    <CreditCard className="h-4 w-4 mr-1" /> {t("card")}
                   </Button>
                   <Button variant="outline" onClick={() => { setPaymentMethod("split"); setPaymentOpen(true); }}>
-                    <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Split
+                    <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> {t("split")}
                   </Button>
                 </div>
               </div>
@@ -1717,7 +1719,7 @@ export default function PosPage() {
       <Dialog open={!!variantDialog} onOpenChange={() => setVariantDialog(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Select Variant</DialogTitle>
+            <DialogTitle>{t("selectVariant")}</DialogTitle>
             <DialogDescription>{variantDialog?.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-2">
@@ -1725,12 +1727,12 @@ export default function PosPage() {
               <Button key={v.id} variant="outline" className="justify-between h-auto py-3" onClick={() => addToCartDirect(variantDialog!, v)}>
                 <div className="text-left">
                   <p className="font-medium">{v.name}</p>
-                  {v.sku && <p className="text-xs text-muted-foreground">SKU: {v.sku}</p>}
+                  {v.sku && <p className="text-xs text-muted-foreground">{t("sku", { sku: v.sku })}</p>}
                   {v.barcode && <p className="text-xs text-muted-foreground flex items-center gap-1"><Barcode className="h-3 w-3" />{v.barcode}</p>}
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{curr} {v.price.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">{v.quantity} in stock</p>
+                  <p className="text-xs text-muted-foreground">{t("inStock", { count: v.quantity })}</p>
                 </div>
               </Button>
             ))}
@@ -1743,21 +1745,21 @@ export default function PosPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {paymentMethod === "cash" && <><Banknote className="h-5 w-5" /> Cash Payment</>}
-              {paymentMethod === "card" && <><CreditCard className="h-5 w-5" /> Card Payment</>}
-              {paymentMethod === "split" && <><ArrowRightLeft className="h-5 w-5" /> Split Payment</>}
+              {paymentMethod === "cash" && <><Banknote className="h-5 w-5" /> {t("cashPayment")}</>}
+              {paymentMethod === "card" && <><CreditCard className="h-5 w-5" /> {t("cardPayment")}</>}
+              {paymentMethod === "split" && <><ArrowRightLeft className="h-5 w-5" /> {t("splitPayment")}</>}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Due</p>
+              <p className="text-sm text-muted-foreground">{t("totalDue")}</p>
               <p className="text-3xl font-bold">{curr} {total.toFixed(2)}</p>
             </div>
 
             {paymentMethod === "cash" && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label>Amount Tendered</Label>
+                  <Label>{t("amountTendered")}</Label>
                   <Input
                     type="number" step="0.01" inputMode="decimal" value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
@@ -1767,7 +1769,7 @@ export default function PosPage() {
                 </div>
                 {change > 0 && (
                   <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Change</p>
+                    <p className="text-sm text-muted-foreground">{t("change")}</p>
                     <p className="text-2xl font-bold text-green-600">{curr} {change.toFixed(2)}</p>
                   </div>
                 )}
@@ -1782,7 +1784,7 @@ export default function PosPage() {
                     ))}
                 </div>
                 <Button variant="outline" className="w-full" size="sm" onClick={() => setAmountTendered(total.toFixed(2))}>
-                  Exact Amount — {curr} {total.toFixed(2)}
+                  {t("exactAmount", { curr, total: total.toFixed(2) })}
                 </Button>
               </div>
             )}
@@ -1790,21 +1792,21 @@ export default function PosPage() {
             {paymentMethod === "card" && (
               <div className="text-center py-4">
                 <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Tap, insert, or swipe the card</p>
-                <p className="text-xs text-muted-foreground mt-1">Press &quot;Complete Sale&quot; to process</p>
+                <p className="text-sm text-muted-foreground">{t("tapInsertSwipe")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("pressComplete")}</p>
               </div>
             )}
 
             {paymentMethod === "split" && (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Split payment between cash and card</p>
+                <p className="text-sm text-muted-foreground">{t("splitDescription")}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" /> Cash Amount</Label>
+                    <Label className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" /> {t("cashAmount")}</Label>
                     <Input type="number" step="0.01" inputMode="decimal" value={splitCash} onChange={(e) => { setSplitCash(e.target.value); setSplitCard(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" autoFocus />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card Amount</Label>
+                    <Label className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> {t("cardAmount")}</Label>
                     <Input type="number" step="0.01" inputMode="decimal" value={splitCard} onChange={(e) => { setSplitCard(e.target.value); setSplitCash(Math.max(0, total - (parseFloat(e.target.value) || 0)).toFixed(2)); }} placeholder="0.00" />
                   </div>
                 </div>
@@ -1812,14 +1814,14 @@ export default function PosPage() {
                   const splitTotal = (parseFloat(splitCash) || 0) + (parseFloat(splitCard) || 0);
                   const diff = Math.abs(splitTotal - total);
                   return diff > 0.01
-                    ? <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Split amounts must equal {curr} {total.toFixed(2)} (diff: {curr} {diff.toFixed(2)})</p>
-                    : <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Split amounts match total</p>;
+                    ? <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {t("splitMustEqual", { curr, total: total.toFixed(2), diff: diff.toFixed(2) })}</p>
+                    : <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {t("splitMatch")}</p>;
                 })()}
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPaymentOpen(false)}>{t("cancel")}</Button>
             <Button
               onClick={handleCheckout}
               disabled={
@@ -1827,7 +1829,7 @@ export default function PosPage() {
                 (paymentMethod === "split" && Math.abs(((parseFloat(splitCash) || 0) + (parseFloat(splitCard) || 0)) - total) > 0.01)
               }
             >
-              Complete Sale
+              {t("completeSale")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1837,10 +1839,10 @@ export default function PosPage() {
       <Dialog open={holdDialogOpen} onOpenChange={setHoldDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Held Sales ({heldSales.length})</DialogTitle>
+            <DialogTitle>{t("heldSales", { count: heldSales.length })}</DialogTitle>
           </DialogHeader>
           {heldSales.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">No held sales</p>
+            <p className="text-center text-muted-foreground py-4">{t("noHeldSales")}</p>
           ) : (
             <div className="space-y-2 max-h-80 overflow-auto">
               {heldSales.map((h) => (
@@ -1848,11 +1850,11 @@ export default function PosPage() {
                   <div>
                     <p className="text-sm font-medium">{h.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {h.cart.length} items — {curr} {h.cart.reduce((s, i) => s + (i.variant ? i.variant.price : i.product.price) * i.quantity, 0).toFixed(2)}
+                      {t("items", { count: h.cart.length })} — {curr} {h.cart.reduce((s, i) => s + (i.variant ? i.variant.price : i.product.price) * i.quantity, 0).toFixed(2)}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => recallSale(h)}>Recall</Button>
+                    <Button size="sm" onClick={() => recallSale(h)}>{t("recall")}</Button>
                     <Button size="sm" variant="destructive" onClick={() => setHeldSales((prev) => prev.filter((s) => s.id !== h.id))}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -1867,20 +1869,20 @@ export default function PosPage() {
       {/* ═══════════ Custom Item Dialog ═══════════ */}
       <Dialog open={customItemOpen} onOpenChange={setCustomItemOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Add Custom Item</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("addCustomItem")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Item Name</Label>
-              <Input value={customItemName} onChange={(e) => setCustomItemName(e.target.value)} placeholder="e.g. Alterations" />
+              <Label>{t("itemName")}</Label>
+              <Input value={customItemName} onChange={(e) => setCustomItemName(e.target.value)} placeholder={t("itemNamePlaceholder")} />
             </div>
             <div className="space-y-1.5">
-              <Label>Price ({curr})</Label>
+              <Label>{t("price", { curr })}</Label>
               <Input type="number" value={customItemPrice} onChange={(e) => setCustomItemPrice(e.target.value)} placeholder="0.00" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCustomItemOpen(false)}>Cancel</Button>
-            <Button onClick={addCustomItem} disabled={!customItemName || !customItemPrice}>Add Item</Button>
+            <Button variant="outline" onClick={() => setCustomItemOpen(false)}>{t("cancel")}</Button>
+            <Button onClick={addCustomItem} disabled={!customItemName || !customItemPrice}>{t("addItem")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1889,23 +1891,23 @@ export default function PosPage() {
       <Dialog open={manualBarcodeOpen} onOpenChange={setManualBarcodeOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Barcode className="h-5 w-5" /> Manual Barcode Entry</DialogTitle>
-            <DialogDescription>Type or paste a barcode, SKU, or QR code value</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Barcode className="h-5 w-5" /> {t("manualBarcodeEntry")}</DialogTitle>
+            <DialogDescription>{t("manualBarcodeDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
               value={manualBarcodeValue}
               onChange={(e) => setManualBarcodeValue(e.target.value)}
-              placeholder="Enter barcode or SKU…"
+              placeholder={t("enterBarcode")}
               autoFocus
               onKeyDown={(e) => { if (e.key === "Enter") handleManualBarcode(); }}
             />
-            <p className="text-xs text-muted-foreground">Supports: EAN-13, UPC-A, Code 128, Code 39, QR codes</p>
+            <p className="text-xs text-muted-foreground">{t("barcodeFormats")}</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setManualBarcodeOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setManualBarcodeOpen(false)}>{t("cancel")}</Button>
             <Button onClick={handleManualBarcode} disabled={!manualBarcodeValue.trim()}>
-              <ScanLine className="h-4 w-4 mr-1.5" /> Look Up
+              <ScanLine className="h-4 w-4 mr-1.5" /> {t("lookUp")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1917,12 +1919,12 @@ export default function PosPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5" />
-              {posSession ? "Close Register" : "Open Register"}
+              {posSession ? t("closeRegister") : t("openRegister")}
             </DialogTitle>
             <DialogDescription>
               {posSession
-                ? "Count your cash drawer and close the register for this session."
-                : "Enter the opening cash float to start your POS session."}
+                ? t("closeRegisterDesc")
+                : t("openRegisterDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1930,29 +1932,29 @@ export default function PosPage() {
               <>
                 <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Opened</span>
+                    <span className="text-muted-foreground">{t("opened")}</span>
                     <span>{new Date(posSession.openedAt).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Opening Balance</span>
+                    <span className="text-muted-foreground">{t("openingBalance")}</span>
                     <span>{curr} {Number(posSession.openingBalance).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Sales</span>
+                    <span className="text-muted-foreground">{t("totalSales")}</span>
                     <span>{curr} {Number(posSession.totalSales).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Orders</span>
+                    <span className="text-muted-foreground">{t("totalOrders")}</span>
                     <span>{posSession.totalOrders}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-medium">
-                    <span>Expected in Drawer</span>
+                    <span>{t("expectedInDrawer")}</span>
                     <span>{curr} {(Number(posSession.openingBalance) + Number(posSession.totalSales)).toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Actual Cash Count ({curr})</Label>
+                  <Label>{t("actualCashCount", { curr })}</Label>
                   <Input type="number" step="0.01" inputMode="decimal" value={closingBalance} onChange={(e) => setClosingBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
                   {closingBalance && (() => {
                     const expected = Number(posSession.openingBalance) + Number(posSession.totalSales);
@@ -1960,7 +1962,7 @@ export default function PosPage() {
                     const variance = actual - expected;
                     return (
                       <p className={`text-xs mt-1 ${Math.abs(variance) > 0.01 ? "text-destructive" : "text-green-600"}`}>
-                        {Math.abs(variance) <= 0.01 ? "✓ Cash matches expected amount" : `${variance > 0 ? "+" : ""}${curr} ${variance.toFixed(2)} variance`}
+                        {Math.abs(variance) <= 0.01 ? t("cashMatchesExpected") : t("variance", { sign: variance > 0 ? "+" : "", curr, amount: variance.toFixed(2) })}
                       </p>
                     );
                   })()}
@@ -1968,21 +1970,21 @@ export default function PosPage() {
               </>
             ) : (
               <div className="space-y-1.5">
-                <Label>Opening Cash Float ({curr})</Label>
+                <Label>{t("openingCashFloat", { curr })}</Label>
                 <Input type="number" step="0.01" inputMode="decimal" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} placeholder="0.00" className="text-lg" autoFocus />
-                <p className="text-xs text-muted-foreground mt-1">Count the cash in your drawer before starting</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("countCash")}</p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRegisterOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setRegisterOpen(false)}>{t("cancel")}</Button>
             {posSession ? (
               <Button onClick={closeRegister} disabled={!closingBalance} variant="destructive">
-                <LogOut className="h-4 w-4 mr-1.5" /> Close Register
+                <LogOut className="h-4 w-4 mr-1.5" /> {t("closeRegister")}
               </Button>
             ) : (
               <Button onClick={openRegister}>
-                <LogIn className="h-4 w-4 mr-1.5" /> Open Register
+                <LogIn className="h-4 w-4 mr-1.5" /> {t("openRegister")}
               </Button>
             )}
           </DialogFooter>
@@ -1994,9 +1996,9 @@ export default function PosPage() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5" /> POS Refund
+              <RotateCcw className="h-5 w-5" /> {t("posRefund")}
             </DialogTitle>
-            <DialogDescription>Search for an order and select items to refund</DialogDescription>
+            <DialogDescription>{t("refundDesc")}</DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-auto space-y-4">
@@ -2004,9 +2006,9 @@ export default function PosPage() {
             {!refundOrder && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label>Order Number</Label>
+                  <Label>{t("orderNumber")}</Label>
                   <Input
-                    placeholder="Search by order number or email…"
+                    placeholder={t("refundSearchPlaceholder")}
                     value={refundOrderSearch}
                     onChange={(e) => searchRefundOrders(e.target.value)}
                     autoFocus
@@ -2038,7 +2040,7 @@ export default function PosPage() {
                           <span className="text-sm font-medium">{curr} {Number(order.totalAmount).toFixed(2)}</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {new Date(order.createdAt).toLocaleDateString()} — {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                          {new Date(order.createdAt).toLocaleDateString()} — {t("itemCount", { count: order.items.length })}
                         </p>
                       </button>
                     ))}
@@ -2046,7 +2048,7 @@ export default function PosPage() {
                 )}
 
                 {refundOrderSearch.length >= 2 && !refundSearchLoading && refundSearchResults.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No eligible orders found</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("noEligibleOrders")}</p>
                 )}
               </div>
             )}
@@ -2065,16 +2067,16 @@ export default function PosPage() {
                   <div className="text-right">
                     <p className="font-medium">{curr} {Number(refundOrder.totalAmount).toFixed(2)}</p>
                     <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => { setRefundOrder(null); setRefundSelections([]); }}>
-                      Change Order
+                      {t("changeOrder")}
                     </Button>
                   </div>
                 </div>
 
                 {/* Select all */}
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Select Items to Refund</Label>
+                  <Label className="text-sm font-medium">{t("selectItemsToRefund")}</Label>
                   <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectAllRefundItems}>
-                    {refundSelections.length === refundOrder.items.length ? "Deselect All" : "Select All"}
+                    {refundSelections.length === refundOrder.items.length ? t("deselectAll") : t("selectAll")}
                   </Button>
                 </div>
 

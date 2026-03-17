@@ -19,7 +19,7 @@ const forgotSchema = z.object({
 });
 
 const resetSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, "Invalid token format"),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")

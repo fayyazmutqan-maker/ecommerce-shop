@@ -2,7 +2,7 @@ import { StoreNavbar } from "@/components/store/store-navbar";
 import { StoreFooter } from "@/components/store/store-footer";
 import { AbandonedCartTracker } from "@/components/store/abandoned-cart-tracker";
 import { Providers } from "@/components/providers";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getActiveTemplateColors } from "@/components/store/template-renderer";
 
 export default async function StoreLayout({
@@ -31,7 +31,7 @@ export default async function StoreLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground"
         >
-          Skip to content
+          {(await getTranslations("errors"))("skipToContent")}
         </a>
         <StoreNavbar />
         <main id="main-content" className="flex-1">{children}</main>

@@ -12,11 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart, addItem } =
     useCartStore();
   const searchParams = useSearchParams();
+  const t = useTranslations("cartPage");
+  const tCommon = useTranslations("common");
+  const tCart = useTranslations("cart");
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [recovering, setRecovering] = useState(false);
@@ -36,7 +40,7 @@ export default function CartPage() {
         const res = await fetch(`/api/abandoned-carts/recover?token=${encodeURIComponent(token)}`);
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.error || "Failed to recover cart");
+          toast.error(data.error || t("failedRecover"));
           return;
         }
         clearCart();
@@ -52,9 +56,9 @@ export default function CartPage() {
             variantName: item.variantName || undefined,
           });
         }
-        toast.success("Your cart has been recovered!");
+        toast.success(t("cartRecovered"));
       } catch {
-        toast.error("Failed to recover cart");
+        toast.error(t("failedRecover"));
       } finally {
         setRecovering(false);
       }
@@ -76,7 +80,7 @@ export default function CartPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Invalid coupon code");
+        toast.error(data.error || t("invalidCoupon"));
         return;
       }
       setAppliedCoupon({
@@ -84,9 +88,9 @@ export default function CartPage() {
         type: data.coupon.type,
         discount: data.discount,
       });
-      toast.success(`Coupon "${data.coupon.code}" applied! You save SAR ${data.discount.toFixed(2)}`);
+      toast.success(t("couponApplied", { code: data.coupon.code, amount: data.discount.toFixed(2) }));
     } catch {
-      toast.error("Failed to validate coupon");
+      toast.error(t("failedValidateCoupon"));
     } finally {
       setCouponLoading(false);
     }
@@ -103,7 +107,7 @@ export default function CartPage() {
     return (
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">Recovering your cart...</p>
+        <p className="text-muted-foreground">{t("recoveringCart")}</p>
       </div>
     );
   }
@@ -113,14 +117,14 @@ export default function CartPage() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
         <ShoppingBag className="h-16 w-16 text-muted-foreground/40 mx-auto mb-6" />
         <h1 className="text-3xl font-bold tracking-tight mb-3">
-          Your cart is empty
+          {tCommon("emptyCart")}
         </h1>
         <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto">
-          Looks like you haven&apos;t added any products to your cart yet.
+          {t("emptyCartDesc")}
         </p>
         <Button className="h-12 px-8 text-[15px]" asChild>
           <Link href="/products">
-            Continue Shopping
+            {tCommon("continueShopping")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -130,12 +134,12 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "Cart" }]} />
+      <Breadcrumbs items={[{ label: tCommon("cart") }]} />
 
       <h1 className="text-3xl font-bold tracking-tight mb-10">
-        Shopping Cart
+        {tCart("title")}
         <span className="text-muted-foreground font-normal text-lg ml-3">
-          ({getItemCount()} {getItemCount() === 1 ? "item" : "items"})
+          ({t("items", { count: getItemCount() })})
         </span>
       </h1>
 
@@ -166,14 +170,14 @@ export default function CartPage() {
                         </p>
                       )}
                       <p className="text-sm font-bold mt-1.5">
-                        SAR {item.price.toFixed(2)}
+                        {tCommon("sar")} {item.price.toFixed(2)}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-muted-foreground hover:text-destructive flex-shrink-0"
-                      aria-label={`Remove ${item.name} from cart`}
+                      aria-label={t("removeFromCart", { name: item.name })}
                       onClick={() => removeItem(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -185,7 +189,7 @@ export default function CartPage() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-r-none"
-                        aria-label={`Decrease quantity of ${item.name}`}
+                        aria-label={t("decreaseQuantity", { name: item.name })}
                         onClick={() =>
                           updateQuantity(item.id, item.quantity - 1)
                         }
@@ -199,7 +203,7 @@ export default function CartPage() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-l-none"
-                        aria-label={`Increase quantity of ${item.name}`}
+                        aria-label={t("increaseQuantity", { name: item.name })}
                         onClick={() =>
                           updateQuantity(item.id, item.quantity + 1)
                         }
@@ -208,7 +212,7 @@ export default function CartPage() {
                       </Button>
                     </div>
                     <span className="font-bold text-[15px]">
-                      SAR {(item.price * item.quantity).toFixed(2)}
+                      {tCommon("sar")} {(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -218,14 +222,14 @@ export default function CartPage() {
 
           <div className="flex justify-between items-center pt-4">
             <Button variant="outline" className="h-11 px-6" asChild>
-              <Link href="/products">Continue Shopping</Link>
+              <Link href="/products">{tCommon("continueShopping")}</Link>
             </Button>
             <Button
               variant="ghost"
               className="text-destructive hover:text-destructive h-11"
               onClick={clearCart}
             >
-              Clear Cart
+              {t("clearCart")}
             </Button>
           </div>
         </div>
@@ -234,24 +238,24 @@ export default function CartPage() {
         <div>
           <Card className="sticky top-28 shadow-none border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold">Order Summary</CardTitle>
+              <CardTitle className="text-lg font-bold">{t("orderSummary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Subtotal ({getItemCount()} items)
+                    {tCommon("subtotal")} ({t("items", { count: getItemCount() })})
                   </span>
-                  <span className="font-medium">SAR {getTotal().toFixed(2)}</span>
+                  <span className="font-medium">{tCommon("sar")} {getTotal().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="font-medium text-foreground">Free</span>
+                  <span className="text-muted-foreground">{tCommon("shipping")}</span>
+                  <span className="font-medium text-foreground">{tCommon("free")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax</span>
+                  <span className="text-muted-foreground">{tCommon("tax")}</span>
                   <span className="text-muted-foreground">
-                    Calculated at checkout
+                    {t("calculatedAtCheckout")}
                   </span>
                 </div>
               </div>
@@ -274,7 +278,7 @@ export default function CartPage() {
               ) : (
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Coupon code"
+                    placeholder={t("couponCode")}
                     className="h-10"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
@@ -286,7 +290,7 @@ export default function CartPage() {
                     onClick={applyCoupon}
                     disabled={couponLoading || !couponCode.trim()}
                   >
-                    {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                    {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("apply")}
                   </Button>
                 </div>
               )}
@@ -294,13 +298,13 @@ export default function CartPage() {
               <Separator />
 
               <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>SAR {displayTotal.toFixed(2)}</span>
+                <span>{tCommon("total")}</span>
+                <span>{tCommon("sar")} {displayTotal.toFixed(2)}</span>
               </div>
 
               <Button className="w-full h-12 text-[15px] font-semibold" asChild>
                 <Link href="/checkout">
-                  Proceed to Checkout
+                  {tCommon("proceedToCheckout")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

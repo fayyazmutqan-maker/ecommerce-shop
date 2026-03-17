@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/helpers";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export default async function WishlistPage() {
   if (!session?.user) {
     redirect("/login");
   }
+
+  const t = await getTranslations("account");
 
   const items = await db.query.wishlistItems.findMany({
     where: eq(wishlistItems.userId, session.user.id),
@@ -33,8 +36,8 @@ export default async function WishlistPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
-        { label: "Account", href: "/account" },
-        { label: "Wishlist" },
+        { label: t("title"), href: "/account" },
+        { label: t("wishlist") },
       ]} />
 
       <div className="flex items-center gap-4 mb-10">
@@ -45,9 +48,9 @@ export default async function WishlistPage() {
         </Button>
         <div>
           <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">
-            Account
+            {t("title")}
           </p>
-          <h1 className="text-3xl font-bold">My Wishlist</h1>
+          <h1 className="text-3xl font-bold">{t("myWishlist")}</h1>
         </div>
       </div>
 
@@ -56,10 +59,10 @@ export default async function WishlistPage() {
           <CardContent className="py-20 text-center">
             <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-5 font-medium">
-              Your wishlist is empty
+              {t("wishlistEmpty")}
             </p>
             <Button asChild className="h-11 px-6 font-semibold">
-              <Link href="/products">Browse Products</Link>
+              <Link href="/products">{t("browseProducts")}</Link>
             </Button>
           </CardContent>
         </Card>

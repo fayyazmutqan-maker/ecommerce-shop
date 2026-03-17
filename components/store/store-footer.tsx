@@ -17,7 +17,7 @@ export function StoreFooter() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 lg:py-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
           {/* Brand */}
-          <div className="space-y-5 lg:pr-8">
+          <div className="space-y-5 lg:pe-8">
             <h3 className="text-lg font-bold tracking-tight">ShopFlow</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("shopInfo")}
@@ -112,15 +112,15 @@ export function StoreFooter() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 text-xs text-muted-foreground">
           <div className="space-y-1">
             <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("commercialReg")}</p>
-            <p>CR No: 1010XXXXXX — Riyadh, Saudi Arabia</p>
+            <p>{t("crValue")}</p>
           </div>
           <div className="space-y-1">
             <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("vatReg")}</p>
-            <p>VAT No: 3XXXXXXXXXX003 — ZATCA Registered</p>
+            <p>{t("vatValue")}</p>
           </div>
           <div className="space-y-1">
             <p className="font-semibold text-foreground text-[11px] uppercase tracking-widest">{t("ecommLicense")}</p>
-            <p>Licensed and regulated by CITC (Ministry of Commerce)</p>
+            <p>{t("ecommLicenseValue")}</p>
           </div>
         </div>
 

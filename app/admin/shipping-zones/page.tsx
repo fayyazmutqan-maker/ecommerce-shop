@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
@@ -75,17 +76,17 @@ interface ShippingZone {
 }
 
 const COUNTRIES = [
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "AE", name: "United Arab Emirates" },
-  { code: "KW", name: "Kuwait" },
-  { code: "BH", name: "Bahrain" },
-  { code: "OM", name: "Oman" },
-  { code: "QA", name: "Qatar" },
-  { code: "EG", name: "Egypt" },
-  { code: "JO", name: "Jordan" },
-  { code: "IQ", name: "Iraq" },
-  { code: "LB", name: "Lebanon" },
-  { code: "*", name: "Rest of World" },
+  { code: "SA" },
+  { code: "AE" },
+  { code: "KW" },
+  { code: "BH" },
+  { code: "OM" },
+  { code: "QA" },
+  { code: "EG" },
+  { code: "JO" },
+  { code: "IQ" },
+  { code: "LB" },
+  { code: "*" },
 ];
 
 const emptyRate: ShippingRate = {
@@ -102,6 +103,7 @@ const emptyRate: ShippingRate = {
 };
 
 export default function ShippingZonesPage() {
+  const t = useTranslations("admin.shippingZones");
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -123,7 +125,7 @@ export default function ShippingZonesPage() {
       const data = await res.json();
       setZones(Array.isArray(data) ? data : []);
     } catch {
-      toast.error("Failed to load shipping zones");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -156,9 +158,9 @@ export default function ShippingZonesPage() {
   };
 
   const handleSave = async () => {
-    if (!formName.trim()) { toast.error("Zone name is required"); return; }
-    if (formCountries.length === 0) { toast.error("Select at least one country"); return; }
-    if (formRates.some(r => !r.name.trim())) { toast.error("All rates need a name"); return; }
+    if (!formName.trim()) { toast.error(t("toasts.zoneNameRequired")); return; }
+    if (formCountries.length === 0) { toast.error(t("toasts.selectCountry")); return; }
+    if (formRates.some(r => !r.name.trim())) { toast.error(t("toasts.ratesNeedName")); return; }
 
     setSaving(true);
     try {
@@ -187,26 +189,26 @@ export default function ShippingZonesPage() {
         throw new Error(err.error || "Failed to save");
       }
 
-      toast.success(editingZone ? "Shipping zone updated" : "Shipping zone created");
+      toast.success(editingZone ? t("toasts.updated") : t("toasts.created"));
       setDialogOpen(false);
       resetForm();
       fetchZones();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save");
+      toast.error(e instanceof Error ? e.message : t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (zone: ShippingZone) => {
-    if (!confirm(`Delete "${zone.name}" and all its rates?`)) return;
+    if (!confirm(t("deleteConfirm", { name: zone.name }))) return;
     try {
       const res = await fetch(`/api/shipping-zones?id=${zone.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Shipping zone deleted");
+      toast.success(t("toasts.deleted"));
       fetchZones();
     } catch {
-      toast.error("Failed to delete shipping zone");
+      toast.error(t("toasts.deleteFailed"));
     }
   };
 
@@ -222,15 +224,7 @@ export default function ShippingZonesPage() {
     );
   };
 
-  const rateTypeLabel = (type: string) => {
-    switch (type) {
-      case "FLAT": return "Flat Rate";
-      case "WEIGHT_BASED": return "Weight Based";
-      case "PRICE_BASED": return "Price Based";
-      case "FREE": return "Free Shipping";
-      default: return type;
-    }
-  };
+  const rateTypeLabel = (type: string) => t(`rateTypes.${type}`);
 
   if (loading) {
     return (
@@ -248,11 +242,11 @@ export default function ShippingZonesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Shipping Zones</h1>
-          <p className="text-muted-foreground">Configure shipping zones and rates by region</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Add Zone
+          <Plus className="mr-2 h-4 w-4" /> {t("addZone")}
         </Button>
       </div>
 
@@ -260,9 +254,9 @@ export default function ShippingZonesPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Globe className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No shipping zones</h3>
-            <p className="text-sm text-muted-foreground mb-4">Create your first shipping zone to configure delivery rates.</p>
-            <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Shipping Zone</Button>
+            <h3 className="text-lg font-semibold mb-1">{t("noShippingZones")}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{t("noShippingZonesDesc")}</p>
+            <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> {t("addShippingZone")}</Button>
           </CardContent>
         </Card>
       ) : (
@@ -279,11 +273,11 @@ export default function ShippingZonesPage() {
                       <CardTitle className="text-base flex items-center gap-2">
                         {zone.name}
                         <Badge variant={zone.isActive ? "default" : "secondary"}>
-                          {zone.isActive ? "Active" : "Inactive"}
+                          {zone.isActive ? t("active") : t("inactive")}
                         </Badge>
                       </CardTitle>
                       <CardDescription className="text-xs mt-0.5">
-                        {zone.countries.map(c => COUNTRIES.find(x => x.code === c)?.name || c).join(", ")}
+                        {zone.countries.map(c => t(`countryNames.${c}`)).join(", ")}
                         {zone.regions?.length > 0 && ` — ${zone.regions.join(", ")}`}
                       </CardDescription>
                     </div>
@@ -308,12 +302,12 @@ export default function ShippingZonesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Rate Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Conditions</TableHead>
-                        <TableHead>Est. Delivery</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>{t("tableHead.rateName")}</TableHead>
+                        <TableHead>{t("tableHead.type")}</TableHead>
+                        <TableHead>{t("tableHead.price")}</TableHead>
+                        <TableHead>{t("tableHead.conditions")}</TableHead>
+                        <TableHead>{t("tableHead.estDelivery")}</TableHead>
+                        <TableHead>{t("tableHead.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -321,24 +315,24 @@ export default function ShippingZonesPage() {
                         <TableRow key={rate.id}>
                           <TableCell className="font-medium">{rate.name}</TableCell>
                           <TableCell><Badge variant="outline">{rateTypeLabel(rate.type)}</Badge></TableCell>
-                          <TableCell>{rate.type === "FREE" ? "Free" : `SAR ${Number(rate.price).toFixed(2)}`}</TableCell>
+                          <TableCell>{rate.type === "FREE" ? t("free") : `SAR ${Number(rate.price).toFixed(2)}`}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">
                             {rate.type === "WEIGHT_BASED" && `${rate.minWeight || 0}–${rate.maxWeight || "∞"} kg`}
                             {rate.type === "PRICE_BASED" && `SAR ${rate.minOrderAmount || 0}–${rate.maxOrderAmount || "∞"}`}
-                            {rate.type === "FREE" && rate.minOrderAmount ? `Min order: SAR ${rate.minOrderAmount}` : ""}
+                            {rate.type === "FREE" && rate.minOrderAmount ? t("minOrder", { amount: rate.minOrderAmount }) : ""}
                             {rate.type === "FLAT" && "—"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">{rate.estimatedDays || "—"}</TableCell>
                           <TableCell>
                             <Badge variant={rate.isActive ? "default" : "secondary"}>
-                              {rate.isActive ? "Active" : "Inactive"}
+                              {rate.isActive ? t("active") : t("inactive")}
                             </Badge>
                           </TableCell>
                         </TableRow>
                       ))}
                       {zone.rates.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">No rates configured</TableCell>
+                          <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">{t("noRatesConfigured")}</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
@@ -355,22 +349,22 @@ export default function ShippingZonesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingZone ? "Edit Shipping Zone" : "Create Shipping Zone"}</DialogTitle>
+            <DialogTitle>{editingZone ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
             <DialogDescription>
-              Define a shipping zone with countries, regions, and delivery rates.
+              {t("dialog.description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
             {/* Zone Name */}
             <div className="space-y-2">
-              <Label>Zone Name</Label>
-              <Input placeholder="e.g., Saudi Arabia, GCC Countries" value={formName} onChange={(e) => setFormName(e.target.value)} />
+              <Label>{t("dialog.zoneName")}</Label>
+              <Input placeholder={t("dialog.zoneNamePlaceholder")} value={formName} onChange={(e) => setFormName(e.target.value)} />
             </div>
 
             {/* Countries */}
             <div className="space-y-2">
-              <Label>Countries</Label>
+              <Label>{t("dialog.countries")}</Label>
               <div className="flex flex-wrap gap-2">
                 {COUNTRIES.map((country) => (
                   <Badge
@@ -379,7 +373,7 @@ export default function ShippingZonesPage() {
                     className="cursor-pointer"
                     onClick={() => toggleCountry(country.code)}
                   >
-                    {country.name}
+                    {t(`countryNames.${country.code}`)}
                   </Badge>
                 ))}
               </div>
@@ -387,23 +381,23 @@ export default function ShippingZonesPage() {
 
             {/* Regions */}
             <div className="space-y-2">
-              <Label>Regions (optional, comma-separated)</Label>
-              <Input placeholder="e.g., Riyadh, Makkah, Eastern Province" value={formRegions} onChange={(e) => setFormRegions(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Leave empty to apply to all regions in selected countries.</p>
+              <Label>{t("dialog.regions")}</Label>
+              <Input placeholder={t("dialog.regionsPlaceholder")} value={formRegions} onChange={(e) => setFormRegions(e.target.value)} />
+              <p className="text-xs text-muted-foreground">{t("dialog.regionsHint")}</p>
             </div>
 
             {/* Active */}
             <div className="flex items-center gap-3">
               <Switch checked={formIsActive} onCheckedChange={setFormIsActive} />
-              <Label>Active</Label>
+              <Label>{t("dialog.active")}</Label>
             </div>
 
             {/* Rates */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Shipping Rates</Label>
+                <Label className="text-base font-semibold">{t("dialog.shippingRates")}</Label>
                 <Button variant="outline" size="sm" onClick={addRate}>
-                  <Plus className="mr-1 h-3 w-3" /> Add Rate
+                  <Plus className="mr-1 h-3 w-3" /> {t("dialog.addRate")}
                 </Button>
               </div>
 
@@ -413,7 +407,7 @@ export default function ShippingZonesPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Rate #{idx + 1}</span>
+                        <span className="text-sm font-medium">{t("dialog.rateNumber", { number: idx + 1 })}</span>
                       </div>
                       {formRates.length > 1 && (
                         <Button variant="ghost" size="sm" onClick={() => removeRate(idx)} className="text-destructive hover:text-destructive h-7 px-2">
@@ -424,18 +418,18 @@ export default function ShippingZonesPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-xs">Rate Name</Label>
-                        <Input placeholder="e.g., Standard" value={rate.name} onChange={(e) => updateRate(idx, { name: e.target.value })} />
+                        <Label className="text-xs">{t("dialog.rateName")}</Label>
+                        <Input placeholder={t("dialog.rateNamePlaceholder")} value={rate.name} onChange={(e) => updateRate(idx, { name: e.target.value })} />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">Type</Label>
+                        <Label className="text-xs">{t("dialog.type")}</Label>
                         <Select value={rate.type} onValueChange={(v) => updateRate(idx, { type: v as ShippingRate["type"] })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="FLAT">Flat Rate</SelectItem>
-                            <SelectItem value="WEIGHT_BASED">Weight Based</SelectItem>
-                            <SelectItem value="PRICE_BASED">Price Based</SelectItem>
-                            <SelectItem value="FREE">Free Shipping</SelectItem>
+                            <SelectItem value="FLAT">{t("rateTypes.FLAT")}</SelectItem>
+                            <SelectItem value="WEIGHT_BASED">{t("rateTypes.WEIGHT_BASED")}</SelectItem>
+                            <SelectItem value="PRICE_BASED">{t("rateTypes.PRICE_BASED")}</SelectItem>
+                            <SelectItem value="FREE">{t("rateTypes.FREE")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -444,18 +438,18 @@ export default function ShippingZonesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {rate.type !== "FREE" && (
                         <div className="space-y-2">
-                          <Label className="text-xs">Price (SAR)</Label>
+                          <Label className="text-xs">{t("dialog.priceSar")}</Label>
                           <Input type="number" min="0" step="0.01" value={rate.price} onChange={(e) => updateRate(idx, { price: parseFloat(e.target.value) || 0 })} />
                         </div>
                       )}
                       {rate.type === "WEIGHT_BASED" && (
                         <>
                           <div className="space-y-2">
-                            <Label className="text-xs">Min Weight (kg)</Label>
+                            <Label className="text-xs">{t("dialog.minWeightKg")}</Label>
                             <Input type="number" min="0" step="0.1" value={rate.minWeight ?? ""} onChange={(e) => updateRate(idx, { minWeight: parseFloat(e.target.value) || null })} />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs">Max Weight (kg)</Label>
+                            <Label className="text-xs">{t("dialog.maxWeightKg")}</Label>
                             <Input type="number" min="0" step="0.1" value={rate.maxWeight ?? ""} onChange={(e) => updateRate(idx, { maxWeight: parseFloat(e.target.value) || null })} />
                           </div>
                         </>
@@ -463,26 +457,26 @@ export default function ShippingZonesPage() {
                       {(rate.type === "PRICE_BASED" || rate.type === "FREE") && (
                         <>
                           <div className="space-y-2">
-                            <Label className="text-xs">Min Order (SAR)</Label>
+                            <Label className="text-xs">{t("dialog.minOrderSar")}</Label>
                             <Input type="number" min="0" step="0.01" value={rate.minOrderAmount ?? ""} onChange={(e) => updateRate(idx, { minOrderAmount: parseFloat(e.target.value) || null })} />
                           </div>
                           {rate.type === "PRICE_BASED" && (
                             <div className="space-y-2">
-                              <Label className="text-xs">Max Order (SAR)</Label>
+                              <Label className="text-xs">{t("dialog.maxOrderSar")}</Label>
                               <Input type="number" min="0" step="0.01" value={rate.maxOrderAmount ?? ""} onChange={(e) => updateRate(idx, { maxOrderAmount: parseFloat(e.target.value) || null })} />
                             </div>
                           )}
                         </>
                       )}
                       <div className="space-y-2">
-                        <Label className="text-xs">Est. Delivery</Label>
-                        <Input placeholder="e.g., 3-5 business days" value={rate.estimatedDays ?? ""} onChange={(e) => updateRate(idx, { estimatedDays: e.target.value })} />
+                        <Label className="text-xs">{t("dialog.estDelivery")}</Label>
+                        <Input placeholder={t("dialog.estDeliveryPlaceholder")} value={rate.estimatedDays ?? ""} onChange={(e) => updateRate(idx, { estimatedDays: e.target.value })} />
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <Switch checked={rate.isActive} onCheckedChange={(v) => updateRate(idx, { isActive: v })} />
-                      <Label className="text-xs">Active</Label>
+                      <Label className="text-xs">{t("dialog.rateActive")}</Label>
                     </div>
                   </CardContent>
                 </Card>
@@ -491,10 +485,10 @@ export default function ShippingZonesPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t("dialog.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingZone ? "Update Zone" : "Create Zone"}
+              {editingZone ? t("dialog.updateZone") : t("dialog.createZone")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,18 +18,37 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ShoppingBag, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
-const verificationMessages: Record<string, { type: "success" | "error"; message: string }> = {
-  success: { type: "success", message: "Email verified successfully! You can now sign in." },
-  expired: { type: "error", message: "Verification link has expired. Please register again." },
-  invalid: { type: "error", message: "Invalid verification link." },
-  error: { type: "error", message: "Something went wrong during verification. Please try again." },
+const verificationMessages: Record<string, { type: "success" | "error"; key: string }> = {
+  success: { type: "success", key: "emailVerified" },
+  expired: { type: "error", key: "verificationExpired" },
+  invalid: { type: "error", key: "invalidVerification" },
+  error: { type: "error", key: "verificationError" },
 };
 
+/** Validate callback URL — prevent open redirect attacks */
+function sanitizeCallbackUrl(raw: string): string {
+  // Must start with / and not // (protocol-relative)
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+  // Block data:, javascript: schemes embedded in path
+  if (/[?#]/.test(raw.split("/")[1] || "")) return "/";
+  // Block encoded characters that could bypass checks
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded.startsWith("//") || decoded.includes("://")) return "/";
+  } catch {
+    return "/"; // Malformed encoding
+  }
+  return raw;
+}
+
 function LoginForm() {
-  const router = useRouter();
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallback = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = sanitizeCallbackUrl(rawCallback);
   const verified = searchParams.get("verified");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -38,12 +57,12 @@ function LoginForm() {
     if (verified && verificationMessages[verified]) {
       const msg = verificationMessages[verified];
       if (msg.type === "success") {
-        toast.success(msg.message);
+        toast.success(t(msg.key));
       } else {
-        toast.error(msg.message);
+        toast.error(t(msg.key));
       }
     }
-  }, [verified]);
+  }, [verified, t]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,26 +80,30 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        if (result.error.includes("verify your email")) {
-          toast.error(result.error);
+        if (result.error.includes("ACCOUNT_LOCKED")) {
+          toast.error(t("accountLocked"));
+        } else if (result.error.includes("EMAIL_NOT_VERIFIED")) {
+          toast.error(t("verifyEmailFirst"));
         } else {
-          toast.error("Invalid email or password");
+          toast.error(t("invalidCredentials"));
         }
       } else {
-        toast.success("Logged in successfully");
-        // Fetch session to check role and redirect admins/staff to /admin
+        toast.success(t("loggedIn"));
+        // Fetch fresh session to determine role-based redirect
         const sessionRes = await fetch("/api/auth/session");
         const session = await sessionRes.json();
         const role = session?.user?.role;
-        if ((role === "ADMIN" || role === "STAFF") && (callbackUrl === "/" || !callbackUrl)) {
-          router.push("/admin");
-        } else {
-          router.push(callbackUrl);
-        }
-        router.refresh();
+        const destination =
+          (role === "ADMIN" || role === "STAFF") && callbackUrl === "/"
+            ? "/admin"
+            : callbackUrl;
+        // Use window.location for a full navigation to ensure middleware
+        // picks up the new session cookie and applies proper redirects
+        window.location.href = destination;
+        return; // prevent finally from resetting isLoading
       }
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +114,7 @@ function LoginForm() {
     try {
       await signIn("google", { callbackUrl });
     } catch {
-      toast.error("Failed to sign in with Google");
+      toast.error(t("failedGoogleSignIn"));
       setIsGoogleLoading(false);
     }
   }
@@ -106,9 +129,9 @@ function LoginForm() {
               <span className="text-2xl font-bold">ShopFlow</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t("welcomeBack")}</CardTitle>
           <CardDescription className="text-[15px]">
-            Sign in to your account to continue
+            {t("signInDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 px-7">
@@ -121,7 +144,7 @@ function LoginForm() {
               {verificationMessages[verified].type === "success"
                 ? <CheckCircle2 className="h-4 w-4 shrink-0" />
                 : <XCircle className="h-4 w-4 shrink-0" />}
-              {verificationMessages[verified].message}
+              {t(verificationMessages[verified].key)}
             </div>
           )}
           <Button
@@ -152,7 +175,7 @@ function LoginForm() {
                 />
               </svg>
             )}
-            Continue with Google
+            {t("continueWithGoogle")}
           </Button>
 
           <div className="relative">
@@ -161,14 +184,14 @@ function LoginForm() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-3 text-muted-foreground tracking-widest">
-                Or continue with email
+                {t("orContinueWith")}
               </span>
             </div>
           </div>
 
           <form onSubmit={onSubmit} method="post" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
+              <Label htmlFor="email" className="text-sm font-semibold">{t("email")}</Label>
               <Input
                 id="email"
                 name="email"
@@ -181,9 +204,9 @@ function LoginForm() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+                <Label htmlFor="password" className="text-sm font-semibold">{t("password")}</Label>
                 <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  Forgot password?
+                  {t("forgotPassword")}
                 </Link>
               </div>
               <Input
@@ -198,15 +221,15 @@ function LoginForm() {
             </div>
             <Button type="submit" className="w-full h-12 text-[15px] font-semibold" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {t("signIn") || "Sign In"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground px-7 pt-2">
           <div>
-            Don&apos;t have an account?{" "}
+            {t("dontHaveAccount")}{" "}
             <Link href="/register" className="text-foreground hover:underline font-semibold">
-              Create one
+              {t("createOne")}
             </Link>
           </div>
         </CardFooter>

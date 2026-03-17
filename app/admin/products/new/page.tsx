@@ -61,6 +61,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { useTranslations } from "next-intl";
 
 // ─── Types ────────────────────────────────────────
 interface ProductGroup {
@@ -169,6 +170,7 @@ const COUNTRIES_ORIGIN = [
 // ─── Component ────────────────────────────────────
 export default function NewProductPage() {
   const router = useRouter();
+  const t = useTranslations("admin.newProduct");
   const [isLoading, setIsLoading] = useState(false);
 
   // Basic toggles
@@ -252,7 +254,7 @@ export default function NewProductPage() {
         setGroups(groupsData);
         setCategories(catsData);
       })
-      .catch(() => toast.error("Failed to load product data"));
+      .catch(() => toast.error(t("loadFailed")));
   }, []);
 
   // Bundle search
@@ -558,12 +560,12 @@ export default function NewProductPage() {
         throw new Error(error.error || "Failed to create product");
       }
 
-      toast.success("Product created successfully");
+      toast.success(t("createSuccess"));
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to create product"
+        error instanceof Error ? error.message : t("createFailed")
       );
     } finally {
       setIsLoading(false);
@@ -720,15 +722,15 @@ export default function NewProductPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Add Product</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-muted-foreground">
-              Create a new product with full configuration
+              {t("subtitle")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs gap-1">
-            <Info className="h-3 w-3" /> All prices in SAR
+            <Info className="h-3 w-3" /> {t("allPricesIn")}
           </Badge>
         </div>
       </div>
@@ -748,7 +750,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Product Information</CardTitle>
+                        <CardTitle>{t("productInformation")}</CardTitle>
                       </div>
                       {openSections.info ? (
                         <ChevronUp className="h-4 w-4" />
@@ -757,39 +759,39 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Name, description, and basic details
+                      {t("productInfoDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Product Name *</Label>
+                      <Label htmlFor="name">{t("productName")}</Label>
                       <Input
                         id="name"
                         name="name"
-                        placeholder="e.g., Premium Wireless Headphones"
+                        placeholder={t("productNamePlaceholder")}
                         required
                         className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="shortDescription">
-                        Short Description
+                        {t("shortDescription")}
                       </Label>
                       <Input
                         id="shortDescription"
                         name="shortDescription"
-                        placeholder="Brief product summary (shown in listings)"
+                        placeholder={t("shortDescPlaceholder")}
                         className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="description">Full Description</Label>
+                      <Label htmlFor="description">{t("fullDescription")}</Label>
                       <Textarea
                         id="description"
                         name="description"
-                        placeholder="Detailed product description with features, specifications..."
+                        placeholder={t("fullDescPlaceholder")}
                         rows={8}
                       />
                     </div>
@@ -809,7 +811,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Layers className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Media</CardTitle>
+                        <CardTitle>{t("media")}</CardTitle>
                       </div>
                       {openSections.media ? (
                         <ChevronUp className="h-4 w-4" />
@@ -818,8 +820,7 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Upload product images (first image is the primary — drag
-                      to reorder)
+                      {t("mediaDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -848,7 +849,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Pricing</CardTitle>
+                        <CardTitle>{t("pricing")}</CardTitle>
                       </div>
                       {openSections.pricing ? (
                         <ChevronUp className="h-4 w-4" />
@@ -857,7 +858,7 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Set pricing, compare at price, and profit margins
+                      {t("pricingDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -865,7 +866,7 @@ export default function NewProductPage() {
                   <CardContent className="space-y-5">
                     <div className="grid gap-4 sm:grid-cols-3">
                       <div className="space-y-2">
-                        <Label htmlFor="price">Price (SAR) *</Label>
+                        <Label htmlFor="price">{t("price")}</Label>
                         <Input
                           id="price"
                           type="number"
@@ -880,7 +881,7 @@ export default function NewProductPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="compareAtPrice">
-                          Compare at Price (SAR)
+                          {t("compareAtPrice")}
                         </Label>
                         <Input
                           id="compareAtPrice"
@@ -908,7 +909,7 @@ export default function NewProductPage() {
                           )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="costPrice">Cost Price (SAR)</Label>
+                        <Label htmlFor="costPrice">{t("costPrice")}</Label>
                         <Input
                           id="costPrice"
                           type="number"
@@ -927,7 +928,7 @@ export default function NewProductPage() {
                       <div className="flex items-center gap-6 p-3 bg-accent/50 rounded-lg text-sm">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Profit:</span>
+                          <span className="text-muted-foreground">{t("profit")}:</span>
                           <span
                             className={`font-bold ${parseFloat(profitInfo.profit) >= 0 ? "text-green-600" : "text-destructive"}`}
                           >
@@ -935,7 +936,7 @@ export default function NewProductPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Margin:</span>{" "}
+                          <span className="text-muted-foreground">{t("margin")}:</span>{" "}
                           <span className="font-bold">
                             {profitInfo.margin}
                             {profitInfo.margin !== "—" && "%"}
@@ -955,14 +956,14 @@ export default function NewProductPage() {
                           onCheckedChange={setTaxable}
                         />
                         <Label htmlFor="taxable">
-                          Charge VAT (15%) on this product
+                          {t("chargeVAT")}
                         </Label>
                       </div>
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="minOrderQty">Min. Order Quantity</Label>
+                        <Label htmlFor="minOrderQty">{t("minOrderQty")}</Label>
                         <Input
                           id="minOrderQty"
                           name="minOrderQty"
@@ -973,13 +974,13 @@ export default function NewProductPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="maxOrderQty">Max. Order Quantity</Label>
+                        <Label htmlFor="maxOrderQty">{t("maxOrderQty")}</Label>
                         <Input
                           id="maxOrderQty"
                           name="maxOrderQty"
                           type="number"
                           min="1"
-                          placeholder="No limit"
+                          placeholder={t("noLimit")}
                           className="h-11"
                         />
                       </div>
@@ -992,12 +993,12 @@ export default function NewProductPage() {
                         checked={scheduleSale}
                         onCheckedChange={setScheduleSale}
                       />
-                      <Label>Schedule sale pricing</Label>
+                      <Label>{t("scheduleSale")}</Label>
                     </div>
                     {scheduleSale && (
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label>Sale Starts</Label>
+                          <Label>{t("saleStarts")}</Label>
                           <Input
                             type="datetime-local"
                             value={salePriceFrom}
@@ -1006,7 +1007,7 @@ export default function NewProductPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Sale Ends</Label>
+                          <Label>{t("saleEnds")}</Label>
                           <Input
                             type="datetime-local"
                             value={salePriceTo}
@@ -1032,7 +1033,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Product Type & Attributes</CardTitle>
+                        <CardTitle>{t("productTypeAttributes")}</CardTitle>
                       </div>
                       {openSections.attributes ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1041,15 +1042,14 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Select a product group to show relevant attributes (sizes,
-                      colors, materials, etc.)
+                      {t("productTypeAttrDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="space-y-5">
                     <div className="space-y-2">
-                      <Label>Product Group</Label>
+                      <Label>{t("productGroup")}</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                         {groups.map((g) => (
                           <button
@@ -1081,7 +1081,7 @@ export default function NewProductPage() {
                                 {selectedGroup.icon} {selectedGroup.name}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
-                                {selectedGroup.attributes.length} attributes
+                              {selectedGroup.attributes.length} {t("attributes")}
                               </span>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1108,7 +1108,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Layers className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Variants</CardTitle>
+                        <CardTitle>{t("variants")}</CardTitle>
                         {hasVariants && generatedVariants.length > 0 && (
                           <Badge variant="secondary" className="text-xs">
                             {generatedVariants.length} variants
@@ -1134,8 +1134,7 @@ export default function NewProductPage() {
                       </div>
                     </div>
                     <CardDescription>
-                      This product has multiple options, like different sizes or
-                      colors (max 3 options, auto-generates combinations)
+                      {t("variantsDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -1145,7 +1144,7 @@ export default function NewProductPage() {
                       {/* Option Definitions */}
                       <div className="space-y-4">
                         <Label className="text-sm font-semibold">
-                          Option Definitions
+                          {t("optionDefinitions")}
                         </Label>
                         {variantOptions.map((option, optIdx) => (
                           <div
@@ -1154,7 +1153,7 @@ export default function NewProductPage() {
                           >
                             <div className="flex items-center justify-between">
                               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                Option {optIdx + 1}
+                                {t("option")} {optIdx + 1}
                               </Label>
                               <Button
                                 type="button"
@@ -1168,7 +1167,7 @@ export default function NewProductPage() {
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div className="space-y-1.5">
-                                <Label className="text-xs">Option Name</Label>
+                                <Label className="text-xs">{t("optionName")}</Label>
                                 <Select
                                   value={option.name}
                                   onValueChange={(v) =>
@@ -1179,39 +1178,39 @@ export default function NewProductPage() {
                                     <SelectValue placeholder="e.g., Color, Size" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="Color">Color</SelectItem>
-                                    <SelectItem value="Size">Size</SelectItem>
+                                    <SelectItem value="Color">{t("color")}</SelectItem>
+                                    <SelectItem value="Size">{t("size")}</SelectItem>
                                     <SelectItem value="Material">
-                                      Material
+                                      {t("material")}
                                     </SelectItem>
-                                    <SelectItem value="Style">Style</SelectItem>
+                                    <SelectItem value="Style">{t("style")}</SelectItem>
                                     <SelectItem value="Finish">
-                                      Finish
+                                      {t("finish")}
                                     </SelectItem>
                                     <SelectItem value="Capacity">
-                                      Capacity
+                                      {t("capacity")}
                                     </SelectItem>
                                     <SelectItem value="Length">
-                                      Length
+                                      {t("length")}
                                     </SelectItem>
                                     <SelectItem value="Flavor">
-                                      Flavor
+                                      {t("flavor")}
                                     </SelectItem>
-                                    <SelectItem value="Scent">Scent</SelectItem>
+                                    <SelectItem value="Scent">{t("scent")}</SelectItem>
                                     <SelectItem value="Weight">
-                                      Weight
+                                      {t("weight")}
                                     </SelectItem>
                                     <SelectItem value="Pack Size">
-                                      Pack Size
+                                      {t("packSize")}
                                     </SelectItem>
                                     <SelectItem value="Custom">
-                                      Custom...
+                                      {t("custom")}
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
                                 {option.name === "Custom" && (
                                   <Input
-                                    placeholder="Enter custom option name"
+                                    placeholder={t("enterCustomOption")}
                                     className="h-10 mt-2"
                                     onBlur={(e) => {
                                       if (e.target.value)
@@ -1225,9 +1224,9 @@ export default function NewProductPage() {
                               </div>
                               <div className="space-y-1.5">
                                 <Label className="text-xs">
-                                  Values{" "}
+                                  {t("values")}{" "}
                                   <span className="text-muted-foreground">
-                                    (press Enter to add)
+                                    {t("valuesHint")}
                                   </span>
                                 </Label>
                                 <Input
@@ -1294,7 +1293,7 @@ export default function NewProductPage() {
                             onClick={addVariantOption}
                           >
                             <Plus className="mr-2 h-3.5 w-3.5" />
-                            Add another option
+                            {t("addAnotherOption")}
                           </Button>
                         )}
                       </div>
@@ -1306,8 +1305,8 @@ export default function NewProductPage() {
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <Label className="text-sm font-semibold">
-                                Variant Matrix ({generatedVariants.length}{" "}
-                                combinations)
+                                {t("variantMatrix")} ({generatedVariants.length}{" "}
+                                {t("combinations")})
                               </Label>
                               <Button
                                 type="button"
@@ -1316,7 +1315,7 @@ export default function NewProductPage() {
                                 onClick={applyPriceToAll}
                                 className="text-xs"
                               >
-                                Apply base price to all
+                                {t("applyBasePrice")}
                               </Button>
                             </div>
                             <div className="border rounded-lg overflow-x-auto">
@@ -1324,11 +1323,11 @@ export default function NewProductPage() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead className="w-8"></TableHead>
-                                    <TableHead>Variant</TableHead>
-                                    <TableHead>SKU</TableHead>
-                                    <TableHead>Price (SAR)</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Barcode</TableHead>
+                                    <TableHead>{t("variant")}</TableHead>
+                                    <TableHead>{t("sku")}</TableHead>
+                                    <TableHead>{t("price")} </TableHead>
+                                    <TableHead>{t("quantity")}</TableHead>
+                                    <TableHead>{t("barcode")}</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1366,7 +1365,7 @@ export default function NewProductPage() {
                                               e.target.value
                                             )
                                           }
-                                          placeholder="Auto"
+                                          placeholder={t("auto")}
                                           className="h-8 w-28 text-xs"
                                         />
                                       </TableCell>
@@ -1412,7 +1411,7 @@ export default function NewProductPage() {
                                               e.target.value
                                             )
                                           }
-                                          placeholder="Optional"
+                                          placeholder={t("optional")}
                                           className="h-8 w-28 text-xs"
                                         />
                                       </TableCell>
@@ -1441,7 +1440,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Inventory</CardTitle>
+                        <CardTitle>{t("inventory")}</CardTitle>
                       </div>
                       {openSections.inventory ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1450,7 +1449,7 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      SKU, barcode, stock tracking, and availability
+                      {t("inventoryDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -1458,22 +1457,22 @@ export default function NewProductPage() {
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
+                        <Label htmlFor="sku">{t("skuLabel")}</Label>
                         <Input
                           id="sku"
                           name="sku"
-                          placeholder="e.g., WBH-001"
+                          placeholder={t("skuPlaceholder")}
                           className="h-11"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="barcode">
-                          Barcode (ISBN, UPC, GTIN)
+                          {t("barcodeLabel")}
                         </Label>
                         <Input
                           id="barcode"
                           name="barcode"
-                          placeholder="e.g., 6281234567890"
+                          placeholder={t("barcodePlaceholder")}
                           className="h-11"
                         />
                       </div>
@@ -1485,7 +1484,7 @@ export default function NewProductPage() {
                           checked={trackInventory}
                           onCheckedChange={setTrackInventory}
                         />
-                        <Label htmlFor="trackInventory">Track inventory</Label>
+                        <Label htmlFor="trackInventory">{t("trackInventory")}</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
@@ -1494,14 +1493,14 @@ export default function NewProductPage() {
                           onCheckedChange={setContinueSellingWhenOOS}
                         />
                         <Label htmlFor="continueSellingWhenOOS">
-                          Continue selling when out of stock
+                          {t("continueSelling")}
                         </Label>
                       </div>
                     </div>
                     {trackInventory && (
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="quantity">Quantity in Stock</Label>
+                          <Label htmlFor="quantity">{t("quantityInStock")}</Label>
                           <Input
                             id="quantity"
                             name="quantity"
@@ -1513,7 +1512,7 @@ export default function NewProductPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="lowStockThreshold">
-                            Low Stock Alert Threshold
+                            {t("lowStockThreshold")}
                           </Label>
                           <Input
                             id="lowStockThreshold"
@@ -1542,7 +1541,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Shipping & Delivery</CardTitle>
+                        <CardTitle>{t("shippingDelivery")}</CardTitle>
                       </div>
                       {openSections.shipping ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1551,7 +1550,7 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Weight, dimensions, customs, and delivery estimates
+                      {t("shippingDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -1567,7 +1566,7 @@ export default function NewProductPage() {
                             if (v) setRequiresShipping(false);
                           }}
                         />
-                        <Label htmlFor="isDigital">Digital product</Label>
+                        <Label htmlFor="isDigital">{t("digitalProduct")}</Label>
                       </div>
                       {!isDigital && (
                         <div className="flex items-center gap-2">
@@ -1577,7 +1576,7 @@ export default function NewProductPage() {
                             onCheckedChange={setRequiresShipping}
                           />
                           <Label htmlFor="requiresShipping">
-                            Requires shipping
+                            {t("requiresShipping")}
                           </Label>
                         </div>
                       )}
@@ -1588,7 +1587,7 @@ export default function NewProductPage() {
                         <Separator />
                         <div className="grid gap-4 sm:grid-cols-4">
                           <div className="space-y-2">
-                            <Label htmlFor="weight">Weight (kg)</Label>
+                            <Label htmlFor="weight">{t("weight")}</Label>
                             <Input
                               id="weight"
                               name="weight"
@@ -1600,7 +1599,7 @@ export default function NewProductPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="length">Length</Label>
+                            <Label htmlFor="length">{t("length")}</Label>
                             <Input
                               id="length"
                               name="length"
@@ -1612,7 +1611,7 @@ export default function NewProductPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="width">Width</Label>
+                            <Label htmlFor="width">{t("width")}</Label>
                             <Input
                               id="width"
                               name="width"
@@ -1624,7 +1623,7 @@ export default function NewProductPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="height">Height</Label>
+                            <Label htmlFor="height">{t("height")}</Label>
                             <Input
                               id="height"
                               name="height"
@@ -1646,11 +1645,11 @@ export default function NewProductPage() {
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="countryOfOrigin">
-                              Country of Origin
+                              {t("countryOfOrigin")}
                             </Label>
                             <Select name="countryOfOrigin">
                               <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select country" />
+                                <SelectValue placeholder={t("selectCountry")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {COUNTRIES_ORIGIN.map((c) => (
@@ -1663,29 +1662,28 @@ export default function NewProductPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="hsCode">
-                              HS Code (Customs Tariff)
+                              {t("hsCode")}
                             </Label>
                             <Input
                               id="hsCode"
                               name="hsCode"
-                              placeholder="e.g., 6109.10"
+                              placeholder={t("hsCodePlaceholder")}
                               className="h-11"
                             />
                             <p className="text-xs text-muted-foreground">
-                              Required for international shipping / Saudi
-                              Customs
+                              {t("hsCodeHint")}
                             </p>
                           </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="estimatedDelivery">
-                            Estimated Delivery Time
+                            {t("estimatedDelivery")}
                           </Label>
                           <Input
                             id="estimatedDelivery"
                             name="estimatedDelivery"
-                            placeholder="e.g., 2-5 business days within KSA"
+                            placeholder={t("estimatedDeliveryPlaceholder")}
                             className="h-11"
                           />
                         </div>
@@ -1707,7 +1705,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Gift className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>Bundle & Gift</CardTitle>
+                        <CardTitle>{t("bundleGift")}</CardTitle>
                       </div>
                       {openSections.bundle ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1716,7 +1714,7 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Create product bundles, gift cards, or combo offers
+                      {t("bundleDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -1728,14 +1726,14 @@ export default function NewProductPage() {
                           checked={isGiftCard}
                           onCheckedChange={setIsGiftCard}
                         />
-                        <Label>This is a gift card</Label>
+                        <Label>{t("isGiftCard")}</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={isBundle}
                           onCheckedChange={setIsBundle}
                         />
-                        <Label>This is a product bundle</Label>
+                        <Label>{t("isBundle")}</Label>
                       </div>
                     </div>
 
@@ -1744,12 +1742,12 @@ export default function NewProductPage() {
                         <Separator />
                         <div className="space-y-3">
                           <Label className="text-sm font-semibold">
-                            Bundle Items
+                            {t("bundleItems")}
                           </Label>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                              placeholder="Search products to add to bundle..."
+                              placeholder={t("searchBundle")}
                               value={bundleSearch}
                               onChange={(e) => setBundleSearch(e.target.value)}
                               className="pl-9 h-11"
@@ -1848,7 +1846,7 @@ export default function NewProductPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Globe2 className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle>SEO & Search</CardTitle>
+                        <CardTitle>{t("seoSearch")}</CardTitle>
                       </div>
                       {openSections.seo ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1857,34 +1855,34 @@ export default function NewProductPage() {
                       )}
                     </div>
                     <CardDescription>
-                      Optimize for search engines and social sharing
+                      {t("seoDesc")}
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="seoTitle">SEO Title</Label>
+                      <Label htmlFor="seoTitle">{t("seoTitle")}</Label>
                       <Input
                         id="seoTitle"
                         name="seoTitle"
-                        placeholder="Page title for search engines"
+                        placeholder={t("seoTitlePlaceholder")}
                         className="h-11"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Recommended: 50-60 characters
+                        {t("seoTitleHint")}
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="seoDescription">Meta Description</Label>
+                      <Label htmlFor="seoDescription">{t("metaDescription")}</Label>
                       <Textarea
                         id="seoDescription"
                         name="seoDescription"
-                        placeholder="Brief description for search results"
+                        placeholder={t("metaDescPlaceholder")}
                         rows={3}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Recommended: 120-160 characters
+                        {t("metaDescHint")}
                       </p>
                     </div>
                   </CardContent>
@@ -1899,33 +1897,33 @@ export default function NewProductPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">
-                  Status & Visibility
+                  {t("statusVisibility")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="status">Product Status</Label>
+                  <Label htmlFor="status">{t("productStatus")}</Label>
                   <Select name="status" defaultValue="DRAFT">
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder={t("selectStatus")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="DRAFT">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                          Draft
+                          {t("draft")}
                         </div>
                       </SelectItem>
                       <SelectItem value="ACTIVE">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-green-500" />
-                          Active
+                          {t("active")}
                         </div>
                       </SelectItem>
                       <SelectItem value="ARCHIVED">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-gray-400" />
-                          Archived
+                          {t("archived")}
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -1937,7 +1935,7 @@ export default function NewProductPage() {
                     checked={isFeatured}
                     onCheckedChange={setIsFeatured}
                   />
-                  <Label htmlFor="isFeatured">Featured product</Label>
+                  <Label htmlFor="isFeatured">{t("featuredProduct")}</Label>
                 </div>
 
                 <Separator />
@@ -1948,11 +1946,11 @@ export default function NewProductPage() {
                     checked={schedulePublish}
                     onCheckedChange={setSchedulePublish}
                   />
-                  <Label className="text-sm">Schedule publishing</Label>
+                  <Label className="text-sm">{t("schedulePublishing")}</Label>
                 </div>
                 {schedulePublish && (
                   <div className="space-y-2">
-                    <Label className="text-xs">Publish Date & Time</Label>
+                    <Label className="text-xs">{t("publishDateTime")}</Label>
                     <Input
                       type="datetime-local"
                       value={scheduledAt}
@@ -1968,7 +1966,7 @@ export default function NewProductPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5" /> Product Badge
+                  <Sparkles className="h-3.5 w-3.5" /> {t("productBadge")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -1992,8 +1990,7 @@ export default function NewProductPage() {
                 </div>
                 {customBadge && (
                   <p className="text-xs text-muted-foreground">
-                    Badge &quot;{customBadge}&quot; will be shown on the product
-                    card
+                    {t("badgeShown", { badge: customBadge })}
                   </p>
                 )}
               </CardContent>
@@ -2003,36 +2000,36 @@ export default function NewProductPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">
-                  Organization
+                  {t("organization")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="productType">Product Type</Label>
+                  <Label htmlFor="productType">{t("productType")}</Label>
                   <Input
                     id="productType"
                     name="productType"
-                    placeholder="e.g., T-Shirt, Sneaker, Gadget"
+                    placeholder={t("productTypePlaceholder")}
                     className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="vendor">Vendor / Brand</Label>
+                  <Label htmlFor="vendor">{t("vendorBrand")}</Label>
                   <Input
                     id="vendor"
                     name="vendor"
-                    placeholder="e.g., Nike, Apple, Samsung"
+                    placeholder={t("vendorPlaceholder")}
                     className="h-11"
                   />
                 </div>
                 <Separator />
                 {/* Collections / Categories */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Collections / Categories</Label>
+                  <Label className="text-sm">{t("collections")}</Label>
                   <div className="border rounded-lg max-h-48 overflow-y-auto p-2 space-y-1">
                     {categories.length === 0 ? (
                       <p className="text-xs text-muted-foreground p-2">
-                        No categories available
+                        {t("noCategories")}
                       </p>
                     ) : (
                       categories.map((cat) => (
@@ -2071,19 +2068,19 @@ export default function NewProductPage() {
                   </div>
                   {selectedCategories.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {selectedCategories.length} selected
+                      {t("selected", { count: selectedCategories.length })}
                     </p>
                   )}
                 </div>
                 <Separator />
                 {/* Tags */}
                 <div className="space-y-2">
-                  <Label>Tags</Label>
+                  <Label>{t("tags")}</Label>
                   <div className="flex gap-2">
                     <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="Add tag..."
+                      placeholder={t("addTag")}
                       className="h-10"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === ",") {
@@ -2130,16 +2127,16 @@ export default function NewProductPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Warranty & Trust
+                  <ShieldCheck className="h-3.5 w-3.5" /> {t("warrantyTrust")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="warrantyInfo">Warranty Information</Label>
+                  <Label htmlFor="warrantyInfo">{t("warrantyInfo")}</Label>
                   <Input
                     id="warrantyInfo"
                     name="warrantyInfo"
-                    placeholder="e.g., 2-year manufacturer warranty"
+                    placeholder={t("warrantyPlaceholder")}
                     className="h-11"
                   />
                 </div>
@@ -2158,7 +2155,7 @@ export default function NewProductPage() {
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                Save Product
+                {t("saveProduct")}
               </Button>
               <Button
                 type="button"
@@ -2167,7 +2164,7 @@ export default function NewProductPage() {
                 onClick={() => router.push("/admin/products")}
                 disabled={isLoading}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             </div>
           </div>

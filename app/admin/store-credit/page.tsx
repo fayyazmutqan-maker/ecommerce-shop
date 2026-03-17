@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ interface Transaction {
 }
 
 export default function StoreCreditAdminPage() {
+  const t = useTranslations("admin.storeCredit");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -72,7 +74,7 @@ export default function StoreCreditAdminPage() {
         setCustomers(Array.isArray(data) ? data : data.customers || []);
       }
     } catch {
-      toast.error("Failed to load customers");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -112,7 +114,7 @@ export default function StoreCreditAdminPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed");
       }
-      toast.success(`Store credit ${type === "CREDIT" ? "added" : "deducted"}`);
+      toast.success(t(type === "CREDIT" ? "toasts.creditAdded" : "toasts.creditDeducted"));
       setOpen(false);
       fetchCustomers();
     } catch (err: any) {
@@ -133,7 +135,7 @@ export default function StoreCreditAdminPage() {
         setTransactions(data.transactions || []);
       }
     } catch {
-      toast.error("Failed to load transactions");
+      toast.error(t("toasts.transactionsFailed"));
     } finally {
       setTxLoading(false);
     }
@@ -143,15 +145,15 @@ export default function StoreCreditAdminPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Store Credit</h1>
-          <p className="text-muted-foreground">Manage customer store credit balances</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search customers..."
+          placeholder={t("searchCustomers")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -172,16 +174,16 @@ export default function StoreCreditAdminPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">No customers found</div>
+            <div className="text-center py-20 text-muted-foreground">{t("noCustomersFound")}</div>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead className="w-[200px]">Actions</TableHead>
+                  <TableHead>{t("customer")}</TableHead>
+                  <TableHead>{t("email")}</TableHead>
+                  <TableHead>{t("balance")}</TableHead>
+                  <TableHead className="w-[200px]">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,10 +199,10 @@ export default function StoreCreditAdminPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" onClick={() => openAdd(c)}>
-                          <Plus className="mr-1 h-3 w-3" />Add/Deduct
+                          <Plus className="mr-1 h-3 w-3" />{t("addDeduct")}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => viewTransactions(c)}>
-                          History
+                          {t("history")}
                         </Button>
                       </div>
                     </TableCell>
@@ -220,38 +222,38 @@ export default function StoreCreditAdminPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-muted-foreground" />
-                <h3 className="font-semibold">Transactions — {txCustomer.name || txCustomer.email}</h3>
+                <h3 className="font-semibold">{t("transactions", { name: txCustomer.name || txCustomer.email })}</h3>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setTxCustomer(null)}>Close</Button>
+              <Button variant="ghost" size="sm" onClick={() => setTxCustomer(null)}>{t("close")}</Button>
             </div>
             {txLoading ? (
               <div className="space-y-3 py-4">{Array.from({ length: 3 }).map((_, i) => (<div key={i} className="flex items-center gap-4"><Skeleton className="h-4 w-[20%]" /><Skeleton className="h-4 w-[30%]" /><Skeleton className="h-4 w-[15%]" /><Skeleton className="h-4 w-[15%]" /></div>))}</div>
             ) : transactions.length === 0 ? (
-              <p className="text-muted-foreground text-center py-6">No transactions</p>
+              <p className="text-muted-foreground text-center py-6">{t("noTransactions")}</p>
             ) : (
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{t("type")}</TableHead>
+                    <TableHead>{t("amount")}</TableHead>
+                    <TableHead>{t("reason")}</TableHead>
+                    <TableHead>{t("date")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((t) => (
-                    <TableRow key={t.id}>
+                  {transactions.map((tx) => (
+                    <TableRow key={tx.id}>
                       <TableCell>
-                        <Badge variant={t.type === "CREDIT" ? "default" : "secondary"}>
-                          {t.type}
+                        <Badge variant={tx.type === "CREDIT" ? "default" : "secondary"}>
+                          {tx.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className={t.type === "CREDIT" ? "text-green-600" : "text-red-600"}>
-                        {t.type === "CREDIT" ? "+" : "-"}SAR {Number(t.amount).toFixed(2)}
+                      <TableCell className={tx.type === "CREDIT" ? "text-green-600" : "text-red-600"}>
+                        {tx.type === "CREDIT" ? "+" : "-"}SAR {Number(tx.amount).toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{t.reason || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(t.createdAt).toLocaleString()}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{tx.reason || "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -267,33 +269,33 @@ export default function StoreCreditAdminPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {type === "CREDIT" ? "Add" : "Deduct"} Store Credit — {selectedCustomer?.name || selectedCustomer?.email}
+              {t("dialogTitle", { type, name: selectedCustomer?.name || selectedCustomer?.email || "" })}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t("type")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as "CREDIT" | "DEBIT")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CREDIT">Credit (Add)</SelectItem>
-                  <SelectItem value="DEBIT">Debit (Deduct)</SelectItem>
+                  <SelectItem value="CREDIT">{t("creditAdd")}</SelectItem>
+                  <SelectItem value="DEBIT">{t("debitDeduct")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Amount (SAR)</Label>
+              <Label>{t("amountSar")}</Label>
               <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label>Reason (optional)</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Refund for order #1234" maxLength={500} />
+              <Label>{t("reasonOptional")}</Label>
+              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("reasonPlaceholder")} maxLength={500} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("cancel")}</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {type === "CREDIT" ? "Add Credit" : "Deduct Credit"}
+                {type === "CREDIT" ? t("addCredit") : t("deductCredit")}
               </Button>
             </DialogFooter>
           </form>

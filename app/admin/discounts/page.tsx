@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/helpers";
 import { DiscountCreateButton, DiscountEditButton, DiscountDeleteButton } from "@/components/admin/discount-dialog";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +22,15 @@ export default async function DiscountsPage() {
     orderBy: [desc(coupons.createdAt)],
   });
 
+  const t = await getTranslations("admin.discounts");
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Discounts</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage coupons and discount codes
+            {t("subtitle")}
           </p>
         </div>
         <DiscountCreateButton />
@@ -39,14 +42,14 @@ export default async function DiscountsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Usage</TableHead>
-                <TableHead>Min Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+                <TableHead>{t("code")}</TableHead>
+                <TableHead>{t("type")}</TableHead>
+                <TableHead>{t("value")}</TableHead>
+                <TableHead>{t("usage")}</TableHead>
+                <TableHead>{t("minOrder")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("expires")}</TableHead>
+                <TableHead className="w-20">{t("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,7 +65,7 @@ export default async function DiscountsPage() {
                     {coupon.type === "PERCENTAGE"
                       ? `${Number(coupon.value)}%`
                       : coupon.type === "FREE_SHIPPING"
-                        ? "Free Shipping"
+                        ? t("freeShipping")
                         : formatCurrency(Number(coupon.value))}
                   </TableCell>
                   <TableCell>
@@ -78,13 +81,13 @@ export default async function DiscountsPage() {
                     <Badge
                       variant={coupon.isActive ? "default" : "secondary"}
                     >
-                      {coupon.isActive ? "Active" : "Inactive"}
+                      {coupon.isActive ? t("active") : t("inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {coupon.expiresAt
                       ? formatDate(coupon.expiresAt)
-                      : "No expiry"}
+                      : t("noExpiry")}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -97,7 +100,7 @@ export default async function DiscountsPage() {
               {allCoupons.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
-                    <p className="text-muted-foreground">No discounts yet</p>
+                    <p className="text-muted-foreground">{t("noDiscounts")}</p>
                   </TableCell>
                 </TableRow>
               )}

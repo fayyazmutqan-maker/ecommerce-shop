@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +166,8 @@ function FilterContent({
 }: ProductFiltersProps & {
   onFilterChange: (key: string, value: string, action: "add" | "remove") => void;
 }) {
+  const t = useTranslations("filters");
+  const tCommon = useTranslations("common");
   const [sections, setSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
       quickFilters: true,
@@ -283,7 +286,7 @@ function FilterContent({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {totalActiveFilters} Active Filter{totalActiveFilters !== 1 ? "s" : ""}
+              {t("activeFilters", { count: totalActiveFilters })}
             </p>
             <Button
               variant="ghost"
@@ -292,7 +295,7 @@ function FilterContent({
               onClick={clearAllFilters}
             >
               <RotateCcw className="h-3 w-3" />
-              Clear All
+              {t("clearAll")}
             </Button>
           </div>
 
@@ -300,22 +303,22 @@ function FilterContent({
           <div className="flex flex-wrap gap-1.5">
             {isParamTrue("inStock") && (
               <Badge variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggleParam("inStock")}>
-                In Stock <X className="h-3 w-3" />
+                {t("inStock")} <X className="h-3 w-3" />
               </Badge>
             )}
             {isParamTrue("onSale") && (
               <Badge variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggleParam("onSale")}>
-                On Sale <X className="h-3 w-3" />
+                {t("onSale")} <X className="h-3 w-3" />
               </Badge>
             )}
             {isParamTrue("featured") && (
               <Badge variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggleParam("featured")}>
-                Featured <X className="h-3 w-3" />
+                {t("featured")} <X className="h-3 w-3" />
               </Badge>
             )}
             {isParamTrue("newArrivals") && (
               <Badge variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggleParam("newArrivals")}>
-                New Arrivals <X className="h-3 w-3" />
+                {t("newArrivals")} <X className="h-3 w-3" />
               </Badge>
             )}
             {searchParams.get("minRating") && (
@@ -363,7 +366,7 @@ function FilterContent({
                   setMaxPrice("");
                 }}
               >
-                SAR {currentMinPrice || "0"} – {currentMaxPrice || "∞"} <X className="h-3 w-3" />
+                {t("priceRangeBadge", { min: currentMinPrice || "0", max: currentMaxPrice || "\u221E" })} <X className="h-3 w-3" />
               </Badge>
             )}
           </div>
@@ -386,7 +389,7 @@ function FilterContent({
           <Input
             type="search"
             name="search"
-            placeholder="Search products..."
+            placeholder={t("searchProducts")}
             defaultValue={currentSearch}
             className="h-10"
           />
@@ -394,31 +397,31 @@ function FilterContent({
       </div>
 
       {/* ── Quick Filters ── */}
-      <FilterSection title="Quick Filters" expanded={sections.quickFilters} onToggle={() => toggle("quickFilters")}>
+      <FilterSection title={t("quickFilters")} expanded={sections.quickFilters} onToggle={() => toggle("quickFilters")}>
         <div className="space-y-0.5">
           <QuickToggle
-            label="In Stock"
+            label={t("inStock")}
             icon={<Package className="h-3.5 w-3.5" />}
             count={quickCounts?.inStock}
             checked={isParamTrue("inStock")}
             onChange={() => toggleParam("inStock")}
           />
           <QuickToggle
-            label="On Sale"
+            label={t("onSale")}
             icon={<Flame className="h-3.5 w-3.5" />}
             count={quickCounts?.onSale}
             checked={isParamTrue("onSale")}
             onChange={() => toggleParam("onSale")}
           />
           <QuickToggle
-            label="Featured"
+            label={t("featured")}
             icon={<Sparkles className="h-3.5 w-3.5" />}
             count={quickCounts?.featured}
             checked={isParamTrue("featured")}
             onChange={() => toggleParam("featured")}
           />
           <QuickToggle
-            label="New Arrivals"
+            label={t("newArrivals")}
             icon={<Tag className="h-3.5 w-3.5" />}
             count={quickCounts?.newArrivals}
             checked={isParamTrue("newArrivals")}
@@ -428,13 +431,13 @@ function FilterContent({
       </FilterSection>
 
       {/* ── Categories (hierarchical) ── */}
-      <FilterSection title="Categories" expanded={sections.categories} onToggle={() => toggle("categories")}>
+      <FilterSection title={t("categories")} expanded={sections.categories} onToggle={() => toggle("categories")}>
         <div className="space-y-0.5">
           <Link
             href="/products"
             className={`flex items-center text-sm py-2 px-3 rounded-lg transition-colors ${!currentCategory ? "bg-accent font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}
           >
-            All Products
+            {t("allProducts")}
             {totalProducts !== undefined && (
               <span className="ml-auto text-xs text-muted-foreground/50">{totalProducts}</span>
             )}
@@ -467,7 +470,7 @@ function FilterContent({
       </FilterSection>
 
       {/* ── Price Range ── */}
-      <FilterSection title="Price Range" expanded={sections.price} onToggle={() => toggle("price")}>
+      <FilterSection title={t("priceRange")} expanded={sections.price} onToggle={() => toggle("price")}>
         <div className="space-y-3">
           <div className="flex gap-2 items-center">
             <Input
@@ -478,7 +481,7 @@ function FilterContent({
               className="h-9 text-sm"
               min="0"
             />
-            <span className="text-muted-foreground text-xs">to</span>
+            <span className="text-muted-foreground text-xs">{t("to")}</span>
             <Input
               type="number"
               placeholder={`${priceRange.max}`}
@@ -494,13 +497,13 @@ function FilterContent({
             className="w-full h-8 text-xs"
             onClick={applyPriceFilter}
           >
-            Apply Price
+            {t("applyPrice")}
           </Button>
         </div>
       </FilterSection>
 
       {/* ── Rating ── */}
-      <FilterSection title="Rating" expanded={sections.rating} onToggle={() => toggle("rating")}>
+      <FilterSection title={t("rating")} expanded={sections.rating} onToggle={() => toggle("rating")}>
         <div className="space-y-0.5">
           {[4, 3, 2, 1].map((r) => {
             const cnt = ratingCounts[String(r)] || 0;
@@ -516,7 +519,7 @@ function FilterContent({
                 }`}
               >
                 <RatingStars rating={r} />
-                <span className="text-xs">& up</span>
+                <span className="text-xs">{t("andUp")}</span>
                 <span className={`ml-auto text-xs ${isActive ? "text-background/70" : "text-muted-foreground/50"}`}>
                   {cnt}
                 </span>
@@ -533,7 +536,7 @@ function FilterContent({
             {vendors.length > 5 && (
               <Input
                 type="search"
-                placeholder="Search vendors..."
+                placeholder={t("searchVendors")}
                 value={vendorSearch}
                 onChange={(e) => setVendorSearch(e.target.value)}
                 className="h-8 text-xs"
@@ -656,7 +659,7 @@ function FilterContent({
             {tags.length > 8 && (
               <Input
                 type="search"
-                placeholder="Search tags..."
+                placeholder={t("searchTags")}
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
                 className="h-8 text-xs"
@@ -694,6 +697,7 @@ export function ProductFilters(props: ProductFiltersProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const t = useTranslations("filters");
 
   const handleFilterChange = useCallback(
     (key: string, value: string, action: "add" | "remove") => {
@@ -737,7 +741,7 @@ export function ProductFilters(props: ProductFiltersProps) {
       <aside className="hidden lg:block w-64 shrink-0">
         <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2 space-y-1 pb-6">
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4" /> Filters
+            <SlidersHorizontal className="h-4 w-4" /> {t("filtersTitle")}
             {totalActive > 0 && (
               <Badge variant="secondary" className="text-[10px] h-5 min-w-5">
                 {totalActive}
@@ -754,7 +758,7 @@ export function ProductFilters(props: ProductFiltersProps) {
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2 h-10">
               <SlidersHorizontal className="h-4 w-4" />
-              Filters
+              {t("filtersTitle")}
               {totalActive > 0 && (
                 <Badge variant="secondary" className="text-[10px] h-5 min-w-5">
                   {totalActive}
@@ -765,7 +769,7 @@ export function ProductFilters(props: ProductFiltersProps) {
           <SheetContent side="left" className="w-[min(340px,90vw)] overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4" /> Filters
+                <SlidersHorizontal className="h-4 w-4" /> {t("filtersTitle")}
                 {totalActive > 0 && (
                   <Badge variant="secondary" className="text-[10px] h-5 min-w-5">
                     {totalActive}

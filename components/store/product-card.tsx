@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/lib/store";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface ProductCardProps {
   id: string;
@@ -42,6 +43,9 @@ export function ProductCard({
   const addItem = useCartStore((state) => state.addItem);
   const { has: isWishlisted, toggle: toggleWishlist } = useWishlist();
   const inWishlist = isWishlisted(id);
+  const t = useTranslations("product");
+  const tCommon = useTranslations("common");
+  const tWishlist = useTranslations("wishlist");
   const discount =
     compareAtPrice && compareAtPrice > price
       ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
@@ -56,17 +60,17 @@ export function ProductCard({
       quantity: 1,
       image: images[0] || "",
     });
-    toast.success(`${name} added to cart`);
+    toast.success(t("addedToCart", { name }));
   };
 
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     const result = await toggleWishlist(id);
     if (result === null) {
-      toast.error("Please sign in to add items to your wishlist");
+      toast.error(tWishlist("signInRequired"));
       return;
     }
-    toast.success(result ? "Added to wishlist" : "Removed from wishlist");
+    toast.success(result ? tWishlist("added") : tWishlist("removed"));
   };
 
   const RATIO_CLASS: Record<string, string> = {
@@ -98,7 +102,7 @@ export function ProductCard({
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {isNew && (
               <Badge className="bg-foreground text-background text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 hover:bg-foreground">
-                New
+                {t("new")}
               </Badge>
             )}
             {discount && (
@@ -129,7 +133,7 @@ export function ProductCard({
               onClick={handleAddToCart}
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
+              {t("addToCart")}
             </Button>
           </div>
           )}
@@ -147,10 +151,10 @@ export function ProductCard({
           </h3>
         </Link>
         <div className="flex items-center gap-2 pt-0.5">
-          <span className="text-[15px] font-bold">SAR {price.toFixed(2)}</span>
+          <span className="text-[15px] font-bold">{tCommon("sar")} {price.toFixed(2)}</span>
           {compareAtPrice && compareAtPrice > price && (
             <span className="text-xs text-muted-foreground line-through">
-              SAR {compareAtPrice.toFixed(2)}
+              {tCommon("sar")} {compareAtPrice.toFixed(2)}
             </span>
           )}
         </div>

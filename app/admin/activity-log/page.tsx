@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ interface LogEntry {
 const entityTypes = ["ALL", "ORDER", "PRODUCT", "CUSTOMER", "SETTING", "GIFT_CARD", "BLOG", "COUPON", "REFUND", "RETURN", "INVENTORY"];
 
 export default function ActivityLogPage() {
+  const t = useTranslations("admin.activityLog");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -51,7 +53,7 @@ export default function ActivityLogPage() {
         setTotal(data.total);
       }
     } catch {
-      toast.error("Failed to fetch activity logs");
+      toast.error(t("toasts.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -69,22 +71,22 @@ export default function ActivityLogPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Activity Log</h1>
-        <p className="text-muted-foreground">Track all actions performed in your store</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="flex items-center gap-3">
         <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by type" />
+            <SelectValue placeholder={t("filterByType")} />
           </SelectTrigger>
           <SelectContent>
-            {entityTypes.map((t) => (
-              <SelectItem key={t} value={t}>{t === "ALL" ? "All Types" : t}</SelectItem>
+            {entityTypes.map((et) => (
+              <SelectItem key={et} value={et}>{et === "ALL" ? t("allTypes") : et}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground ml-auto">{total} total entries</span>
+        <span className="text-sm text-muted-foreground ml-auto">{t("totalEntries", { count: total })}</span>
       </div>
 
       <Card>
@@ -107,11 +109,11 @@ export default function ActivityLogPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Details</TableHead>
+                    <TableHead>{t("timestamp")}</TableHead>
+                    <TableHead>{t("user")}</TableHead>
+                    <TableHead>{t("action")}</TableHead>
+                    <TableHead>{t("entity")}</TableHead>
+                    <TableHead>{t("details")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -120,7 +122,7 @@ export default function ActivityLogPage() {
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatDateTime(log.createdAt)}
                       </TableCell>
-                      <TableCell className="text-sm">{log.userName || "System"}</TableCell>
+                      <TableCell className="text-sm">{log.userName || t("system")}</TableCell>
                       <TableCell>
                         <Badge variant={getActionColor(log.action)} className="text-xs">{log.action}</Badge>
                       </TableCell>
@@ -141,7 +143,7 @@ export default function ActivityLogPage() {
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8">
                         <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-muted-foreground">No activity logs yet</p>
+                        <p className="text-muted-foreground">{t("noActivityYet")}</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -150,7 +152,7 @@ export default function ActivityLogPage() {
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+                  <p className="text-sm text-muted-foreground">{t("pageOf", { page, totalPages })}</p>
                   <div className="flex gap-1">
                     <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
                       <ChevronLeft className="h-4 w-4" />

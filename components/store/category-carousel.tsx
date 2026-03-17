@@ -9,6 +9,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useTranslations } from "next-intl";
 
 interface Category {
   id: string;
@@ -61,6 +62,7 @@ const BASIS_CLASS: Record<number, string> = {
 };
 
 function CategoryCard({ cat, layout }: { cat: Category; layout: CategoryGridLayout }) {
+  const t = useTranslations("product");
   const showImage = layout.showImage !== false;
   const showCount = layout.showCount === true;
   const ratio = layout.cardRatio || "square";
@@ -89,7 +91,7 @@ function CategoryCard({ cat, layout }: { cat: Category; layout: CategoryGridLayo
         <CardContent className="p-4 text-center">
           <p className="text-sm font-semibold">{cat.name}</p>
           {showCount && cat._count && (
-            <p className="text-xs text-muted-foreground mt-0.5">{cat._count.products} products</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("productCount", { count: cat._count.products })}</p>
           )}
         </CardContent>
       </Card>

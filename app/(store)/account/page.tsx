@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +43,13 @@ export default async function AccountPage() {
 
   const wishlistCount = wishlistCountResult[0].value;
   const totalSpent = orderList.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const t = await getTranslations("accountPage");
+  const tAccount = await getTranslations("account");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "My Account" }]} />
+      <Breadcrumbs items={[{ label: tAccount("title") }]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
         {/* Sidebar */}
@@ -69,13 +73,13 @@ export default async function AccountPage() {
 
           <nav className="space-y-1">
             {[
-              { href: "/account", icon: User, label: "Dashboard", active: true },
-              { href: "/account/orders", icon: Package, label: "Orders" },
-              { href: "/account/wishlist", icon: Heart, label: "Wishlist" },
-              { href: "/account/addresses", icon: MapPin, label: "Addresses" },
-              { href: "/account/reviews", icon: MessageSquare, label: "Reviews" },
-              { href: "/account/store-credit", icon: Wallet, label: "Store Credit" },
-              { href: "/account/returns", icon: RotateCcw, label: "Returns" },
+              { href: "/account", icon: User, label: t("dashboard"), active: true },
+              { href: "/account/orders", icon: Package, label: tAccount("orders") },
+              { href: "/account/wishlist", icon: Heart, label: tAccount("wishlist") },
+              { href: "/account/addresses", icon: MapPin, label: tAccount("addresses") },
+              { href: "/account/reviews", icon: MessageSquare, label: t("reviews") },
+              { href: "/account/store-credit", icon: Wallet, label: tAccount("storeCredit") },
+              { href: "/account/returns", icon: RotateCcw, label: tAccount("returns") },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -96,8 +100,8 @@ export default async function AccountPage() {
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-8">
           <div>
-            <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Overview</p>
-            <h1 className="text-3xl font-bold">My Account</h1>
+            <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">{t("overview")}</p>
+            <h1 className="text-3xl font-bold">{tAccount("title")}</h1>
           </div>
 
           {/* Stats */}
@@ -105,19 +109,19 @@ export default async function AccountPage() {
             <Card className="shadow-none border">
               <CardContent className="p-5 text-center">
                 <p className="text-3xl font-bold">{orderList.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">Total Orders</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("totalOrders")}</p>
               </CardContent>
             </Card>
             <Card className="shadow-none border">
               <CardContent className="p-5 text-center">
-                <p className="text-3xl font-bold">SAR {totalSpent.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground mt-1">Total Spent</p>
+                <p className="text-3xl font-bold">{tCommon("sar")} {totalSpent.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("totalSpent")}</p>
               </CardContent>
             </Card>
             <Card className="shadow-none border">
               <CardContent className="p-5 text-center">
                 <p className="text-3xl font-bold">{wishlistCount}</p>
-                <p className="text-sm text-muted-foreground mt-1">Wishlist Items</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("wishlistItems")}</p>
               </CardContent>
             </Card>
           </div>
@@ -125,17 +129,17 @@ export default async function AccountPage() {
           {/* Recent Orders */}
           <Card className="shadow-none border">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <CardTitle className="text-lg">Recent Orders</CardTitle>
+              <CardTitle className="text-lg">{t("recentOrders")}</CardTitle>
               <Button variant="ghost" size="sm" asChild className="text-sm">
                 <Link href="/account/orders">
-                  View All <ChevronRight className="ml-1 h-4 w-4" />
+                  {tCommon("viewAll")} <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </CardHeader>
             <CardContent>
               {orderList.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-8 text-center">
-                  No orders yet.
+                  {t("noOrders")}
                 </p>
               ) : (
                 <div className="space-y-1">
@@ -168,7 +172,7 @@ export default async function AccountPage() {
                           {order.status}
                         </Badge>
                         <span className="text-sm font-bold">
-                          SAR {Number(order.totalAmount).toFixed(2)}
+                          {tCommon("sar")} {Number(order.totalAmount).toFixed(2)}
                         </span>
                       </div>
                     </div>

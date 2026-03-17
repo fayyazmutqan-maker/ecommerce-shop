@@ -9,7 +9,7 @@ import {
   smartCollections,
   contentTranslations,
 } from "@/lib/schema";
-import { eq, and, sql, desc, asc, count } from "drizzle-orm";
+import { eq, and, sql, desc, asc, count, inArray } from "drizzle-orm";
 import { TRANSLATABLE_FIELDS, type TranslatableEntityType } from "@/lib/translations";
 
 /**
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
 
   const totalFields = TRANSLATABLE_FIELDS[type]?.length || 0;
 
+  try {
   // Fetch entities based on type
   let entities: { id: string; label: string; subLabel?: string; status?: string }[] = [];
 
@@ -118,7 +119,7 @@ export async function GET(req: NextRequest) {
         and(
           eq(contentTranslations.entityType, type),
           eq(contentTranslations.locale, locale),
-          sql`${contentTranslations.entityId} = ANY(${entityIds})`
+          inArray(contentTranslations.entityId, entityIds)
         )
       )
       .groupBy(contentTranslations.entityId);
@@ -152,4 +153,11 @@ export async function GET(req: NextRequest) {
     fullyTranslated: result.filter((r) => r.progress === 100).length,
     totalFields,
   });
+  } catch (error) {
+    console.error("[translations/entities] Failed:", error);
+    return NextResponse.json(
+      { error: "Failed to load translation entities" },
+      { status: 500 }
+    );
+  }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,13 +40,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 const EMAIL_TEMPLATES = [
   {
     id: "blank",
-    name: "Blank",
+    nameKey: "blank",
     subject: "",
     content: "",
   },
   {
     id: "new-arrivals",
-    name: "New Arrivals",
+    nameKey: "newArrivals",
     subject: "🆕 New Arrivals Just Dropped!",
     content: `<h2>Fresh Picks Are Here!</h2>
 <p>Hi there,</p>
@@ -57,7 +58,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: "sale",
-    name: "Sale / Promotion",
+    nameKey: "salePromotion",
     subject: "🔥 Don't Miss Our Big Sale!",
     content: `<h2>Huge Savings Await!</h2>
 <p>Hi there,</p>
@@ -70,7 +71,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: "seasonal",
-    name: "Seasonal Update",
+    nameKey: "seasonalUpdate",
     subject: "🌟 Get Ready for the New Season!",
     content: `<h2>Season's Best Picks</h2>
 <p>Hi there,</p>
@@ -82,7 +83,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: "back-in-stock",
-    name: "Back in Stock",
+    nameKey: "backInStock",
     subject: "🎉 It's Back! Your Favorites Restocked",
     content: `<h2>Back by Popular Demand!</h2>
 <p>Hi there,</p>
@@ -94,7 +95,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: "thank-you",
-    name: "Thank You",
+    nameKey: "thankYou",
     subject: "💙 Thank You for Being Part of Our Community",
     content: `<h2>We Appreciate You!</h2>
 <p>Hi there,</p>
@@ -135,6 +136,7 @@ interface Campaign {
 }
 
 export default function NewsletterPage() {
+  const t = useTranslations("admin.newsletter");
   // ── Subscriber state ──
   const [data, setData] = useState<SubscriberData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,7 +166,7 @@ export default function NewsletterPage() {
       const res = await fetch(`/api/newsletter?status=${subStatus}&page=${page}&limit=50`);
       if (res.ok) setData(await res.json());
     } catch {
-      toast.error("Failed to load subscribers");
+      toast.error(t("toasts.loadSubscribersFailed"));
     } finally {
       setLoading(false);
     }
@@ -179,7 +181,7 @@ export default function NewsletterPage() {
         setCampaigns(data.campaigns || []);
       }
     } catch {
-      toast.error("Failed to load campaigns");
+      toast.error(t("toasts.loadCampaignsFailed"));
     } finally {
       setCampaignsLoading(false);
     }
@@ -210,12 +212,12 @@ export default function NewsletterPage() {
     a.download = `subscribers-${subStatus.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("CSV exported");
+    toast.success(t("toasts.csvExported"));
   }
 
   async function handleSend() {
     if (!subject.trim() || !content.trim()) {
-      toast.error("Subject and content are required");
+      toast.error(t("toasts.subjectRequired"));
       return;
     }
 
@@ -229,10 +231,10 @@ export default function NewsletterPage() {
       });
       const result = await res.json();
       if (!res.ok) {
-        toast.error(result.error || "Failed to send newsletter");
+        toast.error(result.error || t("toasts.sendFailed"));
         return;
       }
-      toast.success(result.message || "Newsletter sent!");
+      toast.success(result.message || t("toasts.sendSuccess"));
       // Reset composer
       setSubject("");
       setPreviewText("");
@@ -241,7 +243,7 @@ export default function NewsletterPage() {
       // Refresh campaigns
       fetchCampaigns();
     } catch {
-      toast.error("Failed to send newsletter");
+      toast.error(t("toasts.sendFailed"));
     } finally {
       setSending(false);
     }
@@ -266,8 +268,8 @@ export default function NewsletterPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Newsletter</h1>
-          <p className="text-muted-foreground">Compose & send newsletters to your subscribers</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
       </div>
 
@@ -280,7 +282,7 @@ export default function NewsletterPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{data?.counts.active ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Active Subscribers</p>
+              <p className="text-xs text-muted-foreground">{t("stats.activeSubscribers")}</p>
             </div>
           </CardContent>
         </Card>
@@ -291,7 +293,7 @@ export default function NewsletterPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{data?.counts.unsubscribed ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Unsubscribed</p>
+              <p className="text-xs text-muted-foreground">{t("stats.unsubscribed")}</p>
             </div>
           </CardContent>
         </Card>
@@ -299,34 +301,34 @@ export default function NewsletterPage() {
 
       <Tabs defaultValue="compose">
         <TabsList>
-          <TabsTrigger value="compose"><PenLine className="h-4 w-4 mr-1" />Compose</TabsTrigger>
-          <TabsTrigger value="campaigns"><History className="h-4 w-4 mr-1" />Sent Campaigns</TabsTrigger>
-          <TabsTrigger value="subscribers"><Users className="h-4 w-4 mr-1" />Subscribers</TabsTrigger>
+          <TabsTrigger value="compose"><PenLine className="h-4 w-4 mr-1" />{t("tabs.compose")}</TabsTrigger>
+          <TabsTrigger value="campaigns"><History className="h-4 w-4 mr-1" />{t("tabs.sentCampaigns")}</TabsTrigger>
+          <TabsTrigger value="subscribers"><Users className="h-4 w-4 mr-1" />{t("tabs.subscribers")}</TabsTrigger>
         </TabsList>
 
         {/* ════════════════ Compose Tab ════════════════ */}
         <TabsContent value="compose" className="mt-6 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5" />Compose Newsletter</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5" />{t("compose.title")}</CardTitle>
               <CardDescription>
-                This will be sent to all <strong>{data?.counts.active ?? 0}</strong> active subscribers. An unsubscribe link is automatically included.
+                {t.rich("compose.description", { count: data?.counts.active ?? 0, strong: (chunks) => <strong>{chunks}</strong> })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Template Selector */}
               <div className="space-y-2">
-                <Label>Start from Template</Label>
+                <Label>{t("compose.startFromTemplate")}</Label>
                 <Select value={selectedTemplate} onValueChange={applyTemplate}>
                   <SelectTrigger className="w-full sm:w-[280px]">
-                    <SelectValue placeholder="Choose a template..." />
+                    <SelectValue placeholder={t("compose.chooseTemplate")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {EMAIL_TEMPLATES.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
+                    {EMAIL_TEMPLATES.map((tmpl) => (
+                      <SelectItem key={tmpl.id} value={tmpl.id}>
                         <div className="flex items-center gap-2">
                           <FileText className="h-3.5 w-3.5" />
-                          {t.name}
+                          {t(`templates.${tmpl.nameKey}`)}
                         </div>
                       </SelectItem>
                     ))}
@@ -336,11 +338,11 @@ export default function NewsletterPage() {
 
               {/* Subject */}
               <div className="space-y-2">
-                <Label>Subject Line <span className="text-red-500">*</span></Label>
+                <Label>{t("compose.subjectLine")} <span className="text-red-500">*</span></Label>
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. 🆕 New Arrivals Just Dropped!"
+                  placeholder={t("compose.subjectPlaceholder")}
                   maxLength={200}
                 />
                 <p className="text-xs text-muted-foreground">{subject.length}/200</p>
@@ -348,26 +350,26 @@ export default function NewsletterPage() {
 
               {/* Preview Text */}
               <div className="space-y-2">
-                <Label>Preview Text <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Label>{t("compose.previewText")} <span className="text-muted-foreground text-xs">{t("compose.optional")}</span></Label>
                 <Input
                   value={previewText}
                   onChange={(e) => setPreviewText(e.target.value)}
-                  placeholder="Short text shown in inbox next to subject"
+                  placeholder={t("compose.previewTextPlaceholder")}
                   maxLength={200}
                 />
               </div>
 
               {/* Content */}
               <div className="space-y-2">
-                <Label>Email Content (HTML) <span className="text-red-500">*</span></Label>
+                <Label>{t("compose.emailContent")} <span className="text-red-500">*</span></Label>
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write your newsletter content. HTML is supported. Use {{store_url}} for your store link."
+                  placeholder={t("compose.emailContentPlaceholder")}
                   className="min-h-[300px] font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use <code className="bg-muted px-1 rounded">{"{{store_url}}"}</code> for your store URL. HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;a&gt; are supported.
+                  {t("compose.htmlHelp")}
                 </p>
               </div>
 
@@ -378,12 +380,12 @@ export default function NewsletterPage() {
                   variant="outline"
                   disabled={!content.trim()}
                 >
-                  <Eye className="h-4 w-4 mr-2" />Preview
+                  <Eye className="h-4 w-4 mr-2" />{t("compose.preview")}
                 </Button>
                 <Button
                   onClick={() => {
                     if (!subject.trim() || !content.trim()) {
-                      toast.error("Subject and content are required");
+                      toast.error(t("toasts.subjectRequired"));
                       return;
                     }
                     setShowConfirmSend(true);
@@ -391,7 +393,7 @@ export default function NewsletterPage() {
                   disabled={sending || !subject.trim() || !content.trim() || (data?.counts.active ?? 0) === 0}
                 >
                   {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  {sending ? "Sending..." : `Send to ${data?.counts.active ?? 0} Subscribers`}
+                  {sending ? t("compose.sending") : t("compose.sendTo", { count: data?.counts.active ?? 0 })}
                 </Button>
               </div>
             </CardContent>
@@ -402,8 +404,8 @@ export default function NewsletterPage() {
         <TabsContent value="campaigns" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" />Sent Campaigns</CardTitle>
-              <CardDescription>History of all newsletters sent</CardDescription>
+              <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" />{t("campaignHistory.title")}</CardTitle>
+              <CardDescription>{t("campaignHistory.description")}</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {campaignsLoading ? (
@@ -420,21 +422,21 @@ export default function NewsletterPage() {
               ) : !campaigns.length ? (
                 <div className="text-center py-20 text-muted-foreground">
                   <Send className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  <p>No campaigns sent yet</p>
-                  <p className="text-sm">Compose your first newsletter above</p>
+                  <p>{t("campaignHistory.noCampaigns")}</p>
+                  <p className="text-sm">{t("campaignHistory.composeFirst")}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Recipients</TableHead>
-                        <TableHead>Delivered</TableHead>
-                        <TableHead>Failed</TableHead>
-                        <TableHead>Sent At</TableHead>
-                        <TableHead>Sent By</TableHead>
+                        <TableHead>{t("campaignHistory.subject")}</TableHead>
+                        <TableHead>{t("campaignHistory.status")}</TableHead>
+                        <TableHead>{t("campaignHistory.recipients")}</TableHead>
+                        <TableHead>{t("campaignHistory.delivered")}</TableHead>
+                        <TableHead>{t("campaignHistory.failed")}</TableHead>
+                        <TableHead>{t("campaignHistory.sentAt")}</TableHead>
+                        <TableHead>{t("campaignHistory.sentBy")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -472,12 +474,12 @@ export default function NewsletterPage() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <Tabs value={subStatus} onValueChange={(v) => { setSubStatus(v); setPage(1); }}>
               <TabsList>
-                <TabsTrigger value="ACTIVE">Active ({data?.counts.active ?? 0})</TabsTrigger>
-                <TabsTrigger value="UNSUBSCRIBED">Unsubscribed ({data?.counts.unsubscribed ?? 0})</TabsTrigger>
+                <TabsTrigger value="ACTIVE">{t("subscribersList.active", { count: data?.counts.active ?? 0 })}</TabsTrigger>
+                <TabsTrigger value="UNSUBSCRIBED">{t("subscribersList.unsubscribed", { count: data?.counts.unsubscribed ?? 0 })}</TabsTrigger>
               </TabsList>
             </Tabs>
             <Button variant="outline" size="sm" onClick={exportCSV} disabled={!data?.subscribers.length}>
-              <Download className="mr-2 h-4 w-4" />Export CSV
+              <Download className="mr-2 h-4 w-4" />{t("subscribersList.exportCsv")}
             </Button>
           </div>
 
@@ -495,17 +497,17 @@ export default function NewsletterPage() {
                   ))}
                 </div>
               ) : !data?.subscribers.length ? (
-                <div className="text-center py-20 text-muted-foreground">No subscribers found</div>
+                <div className="text-center py-20 text-muted-foreground">{t("subscribersList.noSubscribers")}</div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Subscribed At</TableHead>
-                          <TableHead>Unsubscribed At</TableHead>
+                          <TableHead>{t("subscribersList.email")}</TableHead>
+                          <TableHead>{t("subscribersList.status")}</TableHead>
+                          <TableHead>{t("subscribersList.subscribedAt")}</TableHead>
+                          <TableHead>{t("subscribersList.unsubscribedAt")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -531,11 +533,11 @@ export default function NewsletterPage() {
                   {data.pagination.totalPages > 1 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t">
                       <p className="text-sm text-muted-foreground">
-                        Page {data.pagination.page} of {data.pagination.totalPages} ({data.pagination.total} total)
+                        {t("subscribersList.page", { current: data.pagination.page, total: data.pagination.totalPages, count: data.pagination.total })}
                       </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-                        <Button variant="outline" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+                        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("subscribersList.previous")}</Button>
+                        <Button variant="outline" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(page + 1)}>{t("subscribersList.next")}</Button>
                       </div>
                     </div>
                   )}
@@ -550,10 +552,10 @@ export default function NewsletterPage() {
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Email Preview</DialogTitle>
+            <DialogTitle>{t("previewDialog.title")}</DialogTitle>
             <DialogDescription>
-              <strong>Subject:</strong> {subject || "(no subject)"}
-              {previewText && <><br /><strong>Preview:</strong> {previewText}</>}
+              <strong>{t("previewDialog.subject")}</strong> {subject || t("previewDialog.noSubject")}
+              {previewText && <><br /><strong>{t("previewDialog.previewText")}</strong> {previewText}</>}
             </DialogDescription>
           </DialogHeader>
           <div
@@ -561,7 +563,7 @@ export default function NewsletterPage() {
             dangerouslySetInnerHTML={{ __html: getPreviewHtml() }}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPreview(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setShowPreview(false)}>{t("previewDialog.close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -570,20 +572,20 @@ export default function NewsletterPage() {
       <Dialog open={showConfirmSend} onOpenChange={setShowConfirmSend}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send Newsletter?</DialogTitle>
+            <DialogTitle>{t("confirmDialog.title")}</DialogTitle>
             <DialogDescription>
-              This will send the newsletter to <strong>{data?.counts.active ?? 0}</strong> active subscribers. This action cannot be undone.
+              {t.rich("confirmDialog.description", { count: data?.counts.active ?? 0, strong: (chunks) => <strong>{chunks}</strong> })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm py-2">
-            <p><strong>Subject:</strong> {subject}</p>
-            {previewText && <p><strong>Preview text:</strong> {previewText}</p>}
+            <p><strong>{t("confirmDialog.subject")}</strong> {subject}</p>
+            {previewText && <p><strong>{t("confirmDialog.previewText")}</strong> {previewText}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmSend(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowConfirmSend(false)}>{t("confirmDialog.cancel")}</Button>
             <Button onClick={handleSend} disabled={sending}>
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              {sending ? "Sending..." : "Confirm & Send"}
+              {sending ? t("confirmDialog.sending") : t("confirmDialog.confirmSend")}
             </Button>
           </DialogFooter>
         </DialogContent>

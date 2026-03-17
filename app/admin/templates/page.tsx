@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,24 +81,20 @@ import {
 
 // ─── Section Type Definitions ───
 const SECTION_TYPES = [
-  { value: "hero", label: "Hero Banner", icon: ImageIcon, description: "Main hero section with headline, text, and CTA buttons" },
-  { value: "trust-bar", label: "Trust Bar", icon: ShieldCheck, description: "Feature badges row (shipping, returns, security, support)" },
-  { value: "categories", label: "Categories", icon: Grid3X3, description: "Category grid or carousel display" },
-  { value: "featured-products", label: "Featured Products", icon: Star, description: "Curated featured products grid" },
-  { value: "new-arrivals", label: "New Arrivals", icon: ShoppingBag, description: "Latest product arrivals grid" },
-  { value: "promo-banner", label: "Promo Banner", icon: Megaphone, description: "Full-width promotional banner with CTA" },
-  { value: "newsletter", label: "Newsletter", icon: Mail, description: "Newsletter subscription section" },
-  { value: "rich-text", label: "Rich Text", icon: Type, description: "Custom rich text / HTML content block" },
-  { value: "custom-html", label: "Custom HTML", icon: Code, description: "Raw HTML embed section" },
+  { value: "hero", icon: ImageIcon },
+  { value: "trust-bar", icon: ShieldCheck },
+  { value: "categories", icon: Grid3X3 },
+  { value: "featured-products", icon: Star },
+  { value: "new-arrivals", icon: ShoppingBag },
+  { value: "promo-banner", icon: Megaphone },
+  { value: "newsletter", icon: Mail },
+  { value: "rich-text", icon: Type },
+  { value: "custom-html", icon: Code },
 ] as const;
 
 function getSectionIcon(type: string) {
   const found = SECTION_TYPES.find((s) => s.value === type);
   return found?.icon || LayoutTemplate;
-}
-
-function getSectionLabel(type: string) {
-  return SECTION_TYPES.find((s) => s.value === type)?.label || type;
 }
 
 // ─── Section Help Documentation ───
@@ -353,12 +350,13 @@ function getSectionHelp(type: string) {
 
 // ─── Section Help Panel (inline in SectionRow) ───
 function SectionHelpPanel({ type }: { type: string }) {
+  const t = useTranslations("admin.templates");
   const help = getSectionHelp(type);
   if (!help) return null;
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text).then(() => {
-      toast.success(`${label} copied to clipboard`);
+      toast.success(t("toasts.copiedToClipboard", { label }));
     });
   }
 
@@ -371,9 +369,9 @@ function SectionHelpPanel({ type }: { type: string }) {
 
       <Tabs defaultValue="config" className="w-full">
         <TabsList className="h-8 w-full">
-          <TabsTrigger value="config" className="text-xs h-7 flex-1">Config JSON</TabsTrigger>
-          <TabsTrigger value="content" className="text-xs h-7 flex-1">Content</TabsTrigger>
-          <TabsTrigger value="tips" className="text-xs h-7 flex-1">Tips</TabsTrigger>
+          <TabsTrigger value="config" className="text-xs h-7 flex-1">{t("helpDialog.configTab")}</TabsTrigger>
+          <TabsTrigger value="content" className="text-xs h-7 flex-1">{t("helpDialog.contentTab")}</TabsTrigger>
+          <TabsTrigger value="tips" className="text-xs h-7 flex-1">{t("helpDialog.tipsTab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="config" className="mt-2 space-y-2">
@@ -395,14 +393,14 @@ function SectionHelpPanel({ type }: { type: string }) {
                   variant="ghost"
                   size="icon"
                   className="absolute top-1 right-1 h-6 w-6"
-                  onClick={() => copyToClipboard(help.configExample, "Config example")}
+                  onClick={() => copyToClipboard(help.configExample, "Config")}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">No config options for this section type.</p>
+            <p className="text-xs text-muted-foreground">{t("helpDialog.noConfig")}</p>
           )}
         </TabsContent>
 
@@ -425,14 +423,14 @@ function SectionHelpPanel({ type }: { type: string }) {
                   variant="ghost"
                   size="icon"
                   className="absolute top-1 right-1 h-6 w-6"
-                  onClick={() => copyToClipboard(help.contentExample, "Content example")}
+                  onClick={() => copyToClipboard(help.contentExample, "Content")}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Use the plain Content field for this section.</p>
+            <p className="text-xs text-muted-foreground">{t("helpDialog.plainContent")}</p>
           )}
         </TabsContent>
 
@@ -453,9 +451,10 @@ function SectionHelpPanel({ type }: { type: string }) {
 
 // ─── Help Dialog (all sections overview) ───
 function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations("admin.templates");
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text).then(() => {
-      toast.success(`${label} copied to clipboard`);
+      toast.success(t("toasts.copiedToClipboard", { label }));
     });
   }
 
@@ -465,11 +464,11 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HelpCircle className="h-5 w-5" />
-            Template Sections Guide
+            {t("helpDialog.title")}
           </DialogTitle>
           <DialogDescription>
-            Learn how to configure each section type with the correct JSON format.
-            Copy examples directly into your sections.
+            {t("helpDialog.description1")}
+            {" "}{t("helpDialog.description2")}
           </DialogDescription>
         </DialogHeader>
 
@@ -485,8 +484,8 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
                       <st.icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{st.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{st.description}</p>
+                      <p className="text-sm font-medium">{t(`sectionTypes.${st.value}`)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{t(`sectionDescriptions.${st.value}`)}</p>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
                   </CollapsibleTrigger>
@@ -497,12 +496,12 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
                       {/* Config Keys */}
                       {help.configKeys.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold mb-2">Config (JSON) — paste into the Config field</p>
+                          <p className="text-xs font-semibold mb-2">{t("helpDialog.configNote")}</p>
                           <div className="space-y-1 mb-2">
                             {help.configKeys.map((k) => (
                               <div key={k.key} className="text-xs">
                                 <code className="font-mono bg-muted px-1 rounded text-blue-700 dark:text-blue-300">{k.key}</code>
-                                <span className="text-muted-foreground"> ({k.type}){k.required ? ' — required' : ''} — {k.description}</span>
+                                <span className="text-muted-foreground"> ({k.type}){k.required ? ` ${t("helpDialog.required")}` : ''} — {k.description}</span>
                               </div>
                             ))}
                           </div>
@@ -513,7 +512,7 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
                               variant="ghost"
                               size="icon"
                               className="absolute top-1.5 right-1.5 h-7 w-7"
-                              onClick={() => copyToClipboard(help.configExample, `${st.label} config`)}
+                              onClick={() => copyToClipboard(help.configExample, `${t(`sectionTypes.${st.value}`)} config`)}
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
@@ -524,12 +523,12 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
                       {/* Content Keys */}
                       {help.contentKeys.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold mb-2">Content — paste into the Content field</p>
+                          <p className="text-xs font-semibold mb-2">{t("helpDialog.contentNote")}</p>
                           <div className="space-y-1 mb-2">
                             {help.contentKeys.map((k) => (
                               <div key={k.key} className="text-xs">
                                 <code className="font-mono bg-muted px-1 rounded text-blue-700 dark:text-blue-300">{k.key}</code>
-                                <span className="text-muted-foreground"> ({k.type}){k.required ? ' — required' : ''} — {k.description}</span>
+                                <span className="text-muted-foreground"> ({k.type}){k.required ? ` ${t("helpDialog.required")}` : ''} — {k.description}</span>
                               </div>
                             ))}
                           </div>
@@ -540,7 +539,7 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
                               variant="ghost"
                               size="icon"
                               className="absolute top-1.5 right-1.5 h-7 w-7"
-                              onClick={() => copyToClipboard(help.contentExample, `${st.label} content`)}
+                              onClick={() => copyToClipboard(help.contentExample, `${t(`sectionTypes.${st.value}`)} content`)}
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
@@ -550,7 +549,7 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
 
                       {/* Tips */}
                       <div>
-                        <p className="text-xs font-semibold mb-1.5">Tips</p>
+                        <p className="text-xs font-semibold mb-1.5">{t("helpDialog.tipsTab")}</p>
                         <ul className="space-y-1">
                           {help.tips.map((tip, i) => (
                             <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
@@ -569,7 +568,7 @@ function TemplateHelpDialog({ open, onClose }: { open: boolean; onClose: () => v
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>{t("helpDialog.close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -624,6 +623,7 @@ function SectionRow({
   onRemove: () => void;
   onMove: (dir: "up" | "down") => void;
 }) {
+  const t = useTranslations("admin.templates");
   const [expanded, setExpanded] = useState(false);
   const Icon = getSectionIcon(section.type);
 
@@ -636,8 +636,8 @@ function SectionRow({
         <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{section.name || "Untitled Section"}</p>
-          <p className="text-xs text-muted-foreground">{getSectionLabel(section.type)}</p>
+          <p className="text-sm font-medium truncate">{section.name || t("section.untitled")}</p>
+          <p className="text-xs text-muted-foreground">{t(`sectionTypes.${section.type}`)}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {!section.isVisible && <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -673,15 +673,15 @@ function SectionRow({
         <div className="border-t p-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>Section Name</Label>
+              <Label>{t("section.sectionName")}</Label>
               <Input
                 value={section.name}
                 onChange={(e) => onUpdate({ ...section, name: e.target.value })}
-                placeholder="e.g. Hero Banner"
+                placeholder={t("section.sectionNamePlaceholder")}
               />
             </div>
             <div>
-              <Label>Section Type</Label>
+              <Label>{t("section.sectionType")}</Label>
               <Select value={section.type} onValueChange={(v) => onUpdate({ ...section, type: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -691,7 +691,7 @@ function SectionRow({
                     <SelectItem key={st.value} value={st.value}>
                       <span className="flex items-center gap-2">
                         <st.icon className="h-3.5 w-3.5" />
-                        {st.label}
+                        {t(`sectionTypes.${st.value}`)}
                       </span>
                     </SelectItem>
                   ))}
@@ -703,7 +703,7 @@ function SectionRow({
             <div>
               <Label>Image</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Upload a background image for this {section.type === "hero" ? "hero banner" : "promo banner"}
+                {t("section.backgroundImage")}
               </p>
               <ImageUpload
                 value={(() => {
@@ -748,20 +748,20 @@ function SectionRow({
             return (
               <div className="space-y-5 p-3 bg-muted/30 rounded-lg border">
                 {/* ── Style & Layout ── */}
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hero Style & Layout</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.heroStyleLayout")}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <Label className="text-xs">Style</Label>
+                    <Label className="text-xs">{t("section.style")}</Label>
                     <Select value={cfg.style ?? "default"} onValueChange={(v) => updateCfg({ style: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Default (Gradient)</SelectItem>
-                        <SelectItem value="minimal">Minimal (Clean)</SelectItem>
-                        <SelectItem value="split">Split (Text + Image)</SelectItem>
-                        <SelectItem value="banner">Banner (Full Image)</SelectItem>
-                        <SelectItem value="card">Card (Floating Card)</SelectItem>
+                        <SelectItem value="default">{t("section.styleDefault")}</SelectItem>
+                        <SelectItem value="minimal">{t("section.styleMinimal")}</SelectItem>
+                        <SelectItem value="split">{t("section.styleSplit")}</SelectItem>
+                        <SelectItem value="banner">{t("section.styleBanner")}</SelectItem>
+                        <SelectItem value="card">{t("section.styleCard")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground mt-1">
@@ -773,49 +773,49 @@ function SectionRow({
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs">Mode</Label>
+                    <Label className="text-xs">{t("section.mode")}</Label>
                     <Select value={cfg.mode ?? "single"} onValueChange={(v) => updateCfg({ mode: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="single">Single Slide</SelectItem>
-                        <SelectItem value="carousel">Carousel / Slideshow</SelectItem>
+                        <SelectItem value="single">{t("section.modeSingle")}</SelectItem>
+                        <SelectItem value="carousel">{t("section.modeCarousel")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {isCarousel ? "Multiple slides with auto-rotation" : "Single hero with static content"}
+                      {isCarousel ? t("section.modeCarouselDesc") : t("section.modeSingleDesc")}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs">Height</Label>
+                    <Label className="text-xs">{t("section.height")}</Label>
                     <Select value={cfg.height ?? "large"} onValueChange={(v) => updateCfg({ height: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="small">Small</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="large">Large</SelectItem>
-                        <SelectItem value="full">Full Screen</SelectItem>
+                        <SelectItem value="small">{t("section.heightSmall")}</SelectItem>
+                        <SelectItem value="medium">{t("section.heightMedium")}</SelectItem>
+                        <SelectItem value="large">{t("section.heightLarge")}</SelectItem>
+                        <SelectItem value="full">{t("section.heightFull")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Alignment</Label>
+                    <Label className="text-xs">{t("section.alignment")}</Label>
                     <Select value={cfg.alignment ?? "center"} onValueChange={(v) => updateCfg({ alignment: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="left">Left</SelectItem>
-                        <SelectItem value="center">Center</SelectItem>
-                        <SelectItem value="right">Right</SelectItem>
+                        <SelectItem value="left">{t("section.alignLeft")}</SelectItem>
+                        <SelectItem value="center">{t("section.alignCenter")}</SelectItem>
+                        <SelectItem value="right">{t("section.alignRight")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Overlay Opacity</Label>
+                    <Label className="text-xs">{t("section.overlayOpacity")}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -824,47 +824,47 @@ function SectionRow({
                       value={cfg.overlayOpacity ?? 0.4}
                       onChange={(e) => updateCfg({ overlayOpacity: parseFloat(e.target.value) || 0.4 })}
                     />
-                    <p className="text-[10px] text-muted-foreground mt-1">0 = transparent, 1 = fully dark</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{t("section.overlayOpacityHelp")}</p>
                   </div>
                   <div>
-                    <Label className="text-xs">Overlay Gradient</Label>
+                    <Label className="text-xs">{t("section.overlayGradient")}</Label>
                     <Select value={cfg.overlayGradient ?? "none"} onValueChange={(v) => updateCfg({ overlayGradient: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None (Solid)</SelectItem>
-                        <SelectItem value="bottom">Bottom → Top</SelectItem>
-                        <SelectItem value="top">Top → Bottom</SelectItem>
-                        <SelectItem value="left">Left → Right</SelectItem>
-                        <SelectItem value="right">Right → Left</SelectItem>
-                        <SelectItem value="radial">Radial</SelectItem>
-                        <SelectItem value="vignette">Vignette</SelectItem>
+                        <SelectItem value="none">{t("section.gradientNone")}</SelectItem>
+                        <SelectItem value="bottom">{t("section.gradientBottom")}</SelectItem>
+                        <SelectItem value="top">{t("section.gradientTop")}</SelectItem>
+                        <SelectItem value="left">{t("section.gradientLeft")}</SelectItem>
+                        <SelectItem value="right">{t("section.gradientRight")}</SelectItem>
+                        <SelectItem value="radial">{t("section.gradientRadial")}</SelectItem>
+                        <SelectItem value="vignette">{t("section.gradientVignette")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Background Color</Label>
+                    <Label className="text-xs">{t("section.backgroundColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.backgroundColor ?? ""}
                       onChange={(e) => updateCfg({ backgroundColor: e.target.value || "" })}
-                      placeholder="#1e293b or empty for default"
+                      placeholder={t("section.backgroundColorPlaceholder")}
                       className="font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Text Color</Label>
+                    <Label className="text-xs">{t("section.textColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.textColor ?? ""}
                       onChange={(e) => updateCfg({ textColor: e.target.value || "" })}
-                      placeholder="#ffffff or empty for default"
+                      placeholder={t("section.textColorPlaceholder")}
                       className="font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> Video URL</Label>
+                    <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> {t("section.videoUrl")}</Label>
                     <Input
                       type="url"
                       value={cfg.videoUrl ?? ""}
@@ -872,21 +872,21 @@ function SectionRow({
                       placeholder="https://example.com/video.mp4"
                       className="font-mono text-xs"
                     />
-                    <p className="text-[10px] text-muted-foreground mt-1">MP4 video for background (replaces image)</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{t("section.videoUrlHelp")}</p>
                   </div>
                   <div>
-                    <Label className="text-xs flex items-center gap-1"><Sparkles className="h-3 w-3" /> Content Animation</Label>
+                    <Label className="text-xs flex items-center gap-1"><Sparkles className="h-3 w-3" /> {t("section.contentAnimation")}</Label>
                     <Select value={cfg.contentAnimation ?? "none"} onValueChange={(v) => updateCfg({ contentAnimation: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="fade-up">Fade Up</SelectItem>
-                        <SelectItem value="fade-in">Fade In</SelectItem>
-                        <SelectItem value="slide-left">Slide Left</SelectItem>
-                        <SelectItem value="slide-right">Slide Right</SelectItem>
-                        <SelectItem value="zoom">Zoom In</SelectItem>
+                        <SelectItem value="none">{t("section.animNone")}</SelectItem>
+                        <SelectItem value="fade-up">{t("section.animFadeUp")}</SelectItem>
+                        <SelectItem value="fade-in">{t("section.animFadeIn")}</SelectItem>
+                        <SelectItem value="slide-left">{t("section.animSlideLeft")}</SelectItem>
+                        <SelectItem value="slide-right">{t("section.animSlideRight")}</SelectItem>
+                        <SelectItem value="zoom">{t("section.animZoomIn")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -897,29 +897,29 @@ function SectionRow({
                       checked={cfg.overlay !== false}
                       onCheckedChange={(v) => updateCfg({ overlay: v })}
                     />
-                    <Label className="text-xs">Image Overlay</Label>
+                    <Label className="text-xs">{t("section.imageOverlay")}</Label>
                   </div>
                 </div>
 
                 {/* ── Carousel Settings ── */}
                 {isCarousel && (
                   <div className="space-y-3 pt-2 border-t">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> Carousel Settings</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> {t("section.carouselSettings")}</p>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
-                        <Label className="text-xs">Transition</Label>
+                        <Label className="text-xs">{t("section.transition")}</Label>
                         <Select value={cfg.transition ?? "fade"} onValueChange={(v) => updateCfg({ transition: v })}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="fade">Fade</SelectItem>
-                            <SelectItem value="slide">Slide</SelectItem>
+                            <SelectItem value="fade">{t("section.transitionFade")}</SelectItem>
+                            <SelectItem value="slide">{t("section.transitionSlide")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs">Autoplay Interval (ms)</Label>
+                        <Label className="text-xs">{t("section.autoplayInterval")}</Label>
                         <Input
                           type="number"
                           min={1000}
@@ -933,36 +933,36 @@ function SectionRow({
                     <div className="flex flex-wrap gap-x-6 gap-y-2">
                       <div className="flex items-center gap-2">
                         <Switch checked={cfg.autoplay !== false} onCheckedChange={(v) => updateCfg({ autoplay: v })} />
-                        <Label className="text-xs">Autoplay</Label>
+                        <Label className="text-xs">{t("section.autoplay")}</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch checked={cfg.showArrows !== false} onCheckedChange={(v) => updateCfg({ showArrows: v })} />
-                        <Label className="text-xs">Show Arrows</Label>
+                        <Label className="text-xs">{t("section.showArrows")}</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch checked={cfg.showDots !== false} onCheckedChange={(v) => updateCfg({ showDots: v })} />
-                        <Label className="text-xs">Show Dots</Label>
+                        <Label className="text-xs">{t("section.showDots")}</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch checked={cfg.showProgress !== false} onCheckedChange={(v) => updateCfg({ showProgress: v })} />
-                        <Label className="text-xs">Show Progress</Label>
+                        <Label className="text-xs">{t("section.showProgress")}</Label>
                       </div>
                     </div>
 
                     {/* ── Slides Management ── */}
                     <div className="space-y-3 pt-3 border-t">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Slides ({slides.length})</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.slides", { count: slides.length })}</p>
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs"
                           onClick={() => {
-                            const newSlide = { title: "New Slide", subtitle: "", badge: "", buttonText: "Shop Now", buttonLink: "/products", secondaryButtonText: "", secondaryButtonLink: "", imageUrl: "", videoUrl: "" };
+                            const newSlide = { title: t("section.newSlide"), subtitle: "", badge: "", buttonText: t("section.shopNow"), buttonLink: "/products", secondaryButtonText: "", secondaryButtonLink: "", imageUrl: "", videoUrl: "" };
                             updateCnt({ slides: [...slides, newSlide] });
                           }}
                         >
-                          <Plus className="h-3 w-3 mr-1" /> Add Slide
+                          <Plus className="h-3 w-3 mr-1" /> {t("section.addSlide")}
                         </Button>
                       </div>
                       {slides.map((slide, idx) => (
@@ -970,7 +970,7 @@ function SectionRow({
                           <div className="flex items-center gap-2 p-2 bg-background rounded border">
                             <CollapsibleTrigger className="flex-1 flex items-center gap-2 text-xs font-medium text-left">
                               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>Slide {idx + 1}: {slide.title || "(untitled)"}</span>
+                              <span>Slide {idx + 1}: {slide.title || t("section.untitledSlide")}</span>
                             </CollapsibleTrigger>
                             <div className="flex items-center gap-1">
                               {idx > 0 && (
@@ -993,56 +993,56 @@ function SectionRow({
                           <CollapsibleContent>
                             <div className="grid gap-3 sm:grid-cols-2 p-3 ml-2 border-l-2 border-border">
                               <div>
-                                <Label className="text-xs">Title</Label>
+                                <Label className="text-xs">{t("section.slideTitle")}</Label>
                                 <Input value={slide.title || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], title: e.target.value };
                                   updateCnt({ slides: arr });
-                                }} placeholder="Slide title" className="text-xs" />
+                                }} placeholder={t("section.slideTitle")} className="text-xs" />
                               </div>
                               <div>
-                                <Label className="text-xs">Badge</Label>
+                                <Label className="text-xs">{t("section.badgePlaceholder")}</Label>
                                 <Input value={slide.badge || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], badge: e.target.value };
                                   updateCnt({ slides: arr });
-                                }} placeholder="e.g. New, Sale" className="text-xs" />
+                                }} placeholder={t("section.badgePlaceholder")} className="text-xs" />
                               </div>
                               <div className="sm:col-span-2">
-                                <Label className="text-xs">Subtitle</Label>
+                                <Label className="text-xs">{t("section.slideSubtitle")}</Label>
                                 <Input value={slide.subtitle || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], subtitle: e.target.value };
                                   updateCnt({ slides: arr });
-                                }} placeholder="Slide subtitle" className="text-xs" />
+                                }} placeholder={t("section.slideSubtitle")} className="text-xs" />
                               </div>
                               <div>
-                                <Label className="text-xs">Button Text</Label>
+                                <Label className="text-xs">{t("section.shopNowPlaceholder")}</Label>
                                 <Input value={slide.buttonText || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], buttonText: e.target.value };
                                   updateCnt({ slides: arr });
-                                }} placeholder="Shop Now" className="text-xs" />
+                                }} placeholder={t("section.shopNowPlaceholder")} className="text-xs" />
                               </div>
                               <div>
-                                <Label className="text-xs">Button Link</Label>
+                                <Label className="text-xs">{t("section.buttonLink")}</Label>
                                 <Input value={slide.buttonLink || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], buttonLink: e.target.value };
                                   updateCnt({ slides: arr });
                                 }} placeholder="/products" className="text-xs font-mono" />
                               </div>
                               <div>
-                                <Label className="text-xs">Secondary Button</Label>
+                                <Label className="text-xs">{t("section.learnMorePlaceholder")}</Label>
                                 <Input value={slide.secondaryButtonText || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], secondaryButtonText: e.target.value };
                                   updateCnt({ slides: arr });
-                                }} placeholder="Learn More" className="text-xs" />
+                                }} placeholder={t("section.learnMorePlaceholder")} className="text-xs" />
                               </div>
                               <div>
-                                <Label className="text-xs">Secondary Link</Label>
+                                <Label className="text-xs">{t("section.secondaryLink")}</Label>
                                 <Input value={slide.secondaryButtonLink || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], secondaryButtonLink: e.target.value };
                                   updateCnt({ slides: arr });
                                 }} placeholder="/collections" className="text-xs font-mono" />
                               </div>
                               <div className="sm:col-span-2">
-                                <Label className="text-xs">Slide Image</Label>
+                                <Label className="text-xs">{t("section.slideImage")}</Label>
                                 <ImageUpload
                                   value={slide.imageUrl ? [slide.imageUrl] : []}
                                   onChange={(urls) => {
@@ -1054,19 +1054,19 @@ function SectionRow({
                                 />
                               </div>
                               <div className="sm:col-span-2">
-                                <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> Video URL</Label>
+                                <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> {t("section.videoUrl")}</Label>
                                 <Input value={slide.videoUrl || ""} onChange={(e) => {
                                   const arr = [...slides]; arr[idx] = { ...arr[idx], videoUrl: e.target.value };
                                   updateCnt({ slides: arr });
                                 }} placeholder="https://example.com/video.mp4" className="text-xs font-mono" />
-                                <p className="text-[10px] text-muted-foreground mt-1">MP4 video overrides image for this slide</p>
+                                <p className="text-[10px] text-muted-foreground mt-1">{t("section.slideVideoHelp")}</p>
                               </div>
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
                       ))}
                       {slides.length === 0 && (
-                        <p className="text-xs text-muted-foreground italic py-2">No slides yet. Add slides above to create a carousel.</p>
+                        <p className="text-xs text-muted-foreground italic py-2">{t("section.noSlides")}</p>
                       )}
                     </div>
                   </div>
@@ -1076,7 +1076,7 @@ function SectionRow({
                 <Collapsible>
                   <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2 border-t w-full">
                     <Timer className="h-3.5 w-3.5" />
-                    Countdown Timer
+                    {t("section.countdownTimer")}
                     <ChevronDown className="h-3 w-3 ml-auto" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -1086,12 +1086,12 @@ function SectionRow({
                           checked={countdown.enabled === true}
                           onCheckedChange={(v) => updateCountdown({ enabled: v })}
                         />
-                        <Label className="text-xs">Enable Countdown</Label>
+                        <Label className="text-xs">{t("section.enableCountdown")}</Label>
                       </div>
                       {countdown.enabled === true && (
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           <div>
-                            <Label className="text-xs">End Date & Time</Label>
+                            <Label className="text-xs">{t("section.endDateTime")}</Label>
                             <Input
                               type="datetime-local"
                               value={(countdown.endDate as string) || ""}
@@ -1100,24 +1100,24 @@ function SectionRow({
                             />
                           </div>
                           <div>
-                            <Label className="text-xs">Label</Label>
+                            <Label className="text-xs">{t("section.label")}</Label>
                             <Input
                               value={(countdown.label as string) || ""}
                               onChange={(e) => updateCountdown({ label: e.target.value })}
-                              placeholder="Sale ends in"
+                              placeholder={t("section.labelPlaceholder")}
                               className="text-xs"
                             />
                           </div>
                           <div>
-                            <Label className="text-xs">Variant</Label>
+                            <Label className="text-xs">{t("section.variant")}</Label>
                             <Select value={(countdown.variant as string) ?? "default"} onValueChange={(v) => updateCountdown({ variant: v })}>
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="default">Boxed (Large)</SelectItem>
-                                <SelectItem value="minimal">Minimal (Inline)</SelectItem>
-                                <SelectItem value="badge">Badge (Compact)</SelectItem>
+                                <SelectItem value="default">{t("section.variantBoxed")}</SelectItem>
+                                <SelectItem value="minimal">{t("section.variantMinimal")}</SelectItem>
+                                <SelectItem value="badge">{t("section.variantBadge")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1137,10 +1137,10 @@ function SectionRow({
             };
             return (
               <div className="space-y-4 p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Product Grid Layout</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.productGridLayout")}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <Label className="text-xs">Products to Show</Label>
+                    <Label className="text-xs">{t("section.productsToShow")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -1150,48 +1150,48 @@ function SectionRow({
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Columns</Label>
+                    <Label className="text-xs">{t("section.columns")}</Label>
                     <Select value={String(cfg.columns ?? 4)} onValueChange={(v) => updateCfg({ columns: parseInt(v) })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map((n) => (
-                          <SelectItem key={n} value={String(n)}>{n} {n === 1 ? "column" : "columns"}</SelectItem>
+                          <SelectItem key={n} value={String(n)}>{n} {n === 1 ? t("section.column") : t("section.columnsLabel")}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Spacing</Label>
+                    <Label className="text-xs">{t("section.spacing")}</Label>
                     <Select value={cfg.gap ?? "normal"} onValueChange={(v) => updateCfg({ gap: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tight">Tight</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="loose">Loose</SelectItem>
+                        <SelectItem value="tight">{t("section.spacingTight")}</SelectItem>
+                        <SelectItem value="normal">{t("section.spacingNormal")}</SelectItem>
+                        <SelectItem value="loose">{t("section.spacingLoose")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Card Ratio</Label>
+                    <Label className="text-xs">{t("section.cardRatio")}</Label>
                     <Select value={cfg.cardRatio ?? "portrait"} onValueChange={(v) => updateCfg({ cardRatio: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="square">Square (1:1)</SelectItem>
-                        <SelectItem value="portrait">Portrait (3:4)</SelectItem>
-                        <SelectItem value="landscape">Landscape (4:3)</SelectItem>
-                        <SelectItem value="wide">Wide (16:9)</SelectItem>
+                        <SelectItem value="square">{t("section.ratioSquare")}</SelectItem>
+                        <SelectItem value="portrait">{t("section.ratioPortrait")}</SelectItem>
+                        <SelectItem value="landscape">{t("section.ratioLandscape")}</SelectItem>
+                        <SelectItem value="wide">{t("section.ratioWide")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {section.type === "new-arrivals" && (
                     <div>
-                      <Label className="text-xs">Days Back</Label>
+                      <Label className="text-xs">{t("section.daysBack")}</Label>
                       <Input
                         type="number"
                         min={1}
@@ -1199,7 +1199,7 @@ function SectionRow({
                         value={cfg.daysBack ?? 30}
                         onChange={(e) => updateCfg({ daysBack: parseInt(e.target.value) || 30 })}
                       />
-                      <p className="text-[10px] text-muted-foreground mt-1">Show products added within this many days</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{t("section.daysBackHelp")}</p>
                     </div>
                   )}
                 </div>
@@ -1209,21 +1209,21 @@ function SectionRow({
                       checked={cfg.showAddToCart !== false}
                       onCheckedChange={(v) => updateCfg({ showAddToCart: v })}
                     />
-                    <Label className="text-xs">Add to Cart Button</Label>
+                    <Label className="text-xs">{t("section.addToCartButton")}</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={cfg.showWishlist !== false}
                       onCheckedChange={(v) => updateCfg({ showWishlist: v })}
                     />
-                    <Label className="text-xs">Wishlist Button</Label>
+                    <Label className="text-xs">{t("section.wishlistButton")}</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={cfg.showBadges !== false}
                       onCheckedChange={(v) => updateCfg({ showBadges: v })}
                     />
-                    <Label className="text-xs">Badges (New, Sale)</Label>
+                    <Label className="text-xs">{t("section.badgesNewSale")}</Label>
                   </div>
                 </div>
               </div>
@@ -1237,74 +1237,74 @@ function SectionRow({
             };
             return (
               <div className="space-y-4 p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trust Bar Layout</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.trustBarLayout")}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <Label className="text-xs">Style</Label>
+                    <Label className="text-xs">{t("section.style")}</Label>
                     <Select value={cfg.style ?? "default"} onValueChange={(v) => updateCfg({ style: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Default (Border Row)</SelectItem>
-                        <SelectItem value="cards">Cards</SelectItem>
-                        <SelectItem value="minimal">Minimal (Inline)</SelectItem>
-                        <SelectItem value="banner">Banner (Colored Strip)</SelectItem>
-                        <SelectItem value="centered">Centered (Stacked)</SelectItem>
+                        <SelectItem value="default">{t("section.trustStyleDefault")}</SelectItem>
+                        <SelectItem value="cards">{t("section.trustStyleCards")}</SelectItem>
+                        <SelectItem value="minimal">{t("section.trustStyleMinimal")}</SelectItem>
+                        <SelectItem value="banner">{t("section.trustStyleBanner")}</SelectItem>
+                        <SelectItem value="centered">{t("section.trustStyleCentered")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {cfg.style === "cards" ? "Each item in its own card" :
-                       cfg.style === "minimal" ? "Icons + text in a clean row" :
-                       cfg.style === "banner" ? "Dark background strip" :
-                       cfg.style === "centered" ? "Large icons, centered text" :
-                       "Bordered row with icon boxes"}
+                      {cfg.style === "cards" ? t("section.trustStyleDefaultDesc") :
+                       cfg.style === "minimal" ? t("section.trustStyleMinimalDesc") :
+                       cfg.style === "banner" ? t("section.trustStyleBannerDesc") :
+                       cfg.style === "centered" ? t("section.trustStyleCenteredDesc") :
+                       t("section.trustStyleDefaultDesc")}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs">Columns</Label>
+                    <Label className="text-xs">{t("section.columns")}</Label>
                     <Select value={String(cfg.columns ?? 4)} onValueChange={(v) => updateCfg({ columns: parseInt(v) })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {[2, 3, 4, 5, 6].map((n) => (
-                          <SelectItem key={n} value={String(n)}>{n} columns</SelectItem>
+                          <SelectItem key={n} value={String(n)}>{n} {t("section.columnsLabel")}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Icon Style</Label>
+                    <Label className="text-xs">{t("section.iconStyle")}</Label>
                     <Select value={cfg.iconStyle ?? "rounded"} onValueChange={(v) => updateCfg({ iconStyle: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="rounded">Rounded</SelectItem>
-                        <SelectItem value="circle">Circle</SelectItem>
-                        <SelectItem value="square">Square</SelectItem>
-                        <SelectItem value="none">No Icon</SelectItem>
+                        <SelectItem value="rounded">{t("section.iconRounded")}</SelectItem>
+                        <SelectItem value="circle">{t("section.iconCircle")}</SelectItem>
+                        <SelectItem value="square">{t("section.iconSquare")}</SelectItem>
+                        <SelectItem value="none">{t("section.iconNone")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Background Color</Label>
+                    <Label className="text-xs">{t("section.backgroundColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.backgroundColor ?? ""}
                       onChange={(e) => updateCfg({ backgroundColor: e.target.value || "" })}
-                      placeholder="#1e293b or empty for default"
+                      placeholder={t("section.backgroundColorPlaceholder")}
                       className="font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Text Color</Label>
+                    <Label className="text-xs">{t("section.textColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.textColor ?? ""}
                       onChange={(e) => updateCfg({ textColor: e.target.value || "" })}
-                      placeholder="#ffffff or empty for default"
+                      placeholder={t("section.textColorPlaceholder")}
                       className="font-mono text-xs"
                     />
                   </div>
@@ -1315,7 +1315,7 @@ function SectionRow({
                       checked={cfg.showDescription !== false}
                       onCheckedChange={(v) => updateCfg({ showDescription: v })}
                     />
-                    <Label className="text-xs">Show Descriptions</Label>
+                    <Label className="text-xs">{t("section.showDescriptions")}</Label>
                   </div>
                 </div>
               </div>
@@ -1329,10 +1329,10 @@ function SectionRow({
             };
             return (
               <div className="space-y-4 p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Category Grid Layout</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.categoryGridLayout")}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <Label className="text-xs">Categories to Show</Label>
+                    <Label className="text-xs">{t("section.categoriesToShow")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -1342,56 +1342,56 @@ function SectionRow({
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Display Mode</Label>
+                    <Label className="text-xs">{t("section.displayMode")}</Label>
                     <Select value={cfg.display ?? "carousel"} onValueChange={(v) => updateCfg({ display: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="carousel">Carousel</SelectItem>
-                        <SelectItem value="grid">Grid</SelectItem>
+                        <SelectItem value="carousel">{t("section.displayCarousel")}</SelectItem>
+                        <SelectItem value="grid">{t("section.displayGrid")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Columns</Label>
+                    <Label className="text-xs">{t("section.columns")}</Label>
                     <Select value={String(cfg.columns ?? 6)} onValueChange={(v) => updateCfg({ columns: parseInt(v) })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {[2, 3, 4, 5, 6].map((n) => (
-                          <SelectItem key={n} value={String(n)}>{n} columns</SelectItem>
+                          <SelectItem key={n} value={String(n)}>{n} {t("section.columnsLabel")}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {cfg.display === "grid" ? "Grid columns" : "Visible items in carousel"}
+                      {cfg.display === "grid" ? t("section.gridColumns") : t("section.visibleItems")}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs">Spacing</Label>
+                    <Label className="text-xs">{t("section.spacing")}</Label>
                     <Select value={cfg.gap ?? "normal"} onValueChange={(v) => updateCfg({ gap: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tight">Tight</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="loose">Loose</SelectItem>
+                        <SelectItem value="tight">{t("section.spacingTight")}</SelectItem>
+                        <SelectItem value="normal">{t("section.spacingNormal")}</SelectItem>
+                        <SelectItem value="loose">{t("section.spacingLoose")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Card Shape</Label>
+                    <Label className="text-xs">{t("section.cardShape")}</Label>
                     <Select value={cfg.cardRatio ?? "square"} onValueChange={(v) => updateCfg({ cardRatio: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="square">Square (1:1)</SelectItem>
-                        <SelectItem value="portrait">Portrait (3:4)</SelectItem>
-                        <SelectItem value="circle">Circle</SelectItem>
+                        <SelectItem value="square">{t("section.shapeSquare")}</SelectItem>
+                        <SelectItem value="portrait">{t("section.shapePortrait")}</SelectItem>
+                        <SelectItem value="circle">{t("section.shapeCircle")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1402,14 +1402,14 @@ function SectionRow({
                       checked={cfg.showImage !== false}
                       onCheckedChange={(v) => updateCfg({ showImage: v })}
                     />
-                    <Label className="text-xs">Show Images</Label>
+                    <Label className="text-xs">{t("section.showImages")}</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={cfg.showCount === true}
                       onCheckedChange={(v) => updateCfg({ showCount: v })}
                     />
-                    <Label className="text-xs">Show Product Count</Label>
+                    <Label className="text-xs">{t("section.showProductCount")}</Label>
                   </div>
                 </div>
               </div>
@@ -1423,21 +1423,21 @@ function SectionRow({
             };
             return (
               <div className="space-y-4 p-3 bg-muted/30 rounded-lg border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Promo Banner Layout</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("section.promoBannerLayout")}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <Label className="text-xs">Style</Label>
+                    <Label className="text-xs">{t("section.style")}</Label>
                     <Select value={cfg.style ?? "default"} onValueChange={(v) => updateCfg({ style: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Default (Rounded Card)</SelectItem>
-                        <SelectItem value="fullwidth">Full Width (Edge-to-Edge)</SelectItem>
-                        <SelectItem value="split">Split (Text + Image)</SelectItem>
-                        <SelectItem value="minimal">Minimal (Dashed Border)</SelectItem>
-                        <SelectItem value="banner">Banner (Compact Strip)</SelectItem>
-                        <SelectItem value="card">Card (Floating Card)</SelectItem>
+                        <SelectItem value="default">{t("section.promoStyleDefault")}</SelectItem>
+                        <SelectItem value="fullwidth">{t("section.promoStyleFullWidth")}</SelectItem>
+                        <SelectItem value="split">{t("section.promoStyleSplit")}</SelectItem>
+                        <SelectItem value="minimal">{t("section.promoStyleMinimal")}</SelectItem>
+                        <SelectItem value="banner">{t("section.promoStyleBanner")}</SelectItem>
+                        <SelectItem value="card">{t("section.promoStyleCard")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground mt-1">
@@ -1450,34 +1450,34 @@ function SectionRow({
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs">Height</Label>
+                    <Label className="text-xs">{t("section.height")}</Label>
                     <Select value={cfg.height ?? "medium"} onValueChange={(v) => updateCfg({ height: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="small">Small</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="large">Large</SelectItem>
-                        <SelectItem value="full">Extra Large</SelectItem>
+                        <SelectItem value="small">{t("section.heightSmall")}</SelectItem>
+                        <SelectItem value="medium">{t("section.heightMedium")}</SelectItem>
+                        <SelectItem value="large">{t("section.heightLarge")}</SelectItem>
+                        <SelectItem value="full">{t("section.heightExtraLarge")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Alignment</Label>
+                    <Label className="text-xs">{t("section.alignment")}</Label>
                     <Select value={cfg.alignment ?? "center"} onValueChange={(v) => updateCfg({ alignment: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="left">Left</SelectItem>
-                        <SelectItem value="center">Center</SelectItem>
-                        <SelectItem value="right">Right</SelectItem>
+                        <SelectItem value="left">{t("section.alignLeft")}</SelectItem>
+                        <SelectItem value="center">{t("section.alignCenter")}</SelectItem>
+                        <SelectItem value="right">{t("section.alignRight")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Overlay Opacity</Label>
+                    <Label className="text-xs">{t("section.overlayOpacity")}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -1486,20 +1486,20 @@ function SectionRow({
                       value={cfg.overlayOpacity ?? 0.4}
                       onChange={(e) => updateCfg({ overlayOpacity: parseFloat(e.target.value) || 0.4 })}
                     />
-                    <p className="text-[10px] text-muted-foreground mt-1">0 = transparent, 1 = fully dark</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{t("section.overlayOpacityHelp")}</p>
                   </div>
                   <div>
-                    <Label className="text-xs">Background Color</Label>
+                    <Label className="text-xs">{t("section.backgroundColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.backgroundColor ?? ""}
                       onChange={(e) => updateCfg({ backgroundColor: e.target.value || "" })}
-                      placeholder="#1e293b or empty for default"
+                      placeholder={t("section.backgroundColorPlaceholder")}
                       className="font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Text Color</Label>
+                    <Label className="text-xs">{t("section.textColor")}</Label>
                     <Input
                       type="text"
                       value={cfg.textColor ?? "#ffffff"}
@@ -1515,27 +1515,27 @@ function SectionRow({
                       checked={cfg.overlay !== false}
                       onCheckedChange={(v) => updateCfg({ overlay: v })}
                     />
-                    <Label className="text-xs">Image Overlay</Label>
+                    <Label className="text-xs">{t("section.imageOverlay")}</Label>
                   </div>
                 </div>
               </div>
             );
           })()}
           <div>
-            <Label>Content</Label>
+            <Label>{t("section.content")}</Label>
             <Textarea
               value={section.content || ""}
               onChange={(e) => onUpdate({ ...section, content: e.target.value || null })}
-              placeholder="Section content (optional)"
+              placeholder={t("section.contentPlaceholder")}
               rows={3}
             />
           </div>
           <div>
-            <Label>Config (JSON)</Label>
+            <Label>{t("section.configJson")}</Label>
             <Textarea
               value={section.config || ""}
               onChange={(e) => onUpdate({ ...section, config: e.target.value || null })}
-              placeholder='{"heading": "...", "buttonText": "...", "buttonLink": "/...", "imageUrl": "..."}'
+              placeholder={t("section.configJsonPlaceholder")}
               rows={3}
               className="font-mono text-xs"
             />
@@ -1543,7 +1543,7 @@ function SectionRow({
           <Collapsible>
             <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline">
               <HelpCircle className="h-3.5 w-3.5" />
-              How to configure this section
+              {t("section.configHelp")}
               <ChevronDown className="h-3 w-3 transition-transform [[data-state=open]>&]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
@@ -1556,7 +1556,7 @@ function SectionRow({
               checked={section.isVisible}
               onCheckedChange={(v) => onUpdate({ ...section, isVisible: v })}
             />
-            <Label>Visible</Label>
+            <Label>{t("section.visible")}</Label>
           </div>
         </div>
       )}
@@ -1574,14 +1574,15 @@ function AddSectionDialog({
   onClose: () => void;
   onAdd: (type: string, name: string) => void;
 }) {
+  const t = useTranslations("admin.templates");
   const [selectedType, setSelectedType] = useState<string>("");
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Section</DialogTitle>
-          <DialogDescription>Choose a section type to add to your template.</DialogDescription>
+          <DialogTitle>{t("addSection.title")}</DialogTitle>
+          <DialogDescription>{t("addSection.description")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 max-h-[400px] overflow-y-auto py-2">
           {SECTION_TYPES.map((st) => (
@@ -1598,28 +1599,28 @@ function AddSectionDialog({
                 <st.icon className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium">{st.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{st.description}</p>
+                <p className="text-sm font-medium">{t(`sectionTypes.${st.value}`)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t(`sectionDescriptions.${st.value}`)}</p>
               </div>
             </button>
           ))}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("addSection.cancel")}
           </Button>
           <Button
             disabled={!selectedType}
             onClick={() => {
               if (selectedType) {
-                const label = getSectionLabel(selectedType);
+                const label = t(`sectionTypes.${selectedType}`);
                 onAdd(selectedType, label);
                 setSelectedType("");
                 onClose();
               }
             }}
           >
-            Add Section
+            {t("addSection.add")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1639,6 +1640,7 @@ function TemplateEditorDialog({
   template: Template | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.templates");
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -1733,7 +1735,7 @@ function TemplateEditorDialog({
 
   async function handleSave() {
     if (!name.trim() || !slug.trim()) {
-      toast.error("Name and slug are required");
+      toast.error(t("toasts.nameRequired"));
       return;
     }
     setSaving(true);
@@ -1768,11 +1770,11 @@ function TemplateEditorDialog({
         throw new Error(err.error || "Failed to save template");
       }
 
-      toast.success(template ? "Template updated" : "Template created");
+      toast.success(template ? t("toasts.updated") : t("toasts.created"));
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save template");
+      toast.error(e instanceof Error ? e.message : t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -1783,11 +1785,11 @@ function TemplateEditorDialog({
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{template ? "Edit Template" : "Create Template"}</DialogTitle>
+            <DialogTitle>{template ? t("editor.editTitle") : t("editor.createTitle")}</DialogTitle>
             <DialogDescription>
               {template
-                ? "Update template settings and manage sections."
-                : "Create a new storefront template with customizable sections."}
+                ? t("editor.editDescription")
+                : t("editor.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -1795,11 +1797,11 @@ function TemplateEditorDialog({
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
             <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0" />
             <p className="text-xs text-muted-foreground flex-1">
-              Need help? Each section uses JSON for configuration. Click the help link inside any section, or view the full guide.
+              {t("editor.helpNote")}
             </p>
             <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setHelpOpen(true)}>
               <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
-              Section Guide
+              {t("editor.sectionGuide")}
             </Button>
           </div>
 
@@ -1807,37 +1809,37 @@ function TemplateEditorDialog({
             {/* Basic Info */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label>Template Name</Label>
+                <Label>{t("editor.templateName")}</Label>
                 <Input
                   value={name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Default Store"
+                  placeholder={t("editor.templateNamePlaceholder")}
                 />
               </div>
               <div>
-                <Label>Slug</Label>
+                <Label>{t("editor.slug")}</Label>
                 <Input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  placeholder="e.g. default-store"
+                  placeholder={t("editor.slugPlaceholder")}
                 />
               </div>
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label>{t("editor.description")}</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of this template..."
+                placeholder={t("editor.descriptionPlaceholder")}
                 rows={2}
               />
             </div>
 
             <div>
-              <Label>Thumbnail</Label>
+              <Label>{t("editor.thumbnail")}</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Upload a preview thumbnail for this template
+                {t("editor.thumbnailDescription")}
               </p>
               <ImageUpload
                 value={thumbnail ? [thumbnail] : []}
@@ -1850,11 +1852,11 @@ function TemplateEditorDialog({
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
-                <Label>Active</Label>
+                <Label>{t("editor.activeLabel")}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={isDefault} onCheckedChange={setIsDefault} />
-                <Label>Default</Label>
+                <Label>{t("editor.defaultLabel")}</Label>
               </div>
             </div>
 
@@ -1863,36 +1865,36 @@ function TemplateEditorDialog({
               <CollapsibleTrigger asChild>
                 <button type="button" className="flex items-center gap-2 w-full text-left group">
                   <Palette className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-base cursor-pointer">Theme Colors</Label>
+                  <Label className="text-base cursor-pointer">{t("editor.themeColors")}</Label>
                   {Object.keys(colors).length > 0 && (
                     <Badge variant="secondary" className="text-[10px] ml-1">
-                      {Object.keys(colors).length} custom
+                      {Object.keys(colors).length} {t("editor.custom")}
                     </Badge>
                   )}
                   <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto transition-transform group-data-[state=open]:rotate-180" />
                 </button>
               </CollapsibleTrigger>
               <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Override the default theme colors for this template. Leave empty to use defaults.
+                {t("editor.themeColorsDescription")}
               </p>
               <CollapsibleContent className="pt-2">
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
-                    { key: "primary", label: "Primary", desc: "Buttons, links, accents", defaultVal: "#16a249" },
-                    { key: "primary-foreground", label: "Primary Text", desc: "Text on primary color", defaultVal: "#fbfbf8" },
-                    { key: "secondary", label: "Secondary", desc: "Secondary buttons, badges", defaultVal: "#facc14" },
-                    { key: "secondary-foreground", label: "Secondary Text", desc: "Text on secondary color", defaultVal: "#05140d" },
-                    { key: "background", label: "Background", desc: "Page background", defaultVal: "#fbfbf8" },
-                    { key: "foreground", label: "Foreground", desc: "Main text color", defaultVal: "#05140d" },
-                    { key: "accent", label: "Accent", desc: "Accent backgrounds, highlights", defaultVal: "#dcf9e7" },
-                    { key: "accent-foreground", label: "Accent Text", desc: "Text on accent color", defaultVal: "#12873d" },
-                    { key: "muted", label: "Muted Background", desc: "Subtle backgrounds", defaultVal: "#f3f1ed" },
-                    { key: "muted-foreground", label: "Muted Text", desc: "Secondary text, captions", defaultVal: "#5c7066" },
-                    { key: "card", label: "Card", desc: "Card backgrounds", defaultVal: "#ffffff" },
-                    { key: "card-foreground", label: "Card Text", desc: "Text on cards", defaultVal: "#05140d" },
-                    { key: "border", label: "Border", desc: "Borders and dividers", defaultVal: "#e0ebe6" },
-                    { key: "ring", label: "Ring", desc: "Focus rings", defaultVal: "#16a249" },
-                    { key: "destructive", label: "Destructive", desc: "Error, delete actions", defaultVal: "#ef4343" },
+                    { key: "primary", labelKey: "primary", descKey: "primaryDescription", defaultVal: "#16a249" },
+                    { key: "primary-foreground", labelKey: "primaryText", descKey: "primaryTextDescription", defaultVal: "#fbfbf8" },
+                    { key: "secondary", labelKey: "secondary", descKey: "secondaryDescription", defaultVal: "#facc14" },
+                    { key: "secondary-foreground", labelKey: "secondaryText", descKey: "secondaryTextDescription", defaultVal: "#05140d" },
+                    { key: "background", labelKey: "background", descKey: "backgroundDescription", defaultVal: "#fbfbf8" },
+                    { key: "foreground", labelKey: "foreground", descKey: "foregroundDescription", defaultVal: "#05140d" },
+                    { key: "accent", labelKey: "accent", descKey: "accentDescription", defaultVal: "#dcf9e7" },
+                    { key: "accent-foreground", labelKey: "accentText", descKey: "accentTextDescription", defaultVal: "#12873d" },
+                    { key: "muted", labelKey: "mutedBg", descKey: "mutedBgDescription", defaultVal: "#f3f1ed" },
+                    { key: "muted-foreground", labelKey: "mutedText", descKey: "mutedTextDescription", defaultVal: "#5c7066" },
+                    { key: "card", labelKey: "card", descKey: "cardDescription", defaultVal: "#ffffff" },
+                    { key: "card-foreground", labelKey: "cardText", descKey: "cardTextDescription", defaultVal: "#05140d" },
+                    { key: "border", labelKey: "border", descKey: "borderDescription", defaultVal: "#e0ebe6" },
+                    { key: "ring", labelKey: "ring", descKey: "ringDescription", defaultVal: "#16a249" },
+                    { key: "destructive", labelKey: "destructive", descKey: "destructiveDescription", defaultVal: "#ef4343" },
                   ].map((c) => (
                     <div key={c.key} className="flex items-center gap-3">
                       <ColorPicker
@@ -1902,8 +1904,8 @@ function TemplateEditorDialog({
                         onClear={() => clearColor(c.key)}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{c.label}</p>
-                        <p className="text-xs text-muted-foreground truncate">{c.desc}</p>
+                        <p className="text-sm font-medium">{t(`colors.${c.labelKey}`)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{t(`colors.${c.descKey}`)}</p>
                       </div>
                       <code className="text-[10px] text-muted-foreground font-mono">
                         {colors[c.key] || c.defaultVal}
@@ -1919,7 +1921,7 @@ function TemplateEditorDialog({
                     className="mt-4 text-xs text-muted-foreground"
                     onClick={() => setColors({})}
                   >
-                    Reset All to Defaults
+                    {t("editor.resetDefaults")}
                   </Button>
                 )}
               </CollapsibleContent>
@@ -1929,24 +1931,24 @@ function TemplateEditorDialog({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <Label className="text-base">Sections</Label>
+                  <Label className="text-base">{t("editor.sections")}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Add and arrange storefront sections
+                    {t("editor.sectionsDescription")}
                   </p>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => setAddSectionOpen(true)}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Add Section
+                  {t("editor.addSection")}
                 </Button>
               </div>
 
               {sections.length === 0 ? (
                 <div className="border-2 border-dashed rounded-lg p-8 text-center">
                   <LayoutTemplate className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-3">No sections yet</p>
+                  <p className="text-sm text-muted-foreground mb-3">{t("editor.noSections")}</p>
                   <Button size="sm" variant="outline" onClick={() => setAddSectionOpen(true)}>
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Add Your First Section
+                    {t("editor.addFirstSection")}
                   </Button>
                 </div>
               ) : (
@@ -1969,11 +1971,11 @@ function TemplateEditorDialog({
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("editor.cancel")}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {template ? "Save Changes" : "Create Template"}
+              {template ? t("editor.saveChanges") : t("editor.createTitle")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1995,6 +1997,7 @@ function TemplateEditorDialog({
 
 // ─── Main Page ───
 export default function TemplatesPage() {
+  const t = useTranslations("admin.templates");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -2005,9 +2008,9 @@ export default function TemplatesPage() {
     try {
       const res = await fetch("/api/templates");
       if (res.ok) setTemplates(await res.json());
-      else toast.error("Failed to load templates");
+      else toast.error(t("toasts.loadFailed"));
     } catch {
-      toast.error("Failed to load templates");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -2022,26 +2025,26 @@ export default function TemplatesPage() {
     setEditorOpen(true);
   }
 
-  function openEdit(t: Template) {
-    setEditingTemplate(t);
+  function openEdit(tmpl: Template) {
+    setEditingTemplate(tmpl);
     setEditorOpen(true);
   }
 
-  async function handleActivate(t: Template) {
+  async function handleActivate(tmpl: Template) {
     try {
       const res = await fetch("/api/templates", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          description: t.description,
-          thumbnail: t.thumbnail,
+          id: tmpl.id,
+          name: tmpl.name,
+          slug: tmpl.slug,
+          description: tmpl.description,
+          thumbnail: tmpl.thumbnail,
           isActive: true,
-          isDefault: t.isDefault,
-          config: t.config,
-          sections: t.sections.map((s) => ({
+          isDefault: tmpl.isDefault,
+          config: tmpl.config,
+          sections: tmpl.sections.map((s) => ({
             name: s.name,
             type: s.type,
             config: s.config,
@@ -2052,20 +2055,20 @@ export default function TemplatesPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Template activated");
+      toast.success(t("toasts.activated"));
       fetchTemplates();
     } catch {
-      toast.error("Failed to activate template");
+      toast.error(t("toasts.activateFailed"));
     }
   }
 
-  function handleExport(t: Template) {
+  function handleExport(tmpl: Template) {
     const exportData = {
-      name: t.name,
-      slug: t.slug,
-      description: t.description,
-      config: t.config,
-      sections: t.sections
+      name: tmpl.name,
+      slug: tmpl.slug,
+      description: tmpl.description,
+      config: tmpl.config,
+      sections: tmpl.sections
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((s) => ({
           name: s.name,
@@ -2080,10 +2083,10 @@ export default function TemplatesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `template-${t.slug}.json`;
+    a.download = `template-${tmpl.slug}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Template exported");
+    toast.success(t("toasts.exported"));
   }
 
   function handleImport() {
@@ -2097,7 +2100,7 @@ export default function TemplatesPage() {
         const text = await file.text();
         const data = JSON.parse(text);
         if (!data.name || !data.slug || !Array.isArray(data.sections)) {
-          toast.error("Invalid template file: missing name, slug, or sections");
+          toast.error(t("toasts.invalidFile"));
           return;
         }
         const res = await fetch("/api/templates", {
@@ -2125,31 +2128,31 @@ export default function TemplatesPage() {
           const err = await res.json();
           throw new Error(err.error || "Failed to import");
         }
-        toast.success(`Template "${data.name}" imported`);
+        toast.success(t("toasts.imported", { name: data.name }));
         fetchTemplates();
       } catch (e) {
         if (e instanceof SyntaxError) {
-          toast.error("Invalid JSON file");
+          toast.error(t("toasts.invalidJson"));
         } else {
-          toast.error(e instanceof Error ? e.message : "Failed to import template");
+          toast.error(e instanceof Error ? e.message : t("toasts.importFailed"));
         }
       }
     };
     input.click();
   }
 
-  async function handleDelete(t: Template) {
-    if (!confirm(`Delete template "${t.name}"? This cannot be undone.`)) return;
+  async function handleDelete(tmpl: Template) {
+    if (!confirm(t("deleteConfirm", { name: tmpl.name }))) return;
     try {
-      const res = await fetch(`/api/templates?id=${t.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/templates?id=${tmpl.id}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to delete");
       }
-      toast.success("Template deleted");
+      toast.success(t("toasts.deleted"));
       fetchTemplates();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete template");
+      toast.error(e instanceof Error ? e.message : t("toasts.deleteFailed"));
     }
   }
 
@@ -2186,23 +2189,23 @@ export default function TemplatesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Templates</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-muted-foreground">
-              Customize your storefront appearance
+              {t("subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setHelpOpen(true)}>
               <HelpCircle className="mr-2 h-4 w-4" />
-              Guide
+              {t("guide")}
             </Button>
             <Button variant="outline" onClick={handleImport}>
               <Upload className="mr-2 h-4 w-4" />
-              Import
+              {t("import")}
             </Button>
             <Button onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Template
+              {t("createTemplate")}
             </Button>
           </div>
         </div>
@@ -2211,51 +2214,51 @@ export default function TemplatesPage() {
           <Card>
             <CardContent className="py-16 text-center">
               <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-1">No templates yet</h3>
+              <h3 className="text-lg font-medium mb-1">{t("noTemplates")}</h3>
               <p className="text-sm text-muted-foreground mb-6">
-                Create your first template to customize your storefront layout.
+                {t("noTemplatesDescription")}
               </p>
               <Button onClick={openCreate}>
                 <Plus className="mr-2 h-4 w-4" />
-                Create Template
+                {t("createTemplate")}
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {templates.map((t) => (
+            {templates.map((tmpl) => (
               <Card
-                key={t.id}
-                className={t.isActive ? "ring-2 ring-primary" : ""}
+                key={tmpl.id}
+                className={tmpl.isActive ? "ring-2 ring-primary" : ""}
               >
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{t.name}</CardTitle>
+                    <CardTitle className="text-lg">{tmpl.name}</CardTitle>
                     <div className="flex items-center gap-1.5">
-                      {t.isDefault && (
-                        <Badge variant="secondary" className="text-[10px]">Default</Badge>
+                      {tmpl.isDefault && (
+                        <Badge variant="secondary" className="text-[10px]">{t("default")}</Badge>
                       )}
-                      {t.isActive && (
+                      {tmpl.isActive && (
                         <Badge className="gap-1">
                           <Check className="h-3 w-3" />
-                          Active
+                          {t("active")}
                         </Badge>
                       )}
                     </div>
                   </div>
                   <CardDescription>
-                    {t.description || "No description"}
+                    {tmpl.description || t("noDescription")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {/* Section Preview */}
                   <div className="bg-muted rounded-lg p-3 mb-4 space-y-1.5 min-h-[100px]">
-                    {t.sections.length === 0 ? (
+                    {tmpl.sections.length === 0 ? (
                       <div className="flex items-center justify-center h-[80px] text-xs text-muted-foreground">
-                        No sections
+                        {t("noSections")}
                       </div>
                     ) : (
-                      t.sections
+                      tmpl.sections
                         .sort((a, b) => a.sortOrder - b.sortOrder)
                         .slice(0, 5)
                         .map((s, i) => {
@@ -2274,35 +2277,35 @@ export default function TemplatesPage() {
                           );
                         })
                     )}
-                    {t.sections.length > 5 && (
+                    {tmpl.sections.length > 5 && (
                       <p className="text-[10px] text-muted-foreground text-center pt-1">
-                        +{t.sections.length - 5} more sections
+                        {t("moreSections", { count: tmpl.sections.length - 5 })}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{t.sections.length} section{t.sections.length !== 1 ? "s" : ""}</span>
+                    <span>{tmpl.sections.length !== 1 ? t("sectionsCount", { count: tmpl.sections.length }) : t("sectionCount", { count: tmpl.sections.length })}</span>
                     <div className="flex gap-1.5">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(t)} title="Edit">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(tmpl)} title="Edit">
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExport(t)} title="Export JSON">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExport(tmpl)} title="Export JSON">
                         <Download className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(t)}
-                        disabled={t.isDefault}
+                        onClick={() => handleDelete(tmpl)}
+                        disabled={tmpl.isDefault}
                         title="Delete"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                      {!t.isActive && (
-                        <Button size="sm" onClick={() => handleActivate(t)}>
+                      {!tmpl.isActive && (
+                        <Button size="sm" onClick={() => handleActivate(tmpl)}>
                           <Eye className="mr-1.5 h-3.5 w-3.5" />
-                          Activate
+                          {t("activate")}
                         </Button>
                       )}
                     </div>

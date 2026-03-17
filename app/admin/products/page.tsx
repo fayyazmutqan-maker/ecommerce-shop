@@ -24,6 +24,7 @@ import {
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { DeleteProductItem } from "@/components/admin/delete-product-item";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function ProductsPage({
 }) {
   const { q, page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const t = await getTranslations("admin.products");
 
   const whereClause = q
     ? or(
@@ -75,15 +77,15 @@ export default async function ProductsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage your product catalog ({totalItems} products)
+            {t("subtitle")} ({totalItems})
           </p>
         </div>
         <Button asChild>
           <Link href="/admin/products/new">
             <Plus className="mr-2 h-4 w-4" />
-            Add Product
+            {t("addProduct")}
           </Link>
         </Button>
       </div>
@@ -91,7 +93,7 @@ export default async function ProductsPage({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-4">
-            <AdminSearch placeholder="Search products..." />
+            <AdminSearch placeholder={t("searchProducts")} />
           </div>
         </CardHeader>
         <CardContent>
@@ -99,12 +101,12 @@ export default async function ProductsPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Inventory</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Sales</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("price")}</TableHead>
+                <TableHead>{t("inventory")}</TableHead>
+                <TableHead>{t("category")}</TableHead>
+                <TableHead>{t("sales")}</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -130,7 +132,7 @@ export default async function ProductsPage({
                           {product.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">
-                          {product.sku || "No SKU"}
+                          {product.sku || t("noSKU")}
                         </p>
                       </div>
                     </div>
@@ -160,7 +162,7 @@ export default async function ProductsPage({
                           : ""
                       }
                     >
-                      {product.quantity} in stock
+                      {product.quantity} {t("stock")}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -179,12 +181,12 @@ export default async function ProductsPage({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/products/${product.id}`}>
-                            Edit
+                            {t("edit")}
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/products/${product.slug}`} target="_blank">
-                            View in Store
+                            {t("viewInStore")}
                           </Link>
                         </DropdownMenuItem>
                         <DeleteProductItem productId={product.id} productName={product.name} />
@@ -197,12 +199,12 @@ export default async function ProductsPage({
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {q ? `No products matching "${q}"` : "No products found"}
+                      {q ? t("noMatch", { query: q }) : t("noFound")}
                     </p>
                     {!q && (
                       <Button asChild variant="link" className="mt-2">
                         <Link href="/admin/products/new">
-                          Create your first product
+                          {t("createFirst")}
                         </Link>
                       </Button>
                     )}

@@ -83,7 +83,7 @@ export function CartSheet() {
                         </p>
                       )}
                       <p className="text-sm font-bold mt-1.5">
-                        SAR {item.price.toFixed(2)}
+                        {t("sar")} {item.price.toFixed(2)}
                       </p>
                       <div className="flex items-center gap-2.5 mt-2.5">
                         <Button
@@ -112,7 +112,7 @@ export function CartSheet() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-10 w-10 ml-auto text-muted-foreground hover:text-destructive"
+                          className="h-10 w-10 ms-auto text-muted-foreground hover:text-destructive"
                           onClick={() => removeItem(item.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ interface GiftCard {
 }
 
 export default function GiftCardsPage() {
+  const t = useTranslations("admin.giftCards");
   const [cards, setCards] = useState<GiftCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -56,7 +58,7 @@ export default function GiftCardsPage() {
       const data = await res.json();
       setCards(data);
     } catch {
-      toast.error("Failed to fetch gift cards");
+      toast.error(t("failedLoad"));
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ export default function GiftCardsPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Gift card created");
+        toast.success(t("cardCreated"));
         setShowCreate(false);
         setForm({ initialBalance: "", recipientEmail: "", recipientName: "", senderName: "", message: "", expiresAt: "" });
         fetchCards();
@@ -90,7 +92,7 @@ export default function GiftCardsPage() {
         toast.error(err.error);
       }
     } catch {
-      toast.error("Failed to create gift card");
+      toast.error(t("failedCreate"));
     } finally {
       setCreating(false);
     }
@@ -104,16 +106,16 @@ export default function GiftCardsPage() {
         body: JSON.stringify({ id: card.id, isActive: !card.isActive }),
       });
       if (!res.ok) throw new Error();
-      toast.success(card.isActive ? "Gift card disabled" : "Gift card enabled");
+      toast.success(card.isActive ? t("cardDisabled") : t("cardEnabled"));
       fetchCards();
     } catch {
-      toast.error("Failed to update gift card");
+      toast.error(t("failedUpdate"));
     }
   }
 
   function copyCode(code: string) {
     navigator.clipboard.writeText(code);
-    toast.success("Code copied to clipboard");
+    toast.success(t("codeCopied"));
   }
 
   const totalValue = cards.reduce((sum, c) => sum + Number(c.currentBalance), 0);
@@ -123,49 +125,49 @@ export default function GiftCardsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gift Cards</h1>
-          <p className="text-muted-foreground">Create and manage gift cards</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Create Gift Card</Button>
+            <Button><Plus className="mr-2 h-4 w-4" /> {t("createGiftCard")}</Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleCreate}>
               <DialogHeader>
-                <DialogTitle>Create Gift Card</DialogTitle>
-                <DialogDescription>Issue a new gift card with a balance</DialogDescription>
+                <DialogTitle>{t("dialogTitle")}</DialogTitle>
+                <DialogDescription>{t("dialogDescription")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Initial Balance (SAR) *</Label>
+                  <Label>{t("initialBalance")}</Label>
                   <Input type="number" min="1" step="0.01" required value={form.initialBalance}
                     onChange={(e) => setForm((p) => ({ ...p, initialBalance: e.target.value }))} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Recipient Name</Label>
+                    <Label>{t("recipientName")}</Label>
                     <Input value={form.recipientName}
                       onChange={(e) => setForm((p) => ({ ...p, recipientName: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Recipient Email</Label>
+                    <Label>{t("recipientEmail")}</Label>
                     <Input type="email" value={form.recipientEmail}
                       onChange={(e) => setForm((p) => ({ ...p, recipientEmail: e.target.value }))} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Sender Name</Label>
+                  <Label>{t("senderName")}</Label>
                   <Input value={form.senderName}
                     onChange={(e) => setForm((p) => ({ ...p, senderName: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Message</Label>
+                  <Label>{t("message")}</Label>
                   <Textarea value={form.message} rows={2}
                     onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Expires At</Label>
+                  <Label>{t("expiresAt")}</Label>
                   <Input type="date" value={form.expiresAt}
                     onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))} />
                 </div>
@@ -173,7 +175,7 @@ export default function GiftCardsPage() {
               <DialogFooter>
                 <Button type="submit" disabled={creating}>
                   {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Gift Card
+                  {t("createGiftCard")}
                 </Button>
               </DialogFooter>
             </form>
@@ -189,7 +191,7 @@ export default function GiftCardsPage() {
               <CreditCard className="h-8 w-8 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">{cards.length}</p>
-                <p className="text-sm text-muted-foreground">Total Cards</p>
+                <p className="text-sm text-muted-foreground">{t("totalCards")}</p>
               </div>
             </div>
           </CardContent>
@@ -200,7 +202,7 @@ export default function GiftCardsPage() {
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold">{activeCards}</p>
-                <p className="text-sm text-muted-foreground">Active Cards</p>
+                <p className="text-sm text-muted-foreground">{t("activeCards")}</p>
               </div>
             </div>
           </CardContent>
@@ -211,7 +213,7 @@ export default function GiftCardsPage() {
               <SaudiRiyal className="h-8 w-8 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">SAR {totalValue.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Outstanding Balance</p>
+                <p className="text-sm text-muted-foreground">{t("outstandingBalance")}</p>
               </div>
             </div>
           </CardContent>
@@ -241,14 +243,14 @@ export default function GiftCardsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Initial</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead>Recipient</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-20">Actions</TableHead>
+                  <TableHead>{t("code")}</TableHead>
+                  <TableHead>{t("initial")}</TableHead>
+                  <TableHead>{t("balance")}</TableHead>
+                  <TableHead>{t("recipient")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                  <TableHead>{t("expires")}</TableHead>
+                  <TableHead>{t("createdAt")}</TableHead>
+                  <TableHead className="w-20">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -267,11 +269,11 @@ export default function GiftCardsPage() {
                     <TableCell className="text-muted-foreground">{card.recipientEmail || card.recipientName || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={card.isActive ? "default" : "destructive"}>
-                        {card.isActive ? "Active" : "Disabled"}
+                        {card.isActive ? t("active") : t("disabled")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {card.expiresAt ? formatDate(card.expiresAt) : "Never"}
+                      {card.expiresAt ? formatDate(card.expiresAt) : t("never")}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(card.createdAt)}</TableCell>
                     <TableCell>
@@ -284,7 +286,7 @@ export default function GiftCardsPage() {
                 {cards.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No gift cards yet
+                      {t("noGiftCards")}
                     </TableCell>
                   </TableRow>
                 )}

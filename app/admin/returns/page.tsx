@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatDateTime, getStatusColor } from "@/lib/helpers";
+import { useTranslations } from "next-intl";
 
 interface ReturnRequest {
   id: string;
@@ -67,6 +68,7 @@ interface ReturnRequest {
 }
 
 export default function AdminReturnsPage() {
+  const t = useTranslations("admin.returns");
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -88,7 +90,7 @@ export default function AdminReturnsPage() {
       const data = await res.json();
       setReturns(data);
     } catch {
-      toast.error("Failed to load returns");
+      toast.error(t("failedLoad"));
     } finally {
       setLoading(false);
     }
@@ -117,12 +119,12 @@ export default function AdminReturnsPage() {
         const err = await res.json();
         throw new Error(err.error);
       }
-      toast.success("Return updated");
+      toast.success(t("returnUpdated"));
       setDialogOpen(false);
       setLoading(true);
       await fetchReturns();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to update return");
+      toast.error(error instanceof Error ? error.message : t("failedUpdate"));
     } finally {
       setSaving(false);
     }
@@ -154,8 +156,8 @@ export default function AdminReturnsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Returns</h1>
-        <p className="text-muted-foreground">{returns.length} total return requests</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle", { count: returns.length })}</p>
       </div>
 
       <Card>
@@ -164,7 +166,7 @@ export default function AdminReturnsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search returns..."
+                placeholder={t("searchReturns")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -175,12 +177,12 @@ export default function AdminReturnsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
-                <SelectItem value="REQUESTED">Requested</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="RECEIVED">Received</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
+                <SelectItem value="ALL">{t("allStatuses")}</SelectItem>
+                <SelectItem value="REQUESTED">{t("statusRequested")}</SelectItem>
+                <SelectItem value="APPROVED">{t("statusApproved")}</SelectItem>
+                <SelectItem value="RECEIVED">{t("statusReceived")}</SelectItem>
+                <SelectItem value="COMPLETED">{t("statusCompleted")}</SelectItem>
+                <SelectItem value="REJECTED">{t("statusRejected")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -189,21 +191,21 @@ export default function AdminReturnsPage() {
           {filtered.length === 0 ? (
             <div className="text-center py-8">
               <RotateCcw className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No return requests found</p>
+              <p className="text-muted-foreground">{t("noReturns")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Return #</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>{t("returnNumber")}</TableHead>
+                  <TableHead>{t("order")}</TableHead>
+                  <TableHead>{t("customer")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                  <TableHead>{t("action")}</TableHead>
+                  <TableHead>{t("reason")}</TableHead>
+                  <TableHead>{t("items")}</TableHead>
+                  <TableHead>{t("date")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,33 +254,33 @@ export default function AdminReturnsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Return {selected?.returnNumber}</DialogTitle>
+            <DialogTitle>{t("returnDetail", { number: selected?.returnNumber ?? "" })}</DialogTitle>
             <DialogDescription>
-              Order: {selected?.order.orderNumber} — {selected?.order.email}
+              {t("orderInfo", { order: selected?.order.orderNumber ?? "", email: selected?.order.email ?? "" })}
             </DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Reason</Label>
+                <Label className="text-xs text-muted-foreground">{t("reason")}</Label>
                 <p className="text-sm">{selected.reason}</p>
               </div>
               {selected.customerNotes && (
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Customer Notes</Label>
+                <Label className="text-xs text-muted-foreground">{t("customerNotes")}</Label>
                   <p className="text-sm">{selected.customerNotes}</p>
                 </div>
               )}
 
               <div>
-                <Label className="text-xs text-muted-foreground mb-2 block">Items</Label>
+                <Label className="text-xs text-muted-foreground mb-2 block">{t("items")}</Label>
                 <div className="border rounded-md divide-y">
                   {selected.items.map((item) => (
                     <div key={item.id} className="p-2 text-sm flex justify-between">
                       <div>
                         <p className="font-medium">{item.orderItem.name}</p>
                         {item.condition && (
-                          <p className="text-xs text-muted-foreground">Condition: {item.condition}</p>
+                          <p className="text-xs text-muted-foreground">{t("condition", { condition: item.condition })}</p>
                         )}
                         {item.reason && (
                           <p className="text-xs text-muted-foreground">{item.reason}</p>
@@ -291,7 +293,7 @@ export default function AdminReturnsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{t("status")}</Label>
                 <Select value={newStatus} onValueChange={setNewStatus}>
                   <SelectTrigger>
                     <SelectValue />
@@ -305,11 +307,11 @@ export default function AdminReturnsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Admin Notes</Label>
+                <Label>{t("adminNotes")}</Label>
                 <Textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Internal notes..."
+                  placeholder={t("adminNotesPlaceholder")}
                   rows={2}
                 />
               </div>
@@ -317,11 +319,11 @@ export default function AdminReturnsPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleUpdate} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update Return
+              {t("updateReturn")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -10,8 +10,57 @@ import { z } from "zod";
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(8).max(128),
 });
+
+// ── Account lockout — in-memory + Redis-backed ────────────────────
+// Tracks failed login attempts per email. After MAX_FAILED_ATTEMPTS,
+// the account is locked for LOCKOUT_DURATION_MS.
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+// In-memory store (per-instance; in production use Redis via rate-limiter)
+const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
+
+function recordFailedLogin(email: string) {
+  const entry = failedAttempts.get(email) || { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= MAX_FAILED_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+  }
+  failedAttempts.set(email, entry);
+}
+
+function isAccountLocked(email: string): boolean {
+  const entry = failedAttempts.get(email);
+  if (!entry) return false;
+  if (entry.lockedUntil > Date.now()) return true;
+  // Lock expired — reset
+  if (entry.lockedUntil > 0) {
+    failedAttempts.delete(email);
+  }
+  return false;
+}
+
+function clearFailedAttempts(email: string) {
+  failedAttempts.delete(email);
+}
+
+// Periodic cleanup of stale entries every 5 minutes
+if (typeof globalThis !== "undefined") {
+  const key = "__auth_lockout_cleanup";
+  const g = globalThis as Record<string, unknown>;
+  if (!g[key]) {
+    g[key] = setInterval(() => {
+      const now = Date.now();
+      for (const [email, entry] of failedAttempts.entries()) {
+        if (entry.lockedUntil > 0 && entry.lockedUntil < now) {
+          failedAttempts.delete(email);
+        }
+      }
+    }, 5 * 60 * 1000);
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -39,22 +88,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        const email = parsed.data.email.trim().toLowerCase();
+
+        // Account lockout check — block brute-force attacks
+        if (isAccountLocked(email)) {
+          throw new Error("ACCOUNT_LOCKED");
+        }
+
         const user = await db.query.users.findFirst({
-          where: eq(users.email, parsed.data.email),
+          where: eq(users.email, email),
         });
 
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          // Perform a dummy hash to prevent timing side-channel
+          await bcrypt.compare(parsed.data.password, "$2a$12$000000000000000000000000000000000000000000000000000000");
+          recordFailedLogin(email);
+          return null;
+        }
 
         const isValid = await bcrypt.compare(
           parsed.data.password,
           user.password
         );
-        if (!isValid) return null;
+        if (!isValid) {
+          recordFailedLogin(email);
+          return null;
+        }
 
         // Block unverified email accounts
         if (!user.emailVerified) {
-          throw new Error("Please verify your email before signing in. Check your inbox for the verification link.");
+          throw new Error("EMAIL_NOT_VERIFIED");
         }
+
+        // Successful login — clear failed attempts
+        clearFailedAttempts(email);
 
         return {
           id: user.id,
@@ -86,8 +153,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (dbUser) {
             token.role = dbUser.role;
           } else {
-            // User deleted — invalidate token
-            token.role = "CUSTOMER";
+            // User deleted — invalidate by clearing identity
+            return { ...token, id: undefined, role: undefined };
           }
           token.roleCheckedAt = Date.now();
         } catch {

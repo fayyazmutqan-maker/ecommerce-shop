@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useRef } from "react";
 import {
   Download,
@@ -40,6 +41,7 @@ interface ImportResult {
 }
 
 export default function ImportExportPage() {
+  const t = useTranslations("admin.importExport");
   const [exportType, setExportType] = useState("products");
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -65,9 +67,9 @@ export default function ImportExportPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(`${exportType} exported successfully`);
+      toast.success(t("toasts.exportSuccess", { type: exportType }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toast.error(e instanceof Error ? e.message : t("toasts.exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -78,7 +80,7 @@ export default function ImportExportPage() {
     if (!file) return;
 
     if (!file.name.endsWith(".csv")) {
-      toast.error("Please select a CSV file");
+      toast.error(t("csvOnlyError"));
       return;
     }
 
@@ -100,7 +102,7 @@ export default function ImportExportPage() {
       setImportResult(data);
       toast.success(data.message);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import failed");
+      toast.error(e instanceof Error ? e.message : t("toasts.importFailed"));
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -108,16 +110,16 @@ export default function ImportExportPage() {
   };
 
   const exportOptions = [
-    { value: "products", label: "Products", icon: Package, description: "All products with variants, categories, images, and inventory" },
-    { value: "orders", label: "Orders", icon: ShoppingCart, description: "All orders with line items, customer info, and status" },
-    { value: "customers", label: "Customers", icon: Users, description: "Customer profiles with order counts and totals" },
+    { value: "products", icon: Package, label: t("exportOptions.products.label"), description: t("exportOptions.products.description") },
+    { value: "orders", icon: ShoppingCart, label: t("exportOptions.orders.label"), description: t("exportOptions.orders.description") },
+    { value: "customers", icon: Users, label: t("exportOptions.customers.label"), description: t("exportOptions.customers.description") },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Import / Export</h1>
-        <p className="text-muted-foreground">Bulk manage your store data with CSV files</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -125,13 +127,13 @@ export default function ImportExportPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Download className="h-5 w-5" /> Export Data
+              <Download className="h-5 w-5" /> {t("exportData")}
             </CardTitle>
-            <CardDescription>Download your store data as CSV files</CardDescription>
+            <CardDescription>{t("exportDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label>What to export</Label>
+              <Label>{t("whatToExport")}</Label>
               <Select value={exportType} onValueChange={setExportType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -161,9 +163,9 @@ export default function ImportExportPage() {
 
             <Button className="w-full" onClick={handleExport} disabled={exporting}>
               {exporting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("exporting")}</>
               ) : (
-                <><Download className="mr-2 h-4 w-4" /> Export {exportType} CSV</>
+                <><Download className="mr-2 h-4 w-4" /> {t("exportCsv", { type: exportType })}</>
               )}
             </Button>
           </CardContent>
@@ -173,31 +175,30 @@ export default function ImportExportPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Upload className="h-5 w-5" /> Import Data
+              <Upload className="h-5 w-5" /> {t("importData")}
             </CardTitle>
-            <CardDescription>Upload CSV files to create or update products</CardDescription>
+            <CardDescription>{t("importDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-start gap-3 p-4 bg-accent/30 rounded-lg">
               <FileSpreadsheet className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm font-medium">Product Import</p>
+                <p className="text-sm font-medium">{t("productImport")}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Upload a CSV with product data. Required columns: <span className="font-mono">Name</span>, <span className="font-mono">Price</span>. 
-                  Optional: SKU, Barcode, Quantity, Status, Vendor, Tags, Categories, Weight, etc.
+                  {t("productImportDesc")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-sm font-medium">CSV Format Requirements</Label>
+              <Label className="text-sm font-medium">{t("csvFormatRequirements")}</Label>
               <div className="text-xs text-muted-foreground space-y-1.5 bg-muted/50 p-3 rounded-lg font-mono">
                 <p>Name,Price,SKU,Quantity,Status,Vendor,Tags,Categories</p>
                 <p>&quot;Product A&quot;,29.99,SKU001,100,ACTIVE,&quot;Brand&quot;,&quot;tag1;tag2&quot;,&quot;Category 1;Category 2&quot;</p>
                 <p>&quot;Product B&quot;,49.99,SKU002,50,DRAFT,&quot;Brand&quot;,,&quot;Category 1&quot;</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Products matched by SKU or slug — existing products will be <strong>updated</strong>, new ones <strong>created</strong>.
+                {t("matchNote")}
               </p>
             </div>
 
@@ -216,9 +217,9 @@ export default function ImportExportPage() {
               disabled={importing}
             >
               {importing ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importing...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("importing")}</>
               ) : (
-                <><Upload className="mr-2 h-4 w-4" /> Choose CSV File</>
+                <><Upload className="mr-2 h-4 w-4" /> {t("chooseCsvFile")}</>
               )}
             </Button>
 
@@ -228,21 +229,21 @@ export default function ImportExportPage() {
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <p className="text-sm font-medium">Import Complete</p>
+                    <p className="text-sm font-medium">{t("importComplete")}</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
                       <p className="text-lg font-bold text-green-700 dark:text-green-400">{importResult.created}</p>
-                      <p className="text-xs text-muted-foreground">Created</p>
+                      <p className="text-xs text-muted-foreground">{t("created")}</p>
                     </div>
                     <div className="text-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
                       <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{importResult.updated}</p>
-                      <p className="text-xs text-muted-foreground">Updated</p>
+                      <p className="text-xs text-muted-foreground">{t("updated")}</p>
                     </div>
                     <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
                       <p className="text-lg font-bold text-red-700 dark:text-red-400">{importResult.errors.length}</p>
-                      <p className="text-xs text-muted-foreground">Errors</p>
+                      <p className="text-xs text-muted-foreground">{t("errors")}</p>
                     </div>
                   </div>
 
@@ -268,16 +269,16 @@ export default function ImportExportPage() {
       {/* Tips */}
       <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">Tips for Importing</CardTitle>
+          <CardTitle className="text-base">{t("tipsTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="text-sm text-muted-foreground space-y-2 list-disc pl-5">
-            <li>Start by <strong>exporting</strong> your current products to see the expected format.</li>
-            <li>Use semicolons (<code>;</code>) to separate multiple values in Tags and Categories columns.</li>
-            <li>Products are matched by <strong>SKU</strong> first, then by <strong>slug</strong> (generated from name). Existing products are updated in place.</li>
-            <li>Categories are automatically created if they don&apos;t exist.</li>
-            <li>Status should be one of: <Badge variant="outline" className="text-xs">DRAFT</Badge> <Badge variant="outline" className="text-xs">ACTIVE</Badge> <Badge variant="outline" className="text-xs">ARCHIVED</Badge></li>
-            <li>Maximum recommended import size: <strong>1,000 rows</strong> per file.</li>
+            <li>{t("tips.tip1")}</li>
+            <li>{t("tips.tip2")}</li>
+            <li>{t("tips.tip3")}</li>
+            <li>{t("tips.tip4")}</li>
+            <li>{t("statusValues")} <Badge variant="outline" className="text-xs">DRAFT</Badge> <Badge variant="outline" className="text-xs">ACTIVE</Badge> <Badge variant="outline" className="text-xs">ARCHIVED</Badge></li>
+            <li>{t("tips.tip5")}</li>
           </ul>
         </CardContent>
       </Card>

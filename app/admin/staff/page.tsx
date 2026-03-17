@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
@@ -42,14 +43,14 @@ import {
 import { toast } from "sonner";
 
 const ALL_PERMISSIONS = [
-  { key: "products", label: "Products", description: "Manage products, categories, and inventory" },
-  { key: "orders", label: "Orders", description: "View and manage orders, fulfillments, refunds, and returns" },
-  { key: "customers", label: "Customers", description: "View and manage customer accounts" },
-  { key: "discounts", label: "Discounts", description: "Manage discounts, coupons, and auto-discounts" },
-  { key: "content", label: "Content", description: "Manage pages and email templates" },
-  { key: "settings", label: "Settings", description: "Manage store settings and shipping zones" },
-  { key: "analytics", label: "Analytics", description: "View dashboard and analytics" },
-  { key: "import_export", label: "Import / Export", description: "Import and export data" },
+  { key: "products" },
+  { key: "orders" },
+  { key: "customers" },
+  { key: "discounts" },
+  { key: "content" },
+  { key: "settings" },
+  { key: "analytics" },
+  { key: "import_export" },
 ];
 
 interface StaffMember {
@@ -70,6 +71,7 @@ interface SearchUser {
 }
 
 export default function StaffPage() {
+  const t = useTranslations("admin.staff");
   const { data: session } = useSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function StaffPage() {
       if (!res.ok) throw new Error();
       setStaff(await res.json());
     } catch {
-      toast.error("Failed to load staff");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -120,7 +122,7 @@ export default function StaffPage() {
       );
       setSearchResults(customers);
     } catch {
-      toast.error("Search failed");
+      toast.error(t("toasts.searchFailed"));
     } finally {
       setSearching(false);
     }
@@ -139,7 +141,7 @@ export default function StaffPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`${selectedUser.name || selectedUser.email} promoted to staff`);
+      toast.success(t("toasts.promoted", { name: selectedUser.name || selectedUser.email }));
       setAddOpen(false);
       setSelectedUser(null);
       setSelectedPermissions([]);
@@ -147,7 +149,7 @@ export default function StaffPage() {
       setSearchResults([]);
       fetchStaff();
     } catch {
-      toast.error("Failed to promote user");
+      toast.error(t("toasts.promoteFailed"));
     } finally {
       setPromoting(false);
     }
@@ -166,25 +168,25 @@ export default function StaffPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Permissions updated");
+      toast.success(t("toasts.permissionsUpdated"));
       setEditOpen(false);
       fetchStaff();
     } catch {
-      toast.error("Failed to update permissions");
+      toast.error(t("toasts.permissionsFailed"));
     } finally {
       setSavingEdit(false);
     }
   }
 
   async function handleRemoveStaff(userId: string, name: string | null) {
-    if (!confirm(`Remove ${name || "this user"} from staff?`)) return;
+    if (!confirm(t("removeConfirm", { name: name || t("unnamed") }))) return;
     try {
       const res = await fetch(`/api/staff?userId=${userId}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Staff member removed");
+      toast.success(t("toasts.removed"));
       fetchStaff();
     } catch {
-      toast.error("Failed to remove staff");
+      toast.error(t("toasts.removeFailed"));
     }
   }
 
@@ -199,7 +201,7 @@ export default function StaffPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
-        <p className="text-muted-foreground">Admin access required</p>
+        <p className="text-muted-foreground">{t("adminAccessRequired")}</p>
       </div>
     );
   }
@@ -208,23 +210,23 @@ export default function StaffPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Staff Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage staff members and their permissions
+            {t("subtitle")}
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
           <UserPlus className="mr-2 h-4 w-4" />
-          Add Staff Member
+          {t("addStaffMember")}
         </Button>
       </div>
 
       {/* Staff list */}
       <Card>
         <CardHeader>
-          <CardTitle>Staff Members ({staff.length})</CardTitle>
+          <CardTitle>{t("staffMembers", { count: staff.length })}</CardTitle>
           <CardDescription>
-            Staff members can access the admin panel with limited permissions
+            {t("staffDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -243,9 +245,9 @@ export default function StaffPage() {
           ) : staff.length === 0 ? (
             <div className="text-center py-8">
               <Shield className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">No staff members yet</p>
+              <p className="text-sm text-muted-foreground">{t("emptyState.title")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Add a customer as staff to give them admin panel access
+                {t("emptyState.description")}
               </p>
             </div>
           ) : (
@@ -253,10 +255,10 @@ export default function StaffPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead>Added</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
+                  <TableHead>{t("tableHead.member")}</TableHead>
+                  <TableHead>{t("tableHead.permissions")}</TableHead>
+                  <TableHead>{t("tableHead.added")}</TableHead>
+                  <TableHead className="w-24">{t("tableHead.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -264,20 +266,20 @@ export default function StaffPage() {
                   <TableRow key={member.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-sm">{member.name || "Unnamed"}</p>
+                        <p className="font-medium text-sm">{member.name || t("unnamed")}</p>
                         <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {member.permissions.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">No permissions</span>
+                          <span className="text-xs text-muted-foreground">{t("noPermissions")}</span>
                         ) : member.permissions.length === ALL_PERMISSIONS.length ? (
-                          <Badge variant="default" className="text-xs">All Permissions</Badge>
+                          <Badge variant="default" className="text-xs">{t("allPermissions")}</Badge>
                         ) : (
                           member.permissions.map((p) => (
                             <Badge key={p} variant="secondary" className="text-xs">
-                              {ALL_PERMISSIONS.find((ap) => ap.key === p)?.label || p}
+                              {t(`permissionsList.${p}.label`)}
                             </Badge>
                           ))
                         )}
@@ -322,7 +324,7 @@ export default function StaffPage() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Staff Member</DialogTitle>
+            <DialogTitle>{t("addStaffDialogTitle")}</DialogTitle>
           </DialogHeader>
 
           {!selectedUser ? (
@@ -331,7 +333,7 @@ export default function StaffPage() {
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search customers by name or email..."
+                  placeholder={t("searchPlaceholder")}
                   onKeyDown={(e) => e.key === "Enter" && searchUsers()}
                 />
                 <Button onClick={searchUsers} disabled={searching} variant="outline" size="icon">
@@ -350,7 +352,7 @@ export default function StaffPage() {
                         {user.name?.[0] || "?"}
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{user.name || "Unnamed"}</p>
+                        <p className="text-sm font-medium">{user.name || t("unnamed")}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
                     </button>
@@ -359,7 +361,7 @@ export default function StaffPage() {
               )}
               {searchResults.length === 0 && searchQuery && !searching && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No customers found
+                  {t("noCustomersFound")}
                 </p>
               )}
             </div>
@@ -370,7 +372,7 @@ export default function StaffPage() {
                   {selectedUser.name?.[0] || "?"}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{selectedUser.name || "Unnamed"}</p>
+                  <p className="font-medium">{selectedUser.name || t("unnamed")}</p>
                   <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>
@@ -379,7 +381,7 @@ export default function StaffPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Permissions</Label>
+                <Label>{t("permissionsLabel")}</Label>
                 <div className="space-y-2 border rounded-lg p-3">
                   {ALL_PERMISSIONS.map((perm) => (
                     <label key={perm.key} className="flex items-start gap-3 cursor-pointer">
@@ -391,8 +393,8 @@ export default function StaffPage() {
                         className="mt-0.5"
                       />
                       <div>
-                        <p className="text-sm font-medium">{perm.label}</p>
-                        <p className="text-xs text-muted-foreground">{perm.description}</p>
+                        <p className="text-sm font-medium">{t(`permissionsList.${perm.key}.label`)}</p>
+                        <p className="text-xs text-muted-foreground">{t(`permissionsList.${perm.key}.description`)}</p>
                       </div>
                     </label>
                   ))}
@@ -409,12 +411,12 @@ export default function StaffPage() {
               setSearchQuery("");
               setSearchResults([]);
             }}>
-              Cancel
+              {t("cancel")}
             </Button>
             {selectedUser && (
               <Button onClick={handlePromote} disabled={promoting}>
                 {promoting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add as Staff
+                {t("addAsStaff")}
               </Button>
             )}
           </DialogFooter>
@@ -426,7 +428,7 @@ export default function StaffPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              Edit Permissions — {editingStaff?.name || editingStaff?.email}
+              {t("editPermissionsTitle", { name: editingStaff?.name || editingStaff?.email || "" })}
             </DialogTitle>
           </DialogHeader>
 
@@ -441,8 +443,8 @@ export default function StaffPage() {
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">{perm.label}</p>
-                  <p className="text-xs text-muted-foreground">{perm.description}</p>
+                  <p className="text-sm font-medium">{t(`permissionsList.${perm.key}.label`)}</p>
+                  <p className="text-xs text-muted-foreground">{t(`permissionsList.${perm.key}.description`)}</p>
                 </div>
               </label>
             ))}
@@ -454,24 +456,24 @@ export default function StaffPage() {
               size="sm"
               onClick={() => setEditPermissions(ALL_PERMISSIONS.map((p) => p.key))}
             >
-              <Check className="mr-1 h-3.5 w-3.5" /> Select All
+              <Check className="mr-1 h-3.5 w-3.5" /> {t("selectAll")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setEditPermissions([])}
             >
-              <X className="mr-1 h-3.5 w-3.5" /> Clear All
+              <X className="mr-1 h-3.5 w-3.5" /> {t("clearAll")}
             </Button>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSavePermissions} disabled={savingEdit}>
               {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Permissions
+              {t("savePermissions")}
             </Button>
           </DialogFooter>
         </DialogContent>

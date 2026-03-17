@@ -57,6 +57,7 @@ import {
   Camera,
 } from "lucide-react";
 import { formatDate, formatDateTime, getStatusColor } from "@/lib/helpers";
+import { useTranslations } from "next-intl";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -158,6 +159,7 @@ function isSnapchatChannel(platform: string): boolean {
 // ─── Component ───────────────────────────────────────────────
 
 export default function ChannelsPage() {
+  const t = useTranslations("admin.channels");
   const [metaChannels, setMetaChannels] = useState<Channel[]>([]);
   const [googleChannels, setGoogleChannels] = useState<Channel[]>([]);
   const [whatsAppChannels, setWhatsAppChannels] = useState<Channel[]>([]);
@@ -229,7 +231,7 @@ export default function ChannelsPage() {
       if (tiktokRes.ok) setTiktokChannels(await tiktokRes.json());
       if (snapchatRes.ok) setSnapchatChannels(await snapchatRes.json());
     } catch {
-      toast.error("Failed to load channels");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -254,7 +256,7 @@ export default function ChannelsPage() {
       const { oauthUrl } = await res.json();
       window.location.href = oauthUrl;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.connectionFailed"));
       setConnectingMeta(false);
     }
   };
@@ -274,14 +276,14 @@ export default function ChannelsPage() {
       const { oauthUrl } = await res.json();
       window.location.href = oauthUrl;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.connectionFailed"));
       setConnectingGoogle(false);
     }
   };
 
   const handleConnectWhatsApp = async () => {
     if (!waAccessToken || !waBusinessAccountId || !waPhoneNumberId) {
-      toast.error("All WhatsApp fields are required");
+      toast.error(t("toasts.waFieldsRequired"));
       return;
     }
     setConnectingWhatsApp(true);
@@ -299,14 +301,14 @@ export default function ChannelsPage() {
         const err = await res.json();
         throw new Error(err.error || "Failed to connect WhatsApp");
       }
-      toast.success("WhatsApp Business connected successfully");
+      toast.success(t("toasts.waConnected"));
       setWhatsAppConnectOpen(false);
       setWaAccessToken("");
       setWaBusinessAccountId("");
       setWaPhoneNumberId("");
       fetchChannels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.connectionFailed"));
     } finally {
       setConnectingWhatsApp(false);
     }
@@ -327,7 +329,7 @@ export default function ChannelsPage() {
       const { oauthUrl } = await res.json();
       window.location.href = oauthUrl;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.connectionFailed"));
       setConnectingTikTok(false);
     }
   };
@@ -347,7 +349,7 @@ export default function ChannelsPage() {
       const { oauthUrl } = await res.json();
       window.location.href = oauthUrl;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Connection failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.connectionFailed"));
       setConnectingSnapchat(false);
     }
   };
@@ -421,7 +423,7 @@ export default function ChannelsPage() {
         }
       }
     } catch {
-      toast.error("Failed to load channel details");
+      toast.error(t("toasts.detailsFailed"));
     } finally {
       setLoadingDetails(false);
     }
@@ -486,26 +488,26 @@ export default function ChannelsPage() {
         const err = await res.json();
         throw new Error(err.error || "Save failed");
       }
-      toast.success("Channel settings saved");
+      toast.success(t("toasts.settingsSaved"));
       setSettingsOpen(false);
       fetchChannels();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Save failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDisconnect = async (channel: Channel) => {
-    if (!confirm(`Disconnect ${channel.name}? This will remove all sync data.`)) return;
+    if (!confirm(t("disconnectConfirm", { name: channel.name }))) return;
     const base = getApiBase(channel.platform);
     try {
       const res = await fetch(`${base}/${channel.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Channel disconnected");
+      toast.success(t("toasts.disconnected"));
       fetchChannels();
     } catch {
-      toast.error("Failed to disconnect channel");
+      toast.error(t("toasts.disconnectFailed"));
     }
   };
 
@@ -522,12 +524,12 @@ export default function ChannelsPage() {
         throw new Error(err.error || "Sync failed");
       }
       const result = await res.json();
-      toast.success(`Sync complete: ${result.synced}/${result.totalProducts} products synced`);
+      toast.success(t("toasts.syncComplete", { synced: result.synced, total: result.totalProducts }));
       // Refresh details
       const detailsRes = await fetch(`${base}/${selectedChannel.id}`);
       if (detailsRes.ok) setSelectedChannel(await detailsRes.json());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sync failed");
+      toast.error(error instanceof Error ? error.message : t("toasts.saveFailed"));
     } finally {
       setSyncing(false);
     }
@@ -543,10 +545,10 @@ export default function ChannelsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Channel ${newStatus === "ACTIVE" ? "activated" : "paused"}`);
+      toast.success(newStatus === "ACTIVE" ? t("toasts.channelActivated") : t("toasts.channelPaused"));
       fetchChannels();
     } catch {
-      toast.error("Failed to update channel status");
+      toast.error(t("toasts.statusFailed"));
     }
   };
 
@@ -572,12 +574,12 @@ export default function ChannelsPage() {
 
   const getPlatformLabel = (platform: string) => {
     switch (platform) {
-      case "INSTAGRAM": return "Instagram";
-      case "GOOGLE": return "Google Merchant";
-      case "WHATSAPP": return "WhatsApp Business";
-      case "TIKTOK": return "TikTok Shop";
-      case "SNAPCHAT": return "Snapchat";
-      case "FACEBOOK": return "Facebook";
+      case "INSTAGRAM": return t("platformInstagram");
+      case "GOOGLE": return t("platformGoogle");
+      case "WHATSAPP": return t("platformWhatsApp");
+      case "TIKTOK": return t("platformTikTok");
+      case "SNAPCHAT": return t("platformSnapchat");
+      case "FACEBOOK": return t("platformFacebook");
       default: return platform;
     }
   };
@@ -605,9 +607,9 @@ export default function ChannelsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sales Channels</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Connect your store to Facebook, Instagram, Google Shopping, WhatsApp, TikTok Shop, Snapchat, and more
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -617,7 +619,7 @@ export default function ChannelsPage() {
             ) : (
               <Facebook className="mr-2 size-4" />
             )}
-            Connect Meta
+            {t("connectMeta")}
           </Button>
           <Button onClick={handleConnectGoogle} disabled={connectingGoogle}>
             {connectingGoogle ? (
@@ -625,11 +627,11 @@ export default function ChannelsPage() {
             ) : (
               <Store className="mr-2 size-4" />
             )}
-            Connect Google
+            {t("connectGoogle")}
           </Button>
           <Button onClick={() => setWhatsAppConnectOpen(true)} variant="outline">
             <MessageSquare className="mr-2 size-4" />
-            Connect WhatsApp
+            {t("connectWhatsApp")}
           </Button>
           <Button onClick={handleConnectTikTok} disabled={connectingTikTok} variant="outline">
             {connectingTikTok ? (
@@ -637,7 +639,7 @@ export default function ChannelsPage() {
             ) : (
               <Music className="mr-2 size-4" />
             )}
-            Connect TikTok
+            {t("connectTikTok")}
           </Button>
           <Button onClick={handleConnectSnapchat} disabled={connectingSnapchat} variant="outline">
             {connectingSnapchat ? (
@@ -645,7 +647,7 @@ export default function ChannelsPage() {
             ) : (
               <Camera className="mr-2 size-4" />
             )}
-            Connect Snapchat
+            {t("connectSnapchat")}
           </Button>
         </div>
       </div>
@@ -655,10 +657,9 @@ export default function ChannelsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <ShoppingBag className="size-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No channels connected</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("noChannels")}</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              Connect your store to Facebook, Instagram, Google Merchant Center, WhatsApp Business,
-              TikTok Shop, or Snapchat to sync products and reach more customers.
+              {t("noChannelsDesc")}
             </p>
             <div className="flex gap-3 flex-wrap justify-center">
               <Button onClick={handleConnectMeta} disabled={connectingMeta} variant="outline">
@@ -667,7 +668,7 @@ export default function ChannelsPage() {
                 ) : (
                   <Facebook className="mr-2 size-4" />
                 )}
-                Connect Meta
+                {t("connectMeta")}
               </Button>
               <Button onClick={handleConnectGoogle} disabled={connectingGoogle}>
                 {connectingGoogle ? (
@@ -675,11 +676,11 @@ export default function ChannelsPage() {
                 ) : (
                   <Store className="mr-2 size-4" />
                 )}
-                Connect Google Merchant
+                {t("connectGoogleMerchant")}
               </Button>
               <Button onClick={() => setWhatsAppConnectOpen(true)} variant="outline">
                 <MessageSquare className="mr-2 size-4" />
-                Connect WhatsApp
+                {t("connectWhatsApp")}
               </Button>
               <Button onClick={handleConnectTikTok} disabled={connectingTikTok} variant="outline">
                 {connectingTikTok ? (
@@ -687,7 +688,7 @@ export default function ChannelsPage() {
                 ) : (
                   <Music className="mr-2 size-4" />
                 )}
-                Connect TikTok Shop
+                {t("connectTikTokShop")}
               </Button>
               <Button onClick={handleConnectSnapchat} disabled={connectingSnapchat} variant="outline">
                 {connectingSnapchat ? (
@@ -695,7 +696,7 @@ export default function ChannelsPage() {
                 ) : (
                   <Camera className="mr-2 size-4" />
                 )}
-                Connect Snapchat
+                {t("connectSnapchat")}
               </Button>
             </div>
           </CardContent>
@@ -719,7 +720,7 @@ export default function ChannelsPage() {
                       {channel.lastSyncAt && (
                         <>
                           <span className="text-muted-foreground">·</span>
-                          <span>Last sync: {formatDate(channel.lastSyncAt)}</span>
+                          <span>{t("lastSync")} {formatDate(channel.lastSyncAt)}</span>
                         </>
                       )}
                     </CardDescription>
@@ -727,7 +728,7 @@ export default function ChannelsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={getStatusColor(channel.status)}>
-                    {channel.syncedProductCount || 0} products synced
+                    {t("productsSynced", { count: channel.syncedProductCount || 0 })}
                   </Badge>
                   <Switch
                     checked={channel.status === "ACTIVE"}
@@ -739,7 +740,7 @@ export default function ChannelsPage() {
                     onClick={() => openSettings(channel)}
                   >
                     <Settings2 className="mr-1 size-4" />
-                    Settings
+                    {t("settings")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -754,7 +755,7 @@ export default function ChannelsPage() {
                 <CardContent className="pt-0">
                   <div className="flex items-center gap-2 text-sm text-destructive">
                     <AlertCircle className="size-4" />
-                    Last sync failed. Open settings to retry.
+                    {t("syncFailedRetry")}
                   </div>
                 </CardContent>
               )}
@@ -769,18 +770,18 @@ export default function ChannelsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedChannel && getPlatformIcon(selectedChannel.platform)}
-              {selectedChannel ? `${getPlatformLabel(selectedChannel.platform)} Settings` : "Channel Settings"}
+              {selectedChannel ? t("settingsDesc", { platform: getPlatformLabel(selectedChannel.platform) }) : t("channelSettings")}
             </DialogTitle>
             <DialogDescription>
               {selectedChannel && isGoogleChannel(selectedChannel.platform)
-                ? "Configure sync settings for your Google Merchant Center connection"
+                ? t("googleSettingsDesc")
                 : selectedChannel && isWhatsAppChannel(selectedChannel.platform)
-                ? "Configure catalog sync and messaging for your WhatsApp Business connection"
+                ? t("whatsappSettingsDesc")
                 : selectedChannel && isTikTokChannel(selectedChannel.platform)
-                ? "Configure shop, categories, and sync settings for your TikTok Shop connection"
+                ? t("tiktokSettingsDesc")
                 : selectedChannel && isSnapchatChannel(selectedChannel.platform)
-                ? "Configure organization, catalog, and sync settings for your Snapchat connection"
-                : "Configure sync settings and manage your Meta Commerce connection"}
+                ? t("snapchatSettingsDesc")
+                : t("metaSettingsDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -795,12 +796,12 @@ export default function ChannelsPage() {
             <div className="space-y-6 py-2">
               {/* Channel Name */}
               <div className="space-y-2">
-                <Label htmlFor="channelName">Channel Name</Label>
+                <Label htmlFor="channelName">{t("channelName")}</Label>
                 <Input
                   id="channelName"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
-                  placeholder={isGoogleChannel(selectedChannel.platform) ? "My Google Shop" : isWhatsAppChannel(selectedChannel.platform) ? "My WhatsApp Catalog" : isTikTokChannel(selectedChannel.platform) ? "My TikTok Shop" : isSnapchatChannel(selectedChannel.platform) ? "My Snapchat Catalog" : "My Facebook Shop"}
+                  placeholder={isGoogleChannel(selectedChannel.platform) ? t("placeholderGoogle") : isWhatsAppChannel(selectedChannel.platform) ? t("placeholderWhatsApp") : isTikTokChannel(selectedChannel.platform) ? t("placeholderTikTok") : isSnapchatChannel(selectedChannel.platform) ? t("placeholderSnapchat") : t("placeholderFacebook")}
                 />
               </div>
 
@@ -810,10 +811,10 @@ export default function ChannelsPage() {
                   {/* Page Selection */}
                   {metaDiscovery?.pages && metaDiscovery.pages.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Facebook Page</Label>
+                      <Label>{t("facebookPage")}</Label>
                       <Select value={selectedPageId} onValueChange={setSelectedPageId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a page" />
+                          <SelectValue placeholder={t("selectPage")} />
                         </SelectTrigger>
                         <SelectContent>
                           {metaDiscovery.pages.map((page) => (
@@ -829,10 +830,10 @@ export default function ChannelsPage() {
                   {/* Catalog Selection */}
                   {metaDiscovery?.businesses && metaDiscovery.businesses.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Product Catalog</Label>
+                      <Label>{t("productCatalog")}</Label>
                       <Select value={selectedCatalogId} onValueChange={setSelectedCatalogId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a catalog" />
+                          <SelectValue placeholder={t("selectCatalog")} />
                         </SelectTrigger>
                         <SelectContent>
                           {metaDiscovery.businesses.flatMap((biz) =>
@@ -849,15 +850,15 @@ export default function ChannelsPage() {
 
                   {/* Pixel ID */}
                   <div className="space-y-2">
-                    <Label htmlFor="pixelId">Meta Pixel ID</Label>
+                    <Label htmlFor="pixelId">{t("metaPixelId")}</Label>
                     <Input
                       id="pixelId"
                       value={pixelId}
                       onChange={(e) => setPixelId(e.target.value)}
-                      placeholder="Enter your Meta Pixel ID for conversion tracking"
+                      placeholder={t("metaPixelPlaceholder")}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Required for Conversions API server-side event tracking
+                      {t("metaPixelHelp")}
                     </p>
                   </div>
                 </>
@@ -869,10 +870,10 @@ export default function ChannelsPage() {
                   {/* Merchant Account Selection */}
                   {googleDiscovery?.accounts && googleDiscovery.accounts.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Merchant Account</Label>
+                      <Label>{t("merchantAccount")}</Label>
                       <Select value={selectedMerchantId} onValueChange={setSelectedMerchantId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a merchant account" />
+                          <SelectValue placeholder={t("selectMerchant")} />
                         </SelectTrigger>
                         <SelectContent>
                           {googleDiscovery.accounts.map((acc) => (
@@ -888,68 +889,68 @@ export default function ChannelsPage() {
 
                   {/* Content Language */}
                   <div className="space-y-2">
-                    <Label>Content Language</Label>
+                    <Label>{t("contentLanguage")}</Label>
                     <Select value={contentLanguage} onValueChange={setContentLanguage}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="ar">Arabic</SelectItem>
+                        <SelectItem value="en">{t("english")}</SelectItem>
+                        <SelectItem value="ar">{t("arabic")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Language for your product listings in Google Shopping
+                      {t("contentLangHelp")}
                     </p>
                   </div>
 
                   {/* Target Country */}
                   <div className="space-y-2">
-                    <Label>Target Country</Label>
+                    <Label>{t("targetCountry")}</Label>
                     <Select value={targetCountry} onValueChange={setTargetCountry}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SA">Saudi Arabia</SelectItem>
-                        <SelectItem value="AE">United Arab Emirates</SelectItem>
-                        <SelectItem value="KW">Kuwait</SelectItem>
-                        <SelectItem value="BH">Bahrain</SelectItem>
-                        <SelectItem value="QA">Qatar</SelectItem>
-                        <SelectItem value="OM">Oman</SelectItem>
-                        <SelectItem value="EG">Egypt</SelectItem>
-                        <SelectItem value="JO">Jordan</SelectItem>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
+                        <SelectItem value="SA">{t("countrySA")}</SelectItem>
+                        <SelectItem value="AE">{t("countryAE")}</SelectItem>
+                        <SelectItem value="KW">{t("countryKW")}</SelectItem>
+                        <SelectItem value="BH">{t("countryBH")}</SelectItem>
+                        <SelectItem value="QA">{t("countryQA")}</SelectItem>
+                        <SelectItem value="OM">{t("countryOM")}</SelectItem>
+                        <SelectItem value="EG">{t("countryEG")}</SelectItem>
+                        <SelectItem value="JO">{t("countryJO")}</SelectItem>
+                        <SelectItem value="US">{t("countryUS")}</SelectItem>
+                        <SelectItem value="GB">{t("countryGB")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Country where your products will be shown in Google Shopping
+                      {t("targetCountryHelp")}
                     </p>
                   </div>
 
                   {/* Product Status Summary */}
                   {googleDiscovery?.productStatusSummary && (
                     <div className="space-y-2">
-                      <Label className="text-base font-semibold">Product Status (Google)</Label>
+                      <Label className="text-base font-semibold">{t("productStatusGoogle")}</Label>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="rounded-lg border p-3 text-center">
                           <p className="text-lg font-bold text-green-600">
                             {googleDiscovery.productStatusSummary.approved}
                           </p>
-                          <p className="text-xs text-muted-foreground">Approved</p>
+                          <p className="text-xs text-muted-foreground">{t("approved")}</p>
                         </div>
                         <div className="rounded-lg border p-3 text-center">
                           <p className="text-lg font-bold text-yellow-600">
                             {googleDiscovery.productStatusSummary.pending}
                           </p>
-                          <p className="text-xs text-muted-foreground">Pending</p>
+                          <p className="text-xs text-muted-foreground">{t("pending")}</p>
                         </div>
                         <div className="rounded-lg border p-3 text-center">
                           <p className="text-lg font-bold text-red-600">
                             {googleDiscovery.productStatusSummary.disapproved}
                           </p>
-                          <p className="text-xs text-muted-foreground">Disapproved</p>
+                          <p className="text-xs text-muted-foreground">{t("disapproved")}</p>
                         </div>
                       </div>
                     </div>
@@ -963,10 +964,10 @@ export default function ChannelsPage() {
                   {/* Catalog Selection */}
                   {whatsAppDiscovery?.catalogs && whatsAppDiscovery.catalogs.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Product Catalog</Label>
+                      <Label>{t("productCatalog")}</Label>
                       <Select value={selectedWaCatalogId} onValueChange={setSelectedWaCatalogId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a catalog" />
+                          <SelectValue placeholder={t("selectCatalog")} />
                         </SelectTrigger>
                         <SelectContent>
                           {whatsAppDiscovery.catalogs.map((cat) => (
@@ -977,7 +978,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Select the Meta Commerce catalog to sync products with WhatsApp
+                        {t("waCatalogHelp")}
                       </p>
                     </div>
                   )}
@@ -985,7 +986,7 @@ export default function ChannelsPage() {
                   {/* Phone Number Info */}
                   {whatsAppDiscovery?.phoneNumbers && whatsAppDiscovery.phoneNumbers.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-base font-semibold">Connected Phone Numbers</Label>
+                      <Label className="text-base font-semibold">{t("connectedPhones")}</Label>
                       <div className="space-y-2">
                         {whatsAppDiscovery.phoneNumbers.map((phone) => (
                           <div key={phone.id} className="flex items-center justify-between rounded-lg border p-3">
@@ -1005,22 +1006,22 @@ export default function ChannelsPage() {
                   {/* Business Profile Info */}
                   {whatsAppDiscovery?.profile && (
                     <div className="space-y-2">
-                      <Label className="text-base font-semibold">Business Profile</Label>
+                      <Label className="text-base font-semibold">{t("businessProfile")}</Label>
                       <div className="rounded-lg border p-3 space-y-1 text-sm">
                         {whatsAppDiscovery.profile.about && (
-                          <p><span className="font-medium">About:</span> {whatsAppDiscovery.profile.about}</p>
+                          <p><span className="font-medium">{t("about")}</span> {whatsAppDiscovery.profile.about}</p>
                         )}
                         {whatsAppDiscovery.profile.description && (
-                          <p><span className="font-medium">Description:</span> {whatsAppDiscovery.profile.description}</p>
+                          <p><span className="font-medium">{t("description")}</span> {whatsAppDiscovery.profile.description}</p>
                         )}
                         {whatsAppDiscovery.profile.address && (
-                          <p><span className="font-medium">Address:</span> {whatsAppDiscovery.profile.address}</p>
+                          <p><span className="font-medium">{t("address")}</span> {whatsAppDiscovery.profile.address}</p>
                         )}
                         {whatsAppDiscovery.profile.vertical && (
-                          <p><span className="font-medium">Category:</span> {whatsAppDiscovery.profile.vertical}</p>
+                          <p><span className="font-medium">{t("category")}</span> {whatsAppDiscovery.profile.vertical}</p>
                         )}
                         {whatsAppDiscovery.profile.websites && whatsAppDiscovery.profile.websites.length > 0 && (
-                          <p><span className="font-medium">Websites:</span> {whatsAppDiscovery.profile.websites.join(", ")}</p>
+                          <p><span className="font-medium">{t("websites")}</span> {whatsAppDiscovery.profile.websites.join(", ")}</p>
                         )}
                       </div>
                     </div>
@@ -1034,10 +1035,10 @@ export default function ChannelsPage() {
                   {/* Shop Selection */}
                   {tiktokDiscovery?.shops && tiktokDiscovery.shops.length > 0 && (
                     <div className="space-y-2">
-                      <Label>TikTok Shop</Label>
+                      <Label>{t("tiktokShop")}</Label>
                       <Select value={selectedTikTokShopId} onValueChange={setSelectedTikTokShopId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a shop" />
+                          <SelectValue placeholder={t("selectShop")} />
                         </SelectTrigger>
                         <SelectContent>
                           {tiktokDiscovery.shops.map((shop) => (
@@ -1048,7 +1049,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Select the TikTok Shop to sync products with
+                        {t("tiktokShopHelp")}
                       </p>
                     </div>
                   )}
@@ -1056,10 +1057,10 @@ export default function ChannelsPage() {
                   {/* Default Category Selection */}
                   {tiktokDiscovery?.categories && tiktokDiscovery.categories.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Default Product Category</Label>
+                      <Label>{t("defaultProductCategory")}</Label>
                       <Select value={selectedTikTokCategoryId} onValueChange={setSelectedTikTokCategoryId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a default category" />
+                          <SelectValue placeholder={t("selectDefaultCategory")} />
                         </SelectTrigger>
                         <SelectContent>
                           {tiktokDiscovery.categories
@@ -1072,7 +1073,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        TikTok Shop requires a category for every product. This default will be used when no specific category is mapped.
+                        {t("tiktokCategoryHelp")}
                       </p>
                     </div>
                   )}
@@ -1080,10 +1081,10 @@ export default function ChannelsPage() {
                   {/* Warehouse Selection */}
                   {tiktokDiscovery?.warehouses && tiktokDiscovery.warehouses.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Warehouse</Label>
+                      <Label>{t("warehouse")}</Label>
                       <Select value={selectedTikTokWarehouseId} onValueChange={setSelectedTikTokWarehouseId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a warehouse" />
+                          <SelectValue placeholder={t("selectWarehouse")} />
                         </SelectTrigger>
                         <SelectContent>
                           {tiktokDiscovery.warehouses.map((wh) => (
@@ -1094,7 +1095,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Warehouse for inventory and fulfillment tracking
+                        {t("warehouseHelp")}
                       </p>
                     </div>
                   )}
@@ -1107,10 +1108,10 @@ export default function ChannelsPage() {
                   {/* Organization Selection */}
                   {snapchatDiscovery?.organizations && snapchatDiscovery.organizations.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Organization</Label>
+                      <Label>{t("organization")}</Label>
                       <Select value={selectedSnapchatOrgId} onValueChange={setSelectedSnapchatOrgId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an organization" />
+                          <SelectValue placeholder={t("selectOrganization")} />
                         </SelectTrigger>
                         <SelectContent>
                           {snapchatDiscovery.organizations.map((org) => (
@@ -1121,7 +1122,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Select the Snapchat organization to sync products with
+                        {t("snapchatOrgHelp")}
                       </p>
                     </div>
                   )}
@@ -1129,10 +1130,10 @@ export default function ChannelsPage() {
                   {/* Catalog Selection */}
                   {snapchatDiscovery?.catalogs && snapchatDiscovery.catalogs.length > 0 && (
                     <div className="space-y-2">
-                      <Label>Product Catalog</Label>
+                      <Label>{t("productCatalog")}</Label>
                       <Select value={selectedSnapchatCatalogId} onValueChange={setSelectedSnapchatCatalogId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a catalog" />
+                          <SelectValue placeholder={t("selectCatalog")} />
                         </SelectTrigger>
                         <SelectContent>
                           {snapchatDiscovery.catalogs.map((cat) => (
@@ -1143,7 +1144,7 @@ export default function ChannelsPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Select the catalog for product sync
+                        {t("snapchatCatalogHelp")}
                       </p>
                     </div>
                   )}
@@ -1151,7 +1152,7 @@ export default function ChannelsPage() {
                   {/* Ad Accounts Info */}
                   {snapchatDiscovery?.adAccounts && snapchatDiscovery.adAccounts.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-base font-semibold">Ad Accounts</Label>
+                      <Label className="text-base font-semibold">{t("adAccounts")}</Label>
                       <div className="space-y-2">
                         {snapchatDiscovery.adAccounts.map((acc) => (
                           <div key={acc.id} className="flex items-center justify-between rounded-lg border p-3">
@@ -1170,22 +1171,22 @@ export default function ChannelsPage() {
 
               {/* Sync Settings (common) */}
               <div className="space-y-4">
-                <Label className="text-base font-semibold">Sync Settings</Label>
+                <Label className="text-base font-semibold">{t("syncSettings")}</Label>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="autoSync">Auto Sync Products</Label>
+                      <Label htmlFor="autoSync">{t("autoSyncProducts")}</Label>
                       <p className="text-xs text-muted-foreground">
-                        Automatically push product changes to {isGoogleChannel(selectedChannel.platform) ? "Google Merchant Center" : isWhatsAppChannel(selectedChannel.platform) ? "WhatsApp catalog" : isTikTokChannel(selectedChannel.platform) ? "TikTok Shop" : isSnapchatChannel(selectedChannel.platform) ? "Snapchat catalog" : "Meta catalog"}
+                        {t("autoSyncHelp", { platform: isGoogleChannel(selectedChannel.platform) ? t("platformGoogleMerchantCenter") : isWhatsAppChannel(selectedChannel.platform) ? t("platformWhatsAppCatalog") : isTikTokChannel(selectedChannel.platform) ? t("platformTikTok") : isSnapchatChannel(selectedChannel.platform) ? t("platformSnapchatCatalog") : t("platformMetaCatalog") })}
                       </p>
                     </div>
                     <Switch id="autoSync" checked={autoSync} onCheckedChange={setAutoSync} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="syncInventory">Sync Inventory</Label>
+                      <Label htmlFor="syncInventory">{t("syncInventory")}</Label>
                       <p className="text-xs text-muted-foreground">
-                        Keep stock levels in sync
+                        {t("syncInventoryHelp")}
                       </p>
                     </div>
                     <Switch id="syncInventory" checked={syncInventory} onCheckedChange={setSyncInventory} />
@@ -1193,11 +1194,11 @@ export default function ChannelsPage() {
                   {(isMetaChannel(selectedChannel.platform) || isTikTokChannel(selectedChannel.platform)) && (
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="syncOrders">Import Orders</Label>
+                        <Label htmlFor="syncOrders">{t("importOrders")}</Label>
                         <p className="text-xs text-muted-foreground">
                           {isTikTokChannel(selectedChannel.platform)
-                            ? "Automatically import orders from TikTok Shop"
-                            : "Automatically import orders from Facebook/Instagram shops"}
+                            ? t("importOrdersTikTok")
+                            : t("importOrdersMeta")}
                         </p>
                       </div>
                       <Switch id="syncOrders" checked={syncOrders} onCheckedChange={setSyncOrders} />
@@ -1211,13 +1212,13 @@ export default function ChannelsPage() {
                 <Card>
                   <CardContent className="pt-4 text-center">
                     <p className="text-2xl font-bold">{selectedChannel.stats.syncedProducts}</p>
-                    <p className="text-xs text-muted-foreground">Products Synced</p>
+                    <p className="text-xs text-muted-foreground">{t("productsSyncedStat")}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-4 text-center">
                     <p className="text-2xl font-bold">{selectedChannel.stats.importedOrders}</p>
-                    <p className="text-xs text-muted-foreground">Orders Imported</p>
+                    <p className="text-xs text-muted-foreground">{t("ordersImported")}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -1234,20 +1235,20 @@ export default function ChannelsPage() {
                 ) : (
                   <RefreshCw className="mr-2 size-4" />
                 )}
-                Sync Products Now
+                {t("syncProductsNow")}
               </Button>
 
               {/* Recent Sync Logs */}
               {selectedChannel.recentLogs.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-base font-semibold">Recent Sync Activity</Label>
+                  <Label className="text-base font-semibold">{t("recentSyncActivity")}</Label>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>{t("type")}</TableHead>
+                        <TableHead>{t("status")}</TableHead>
+                        <TableHead>{t("items")}</TableHead>
+                        <TableHead>{t("date")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1263,7 +1264,7 @@ export default function ChannelsPage() {
                             {log.successCount}/{log.totalItems}
                             {log.failureCount > 0 && (
                               <span className="text-destructive ml-1">
-                                ({log.failureCount} failed)
+                                ({t("failed", { count: log.failureCount })})
                               </span>
                             )}
                           </TableCell>
@@ -1281,11 +1282,11 @@ export default function ChannelsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSettingsOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Save Settings
+              {t("saveSettings")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1297,63 +1298,62 @@ export default function ChannelsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="size-5" />
-              Connect WhatsApp Business
+              {t("connectWhatsAppBusiness")}
             </DialogTitle>
             <DialogDescription>
-              Enter your WhatsApp Business API credentials. You can find these in your
-              Meta Business Suite under WhatsApp &gt; API Setup.
+              {t("waConnectDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="waAccessToken">Access Token</Label>
+              <Label htmlFor="waAccessToken">{t("accessToken")}</Label>
               <Input
                 id="waAccessToken"
                 type="password"
                 value={waAccessToken}
                 onChange={(e) => setWaAccessToken(e.target.value)}
-                placeholder="Permanent System User access token"
+                placeholder={t("accessTokenPlaceholder")}
               />
               <p className="text-xs text-muted-foreground">
-                Generate a permanent token from Meta Business Suite &gt; System Users
+                {t("accessTokenHelp")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="waBusinessAccountId">Business Account ID</Label>
+              <Label htmlFor="waBusinessAccountId">{t("businessAccountId")}</Label>
               <Input
                 id="waBusinessAccountId"
                 value={waBusinessAccountId}
                 onChange={(e) => setWaBusinessAccountId(e.target.value)}
-                placeholder="e.g. 123456789012345"
+                placeholder={t("businessAccountPlaceholder")}
               />
               <p className="text-xs text-muted-foreground">
-                Your WhatsApp Business Account (WABA) ID
+                {t("businessAccountHelp")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="waPhoneNumberId">Phone Number ID</Label>
+              <Label htmlFor="waPhoneNumberId">{t("phoneNumberId")}</Label>
               <Input
                 id="waPhoneNumberId"
                 value={waPhoneNumberId}
                 onChange={(e) => setWaPhoneNumberId(e.target.value)}
-                placeholder="e.g. 123456789012345"
+                placeholder={t("phoneNumberPlaceholder")}
               />
               <p className="text-xs text-muted-foreground">
-                The Phone Number ID to use for messaging and catalog
+                {t("phoneNumberHelp")}
               </p>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setWhatsAppConnectOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleConnectWhatsApp} disabled={connectingWhatsApp}>
               {connectingWhatsApp && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Connect
+              {t("connect")}
             </Button>
           </DialogFooter>
         </DialogContent>

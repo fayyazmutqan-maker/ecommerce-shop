@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ interface NavMenu {
 }
 
 export default function NavigationsPage() {
+  const t = useTranslations("admin.navigations");
   const [menus, setMenus] = useState<NavMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -58,7 +60,7 @@ export default function NavigationsPage() {
         setMenus(await res.json());
       }
     } catch {
-      toast.error("Failed to load navigation menus");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export default function NavigationsPage() {
       children: i.children?.filter((c) => c.title.trim() && c.url.trim()),
     }));
     if (validItems.length === 0) {
-      toast.error("At least one menu item is required");
+      toast.error(t("toasts.itemRequired"));
       return;
     }
     setSaving(true);
@@ -158,7 +160,7 @@ export default function NavigationsPage() {
         const err = await res.json();
         throw new Error(err.error || "Failed to save");
       }
-      toast.success(editing ? "Navigation updated" : "Navigation created");
+      toast.success(editing ? t("toasts.updated") : t("toasts.created"));
       setOpen(false);
       fetchMenus();
     } catch (err: any) {
@@ -169,14 +171,14 @@ export default function NavigationsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this navigation menu?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/navigations?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Navigation deleted");
+      toast.success(t("toasts.deleted"));
       fetchMenus();
     } catch {
-      toast.error("Failed to delete navigation");
+      toast.error(t("toasts.deleteFailed"));
     }
   }
 
@@ -184,10 +186,10 @@ export default function NavigationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Navigation Menus</h1>
-          <p className="text-muted-foreground">Manage your store&apos;s navigation menus</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Menu</Button>
+        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("createMenu")}</Button>
       </div>
 
       <Card>
@@ -206,19 +208,19 @@ export default function NavigationsPage() {
             </div>
           ) : menus.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
-              <p className="mb-2">No navigation menus yet</p>
-              <Button variant="outline" onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create your first menu</Button>
+              <p className="mb-2">{t("noMenus")}</p>
+              <Button variant="outline" onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("createFirstMenu")}</Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead>{t("titleColumn")}</TableHead>
+                  <TableHead>{t("slug")}</TableHead>
+                  <TableHead>{t("items")}</TableHead>
+                  <TableHead>{t("updated")}</TableHead>
+                  <TableHead className="w-[100px]">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,7 +228,7 @@ export default function NavigationsPage() {
                   <TableRow key={menu.id}>
                     <TableCell className="font-medium">{menu.title}</TableCell>
                     <TableCell><Badge variant="secondary">{menu.slug}</Badge></TableCell>
-                    <TableCell>{menu.items.length} items</TableCell>
+                    <TableCell>{t("itemsCount", { count: menu.items.length })}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(menu.updatedAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -246,24 +248,24 @@ export default function NavigationsPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit" : "Create"} Navigation Menu</DialogTitle>
+            <DialogTitle>{editing ? t("editMenu") : t("createMenuDialog")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Title</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Main Menu" required />
+                <Label>{t("titleLabel")}</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("titlePlaceholder")} required />
               </div>
               <div className="space-y-2">
-                <Label>Slug</Label>
-                <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="main-menu" required pattern="[a-z0-9-]+" />
+                <Label>{t("slugLabel")}</Label>
+                <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={t("slugPlaceholder")} required pattern="[a-z0-9-]+" />
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Menu Items</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="mr-1 h-3 w-3" />Add Item</Button>
+                <Label>{t("menuItems")}</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="mr-1 h-3 w-3" />{t("addItem")}</Button>
               </div>
               {items.map((item, i) => (
                 <Card key={i} className="p-0">
@@ -275,18 +277,18 @@ export default function NavigationsPage() {
                           {expandedItems.has(i) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       )}
-                      <Input value={item.title} onChange={(e) => updateItem(i, "title", e.target.value)} placeholder="Link title" className="flex-1 min-w-[120px]" />
-                      <Input value={item.url} onChange={(e) => updateItem(i, "url", e.target.value)} placeholder="/page-url" className="flex-1 min-w-[120px]" />
+                      <Input value={item.title} onChange={(e) => updateItem(i, "title", e.target.value)} placeholder={t("linkTitlePlaceholder")} className="flex-1 min-w-[120px]" />
+                      <Input value={item.url} onChange={(e) => updateItem(i, "url", e.target.value)} placeholder={t("pageUrlPlaceholder")} className="flex-1 min-w-[120px]" />
                       <div className="flex items-center gap-1 shrink-0">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => addChild(i)} className="text-xs shrink-0">+ Sub</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => addChild(i)} className="text-xs shrink-0">{t("addSub")}</Button>
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} className="shrink-0 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </div>
                     {expandedItems.has(i) && item.children?.map((child, ci) => (
                       <div key={ci} className="flex flex-wrap items-center gap-2 ml-4 sm:ml-10">
                         <span className="text-xs text-muted-foreground w-4">↳</span>
-                        <Input value={child.title} onChange={(e) => updateChild(i, ci, "title", e.target.value)} placeholder="Sub-link title" className="flex-1 min-w-[120px]" />
-                        <Input value={child.url} onChange={(e) => updateChild(i, ci, "url", e.target.value)} placeholder="/sub-url" className="flex-1 min-w-[120px]" />
+                        <Input value={child.title} onChange={(e) => updateChild(i, ci, "title", e.target.value)} placeholder={t("subLinkPlaceholder")} className="flex-1 min-w-[120px]" />
+                        <Input value={child.url} onChange={(e) => updateChild(i, ci, "url", e.target.value)} placeholder={t("subUrlPlaceholder")} className="flex-1 min-w-[120px]" />
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeChild(i, ci)} className="shrink-0 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     ))}
@@ -296,10 +298,10 @@ export default function NavigationsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("cancel")}</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editing ? "Update" : "Create"} Menu
+                {editing ? t("update") : t("create")}
               </Button>
             </DialogFooter>
           </form>

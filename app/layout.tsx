@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import { Noto_Sans_Arabic } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthSessionProvider } from "@/components/session-provider";
 import { getLocale } from "next-intl/server";
 import "./globals.css";
 
@@ -57,7 +58,9 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${fontSans.variable} ${fontMono.variable} ${fontArabic.variable} antialiased`}>
-        {children}
+        <AuthSessionProvider>
+          {children}
+        </AuthSessionProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

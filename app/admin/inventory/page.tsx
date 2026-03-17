@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface InventoryItem {
   id: string;
@@ -49,6 +50,7 @@ interface InventoryItem {
 }
 
 export default function InventoryPage() {
+  const t = useTranslations("admin.inventory");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -87,7 +89,7 @@ export default function InventoryPage() {
         }))
       );
     } catch {
-      toast.error("Failed to load inventory");
+      toast.error(t("failedLoad"));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export default function InventoryPage() {
     try {
       const entries = Object.entries(adjustments).filter(([, v]) => v !== 0);
       if (entries.length === 0) {
-        toast.info("No adjustments to save");
+        toast.info(t("noAdjustments"));
         setSaving(false);
         return;
       }
@@ -126,12 +128,12 @@ export default function InventoryPage() {
         }
       }
 
-      toast.success(`${entries.length} inventory adjustment(s) saved`);
+      toast.success(t("adjustmentsSaved", { count: entries.length }));
       setAdjustments({});
       setLoading(true);
       await fetchInventory();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to save adjustments");
+      toast.error(error instanceof Error ? error.message : t("failedSave"));
     } finally {
       setSaving(false);
     }
@@ -188,13 +190,13 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">{items.length} products</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle", { count: items.length })}</p>
         </div>
         {hasAdjustments && (
           <Button onClick={handleSaveAdjustments} disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Adjustments
+            {t("saveAdjustments")}
           </Button>
         )}
       </div>
@@ -207,7 +209,7 @@ export default function InventoryPage() {
               <Package className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">{items.length}</p>
-                <p className="text-xs text-muted-foreground">Total Products</p>
+                <p className="text-xs text-muted-foreground">{t("totalProducts")}</p>
               </div>
             </div>
           </CardContent>
@@ -218,7 +220,7 @@ export default function InventoryPage() {
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
               <div>
                 <p className="text-2xl font-bold text-yellow-600">{lowStockCount}</p>
-                <p className="text-xs text-muted-foreground">Low Stock</p>
+                <p className="text-xs text-muted-foreground">{t("lowStock")}</p>
               </div>
             </div>
           </CardContent>
@@ -229,7 +231,7 @@ export default function InventoryPage() {
               <AlertTriangle className="h-5 w-5 text-red-500" />
               <div>
                 <p className="text-2xl font-bold text-red-600">{outOfStockCount}</p>
-                <p className="text-xs text-muted-foreground">Out of Stock</p>
+                <p className="text-xs text-muted-foreground">{t("outOfStock")}</p>
               </div>
             </div>
           </CardContent>
@@ -242,7 +244,7 @@ export default function InventoryPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or SKU..."
+                placeholder={t("searchInventory")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -253,9 +255,9 @@ export default function InventoryPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Items</SelectItem>
-                <SelectItem value="LOW_STOCK">Low Stock</SelectItem>
-                <SelectItem value="OUT_OF_STOCK">Out of Stock</SelectItem>
+                <SelectItem value="ALL">{t("allItems")}</SelectItem>
+                <SelectItem value="LOW_STOCK">{t("lowStock")}</SelectItem>
+                <SelectItem value="OUT_OF_STOCK">{t("outOfStock")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -265,12 +267,12 @@ export default function InventoryPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-center">Current</TableHead>
-                <TableHead className="text-center">Adjust</TableHead>
-                <TableHead className="text-center">New Qty</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("product")}</TableHead>
+                <TableHead>{t("sku")}</TableHead>
+                <TableHead className="text-center">{t("current")}</TableHead>
+                <TableHead className="text-center">{t("adjust")}</TableHead>
+                <TableHead className="text-center">{t("newQty")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -289,7 +291,7 @@ export default function InventoryPage() {
                         {item.name}
                       </Link>
                       {hasVariants && (
-                        <p className="text-xs text-muted-foreground">{item.variants.length} variants</p>
+                        <p className="text-xs text-muted-foreground">{t("variants", { count: item.variants.length })}</p>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">
@@ -327,13 +329,13 @@ export default function InventoryPage() {
                     </TableCell>
                     <TableCell>
                       {!item.trackInventory ? (
-                        <Badge variant="outline">Not Tracked</Badge>
+                        <Badge variant="outline">{t("notTracked")}</Badge>
                       ) : item.quantity === 0 ? (
-                        <Badge variant="destructive">Out of Stock</Badge>
+                        <Badge variant="destructive">{t("outOfStock")}</Badge>
                       ) : item.quantity <= item.lowStockThreshold ? (
-                        <Badge variant="secondary" className="text-yellow-700 bg-yellow-100">Low Stock</Badge>
+                        <Badge variant="secondary" className="text-yellow-700 bg-yellow-100">{t("lowStock")}</Badge>
                       ) : (
-                        <Badge variant="default">In Stock</Badge>
+                        <Badge variant="default">{t("inStock")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -342,7 +344,7 @@ export default function InventoryPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                    No products found
+                    {t("noProducts")}
                   </TableCell>
                 </TableRow>
               )}

@@ -25,6 +25,7 @@ import {
   Tooltip, CartesianGrid, Cell, PieChart as RePieChart, Pie, Legend,
 } from "recharts";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface AnalyticsData {
   period: { from: string; to: string; granularity: string };
@@ -111,12 +112,12 @@ interface AnalyticsData {
 const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#e11d48", "#0891b2", "#ca8a04", "#64748b"];
 
 const DATE_RANGES = [
-  { label: "Last 7 days", value: "7d" },
-  { label: "Last 30 days", value: "30d" },
-  { label: "Last 90 days", value: "90d" },
-  { label: "Last 12 months", value: "12m" },
-  { label: "This month", value: "thisMonth" },
-  { label: "This year", value: "thisYear" },
+  { key: "7d", value: "7d" },
+  { key: "30d", value: "30d" },
+  { key: "90d", value: "90d" },
+  { key: "12m", value: "12m" },
+  { key: "thisMonth", value: "thisMonth" },
+  { key: "thisYear", value: "thisYear" },
 ];
 
 function getDateRange(range: string): { from: string; to: string; granularity: string } {
@@ -170,6 +171,7 @@ function ChangeIndicator({ value, suffix = "%" }: { value: number; suffix?: stri
 }
 
 export default function AnalyticsPage() {
+  const t = useTranslations("admin.analytics");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("30d");
@@ -192,7 +194,7 @@ export default function AnalyticsPage() {
       const json = await res.json();
       setData(json);
     } catch {
-      toast.error("Failed to load analytics data");
+      toast.error(t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -209,15 +211,15 @@ export default function AnalyticsPage() {
   const channelPieData = useMemo(() => {
     if (!data) return [];
     return [
-      { name: "Online", value: data.salesByChannel.online.revenue },
-      { name: "POS", value: data.salesByChannel.pos.revenue },
+      { name: t("online"), value: data.salesByChannel.online.revenue },
+      { name: t("pos"), value: data.salesByChannel.pos.revenue },
     ].filter((d) => d.value > 0);
   }, [data]);
 
   const paymentData = useMemo(() => {
     if (!data) return [];
     return Object.entries(data.paymentMethods).map(([method, info]) => ({
-      name: method === "cod" ? "Cash" : method === "tap" ? "Card" : method,
+      name: method === "cod" ? t("cash") : method === "tap" ? t("cardTap") : method,
       count: info.count,
       revenue: info.revenue,
     }));
@@ -228,8 +230,8 @@ export default function AnalyticsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-            <p className="text-muted-foreground">Loading analytics data...</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="text-muted-foreground">{t("loadingData")}</p>
           </div>
         </div>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -251,9 +253,9 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Comprehensive store performance insights
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -264,7 +266,7 @@ export default function AnalyticsPage() {
             </SelectTrigger>
             <SelectContent>
               {DATE_RANGES.map((r) => (
-                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                <SelectItem key={r.value} value={r.value}>{t(`dateRanges.${r.key}`)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -278,7 +280,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("totalRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -288,7 +290,7 @@ export default function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Orders</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("orders")}</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -298,7 +300,7 @@ export default function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Order Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("avgOrderValue")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -308,7 +310,7 @@ export default function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">New Customers</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("newCustomers")}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -320,12 +322,12 @@ export default function AnalyticsPage() {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-          <TabsTrigger value="financials">Financials</TabsTrigger>
-          <TabsTrigger value="products">Top Products</TabsTrigger>
-          <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="abandoned">Abandoned Carts</TabsTrigger>
+          <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
+          <TabsTrigger value="channels">{t("tabChannels")}</TabsTrigger>
+          <TabsTrigger value="financials">{t("tabFinancials")}</TabsTrigger>
+          <TabsTrigger value="products">{t("tabProducts")}</TabsTrigger>
+          <TabsTrigger value="customers">{t("tabCustomers")}</TabsTrigger>
+          <TabsTrigger value="abandoned">{t("tabAbandoned")}</TabsTrigger>
         </TabsList>
 
         {/* ══ Overview Tab ══ */}
@@ -333,15 +335,15 @@ export default function AnalyticsPage() {
           {/* Revenue Trend Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue & Orders Trend</CardTitle>
+              <CardTitle>{t("revenueTrend")}</CardTitle>
               <CardDescription>
-                {data.period.granularity === "day" ? "Daily" : data.period.granularity === "week" ? "Weekly" : "Monthly"} breakdown
+                {data.period.granularity === "day" ? t("dailyBreakdown") : data.period.granularity === "week" ? t("weeklyBreakdown") : t("monthlyBreakdown")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {data.timeSeries.length === 0 ? (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                  No data for selected period
+                  {t("noDataPeriod")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={350}>
@@ -386,7 +388,7 @@ export default function AnalyticsPage() {
                       labelStyle={{ color: "var(--foreground)" }}
                       formatter={(value: number, name: string) => [
                         name === "revenue" ? formatCurrency(value) : value,
-                        name === "revenue" ? "Revenue" : "Orders",
+                        name === "revenue" ? t("revenue") : t("orders"),
                       ]}
                       labelFormatter={(label) => {
                         const d = new Date(label);
@@ -405,11 +407,11 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Sales by Channel</CardTitle>
+                <CardTitle className="text-base">{t("salesByChannel")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {channelPieData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No sales data</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noSalesData")}</p>
                 ) : (
                   <div className="space-y-4">
                     {channelPieData.map((ch, i) => {
@@ -431,7 +433,7 @@ export default function AnalyticsPage() {
                             />
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {ch.name === "Online" ? data.salesByChannel.online.orders : data.salesByChannel.pos.orders} orders ({pct.toFixed(1)}%)
+                            {t("ordersPercent", { count: ch.name === t("online") ? data.salesByChannel.online.orders : data.salesByChannel.pos.orders, pct: pct.toFixed(1) })}
                           </p>
                         </div>
                       );
@@ -443,11 +445,11 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Order Status</CardTitle>
+                <CardTitle className="text-base">{t("orderStatus")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {statusPieData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No orders</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noOrders")}</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={220}>
                     <RePieChart>
@@ -484,29 +486,29 @@ export default function AnalyticsPage() {
           {/* Store Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Store Summary</CardTitle>
+              <CardTitle className="text-base">{t("storeSummary")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
                   <Package className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-bold">{data.overview.activeProducts}</p>
-                  <p className="text-xs text-muted-foreground">Active Products</p>
+                  <p className="text-xs text-muted-foreground">{t("activeProducts")}</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
                   <Users className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-bold">{data.overview.totalCustomers}</p>
-                  <p className="text-xs text-muted-foreground">Total Customers</p>
+                  <p className="text-xs text-muted-foreground">{t("totalCustomers")}</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
                   <ShoppingCart className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-bold">{data.overview.totalOrders}</p>
-                  <p className="text-xs text-muted-foreground">Total Orders</p>
+                  <p className="text-xs text-muted-foreground">{t("totalOrders")}</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
                   <DollarSign className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-bold">{formatCurrency(data.overview.netRevenue)}</p>
-                  <p className="text-xs text-muted-foreground">Net Revenue</p>
+                  <p className="text-xs text-muted-foreground">{t("netRevenue")}</p>
                 </div>
               </div>
             </CardContent>
@@ -525,8 +527,8 @@ export default function AnalyticsPage() {
                     <Monitor className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle>Online Store</CardTitle>
-                    <CardDescription>Website & mobile orders</CardDescription>
+                    <CardTitle>{t("onlineStore")}</CardTitle>
+                    <CardDescription>{t("onlineDesc")}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -534,15 +536,15 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.online.revenue)}</p>
-                    <p className="text-xs text-muted-foreground">Revenue</p>
+                    <p className="text-xs text-muted-foreground">{t("revenue")}</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{data.channelDetails.online.orders}</p>
-                    <p className="text-xs text-muted-foreground">Orders</p>
+                    <p className="text-xs text-muted-foreground">{t("orders")}</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.online.avgOrderValue)}</p>
-                    <p className="text-xs text-muted-foreground">Avg Order</p>
+                    <p className="text-xs text-muted-foreground">{t("avgOrder")}</p>
                   </div>
                 </div>
               </CardContent>
@@ -556,8 +558,8 @@ export default function AnalyticsPage() {
                     <Smartphone className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <CardTitle>Point of Sale</CardTitle>
-                    <CardDescription>In-store transactions</CardDescription>
+                    <CardTitle>{t("pointOfSale")}</CardTitle>
+                    <CardDescription>{t("posDesc")}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -565,15 +567,15 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.pos.revenue)}</p>
-                    <p className="text-xs text-muted-foreground">Revenue</p>
+                    <p className="text-xs text-muted-foreground">{t("revenue")}</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{data.channelDetails.pos.orders}</p>
-                    <p className="text-xs text-muted-foreground">Orders</p>
+                    <p className="text-xs text-muted-foreground">{t("orders")}</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{formatCurrency(data.channelDetails.pos.avgOrderValue)}</p>
-                    <p className="text-xs text-muted-foreground">Avg Order</p>
+                    <p className="text-xs text-muted-foreground">{t("avgOrder")}</p>
                   </div>
                 </div>
               </CardContent>
@@ -584,8 +586,8 @@ export default function AnalyticsPage() {
           {data.channelDetails.timeSeries.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Channel</CardTitle>
-                <CardDescription>Online vs POS revenue over time</CardDescription>
+                <CardTitle>{t("revenueByChannel")}</CardTitle>
+                <CardDescription>{t("channelCompareDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={350}>
@@ -619,14 +621,14 @@ export default function AnalyticsPage() {
                       labelStyle={{ color: "var(--foreground)" }}
                       formatter={(value: number, name: string) => [
                         formatCurrency(value),
-                        name === "onlineRevenue" ? "Online" : "POS",
+                        name === "onlineRevenue" ? t("online") : t("pos"),
                       ]}
                       labelFormatter={(label) => {
                         const d = new Date(label);
                         return d.toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric" });
                       }}
                     />
-                    <Legend formatter={(value) => (value === "onlineRevenue" ? "Online" : "POS")} />
+                    <Legend formatter={(value) => (value === "onlineRevenue" ? t("online") : t("pos"))} />
                     <Bar dataKey="onlineRevenue" fill="var(--chart-4)" radius={[4, 4, 0, 0]} stackId="revenue" />
                     <Bar dataKey="posRevenue" fill="var(--chart-5)" radius={[4, 4, 0, 0]} stackId="revenue" />
                   </BarChart>
@@ -641,13 +643,13 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Monitor className="h-4 w-4 text-blue-600" />
-                  Top Online Products
+                  {t("topOnlineProducts")}
                 </CardTitle>
-                <CardDescription>Best sellers on your online store</CardDescription>
+                <CardDescription>{t("topOnlineDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {data.channelDetails.online.topProducts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No online sales data</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noOnlineSales")}</p>
                 ) : (
                   <div className="space-y-3">
                     {data.channelDetails.online.topProducts.map((product, idx) => (
@@ -657,7 +659,7 @@ export default function AnalyticsPage() {
                         </Badge>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.quantity} sold · {product.orders} orders</p>
+                          <p className="text-xs text-muted-foreground">{t("soldOrders", { qty: product.quantity, orders: product.orders })}</p>
                         </div>
                         <span className="font-bold text-sm shrink-0">{formatCurrency(product.revenue)}</span>
                       </div>
@@ -671,13 +673,13 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Smartphone className="h-4 w-4 text-orange-600" />
-                  Top POS Products
+                  {t("topPosProducts")}
                 </CardTitle>
-                <CardDescription>Best sellers at point of sale</CardDescription>
+                <CardDescription>{t("topPosDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {data.channelDetails.pos.topProducts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No POS sales data</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noPosSales")}</p>
                 ) : (
                   <div className="space-y-3">
                     {data.channelDetails.pos.topProducts.map((product, idx) => (
@@ -687,7 +689,7 @@ export default function AnalyticsPage() {
                         </Badge>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.quantity} sold · {product.orders} orders</p>
+                          <p className="text-xs text-muted-foreground">{t("soldOrders", { qty: product.quantity, orders: product.orders })}</p>
                         </div>
                         <span className="font-bold text-sm shrink-0">{formatCurrency(product.revenue)}</span>
                       </div>
@@ -704,12 +706,12 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Monitor className="h-4 w-4 text-blue-600" />
-                  Online Payment Methods
+                  {t("onlinePayments")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.keys(data.channelDetails.online.paymentMethods).length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No data</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("noData")}</p>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(data.channelDetails.online.paymentMethods).map(([method, info]) => (
@@ -717,8 +719,8 @@ export default function AnalyticsPage() {
                         <div className="flex items-center gap-2">
                           {method === "cod" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
                           <div>
-                            <p className="text-sm font-medium">{method === "cod" ? "Cash on Delivery" : method === "tap" ? "Card (Tap)" : method}</p>
-                            <p className="text-xs text-muted-foreground">{info.count} transactions</p>
+                            <p className="text-sm font-medium">{method === "cod" ? t("cashOnDelivery") : method === "tap" ? t("cardTap") : method}</p>
+                            <p className="text-xs text-muted-foreground">{t("transactions", { count: info.count })}</p>
                           </div>
                         </div>
                         <span className="font-bold text-sm">{formatCurrency(info.revenue)}</span>
@@ -733,12 +735,12 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Smartphone className="h-4 w-4 text-orange-600" />
-                  POS Payment Methods
+                  {t("posPayments")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.keys(data.channelDetails.pos.paymentMethods).length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No data</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("noData")}</p>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(data.channelDetails.pos.paymentMethods).map(([method, info]) => (
@@ -746,8 +748,8 @@ export default function AnalyticsPage() {
                         <div className="flex items-center gap-2">
                           {method === "cod" || method === "cash" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
                           <div>
-                            <p className="text-sm font-medium">{method === "cod" || method === "cash" ? "Cash" : method === "tap" ? "Card (Tap)" : method}</p>
-                            <p className="text-xs text-muted-foreground">{info.count} transactions</p>
+                            <p className="text-sm font-medium">{method === "cod" || method === "cash" ? t("cash") : method === "tap" ? t("cardTap") : method}</p>
+                            <p className="text-xs text-muted-foreground">{t("transactions", { count: info.count })}</p>
                           </div>
                         </div>
                         <span className="font-bold text-sm">{formatCurrency(info.revenue)}</span>
@@ -765,34 +767,34 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Revenue Breakdown</CardTitle>
-                <CardDescription>Financial summary for period</CardDescription>
+                <CardTitle>{t("revenueBreakdown")}</CardTitle>
+                <CardDescription>{t("financialSummary")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between py-2">
-                  <span>Gross Revenue</span>
+                  <span>{t("grossRevenue")}</span>
                   <span className="font-bold">{formatCurrency(data.financials.grossRevenue)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between py-1 text-sm">
-                  <span className="text-muted-foreground">+ Shipping</span>
+                  <span className="text-muted-foreground">{t("shippingPlus")}</span>
                   <span>{formatCurrency(data.financials.totalShipping)}</span>
                 </div>
                 <div className="flex justify-between py-1 text-sm">
-                  <span className="text-muted-foreground">+ Tax (VAT 15%)</span>
+                  <span className="text-muted-foreground">{t("taxPlus")}</span>
                   <span>{formatCurrency(data.financials.totalTax)}</span>
                 </div>
                 <div className="flex justify-between py-1 text-sm text-red-600">
-                  <span>- Discounts</span>
+                  <span>{t("discountsMinus")}</span>
                   <span>-{formatCurrency(data.financials.totalDiscounts)}</span>
                 </div>
                 <div className="flex justify-between py-1 text-sm text-red-600">
-                  <span>- Refunds ({data.financials.refundCount})</span>
+                  <span>{t("refundsMinus", { count: data.financials.refundCount })}</span>
                   <span>-{formatCurrency(data.financials.totalRefunds)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between py-2 text-lg font-bold">
-                  <span>Net Revenue</span>
+                  <span>{t("netRevenue")}</span>
                   <span className="text-green-600">{formatCurrency(data.financials.netRevenue)}</span>
                 </div>
               </CardContent>
@@ -800,11 +802,11 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
+                <CardTitle>{t("paymentMethods")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {paymentData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No payments</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noPayments")}</p>
                 ) : (
                   <div className="space-y-4">
                     {paymentData.map((pm) => (
@@ -813,7 +815,7 @@ export default function AnalyticsPage() {
                           {pm.name === "Cash" ? <Banknote className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
                           <div>
                             <p className="font-medium">{pm.name}</p>
-                            <p className="text-xs text-muted-foreground">{pm.count} transactions</p>
+                            <p className="text-xs text-muted-foreground">{t("transactions", { count: pm.count })}</p>
                           </div>
                         </div>
                         <span className="font-bold">{formatCurrency(pm.revenue)}</span>
@@ -830,22 +832,22 @@ export default function AnalyticsPage() {
         <TabsContent value="products" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Top Products by Revenue</CardTitle>
-              <CardDescription>Best performing products in the selected period</CardDescription>
+              <CardTitle>{t("topByRevenue")}</CardTitle>
+              <CardDescription>{t("topByRevenueDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               {data.topProducts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No product sales data</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("noProductSales")}</p>
               ) : (
                 <div className="space-y-1">
                 <div className="overflow-x-auto">
                 <div className="min-w-[500px]">
                   <div className="grid grid-cols-12 gap-2 py-2 text-xs font-medium text-muted-foreground border-b">
                     <div className="col-span-1">#</div>
-                    <div className="col-span-5">Product</div>
-                    <div className="col-span-2 text-right">Revenue</div>
-                    <div className="col-span-2 text-right">Qty Sold</div>
-                    <div className="col-span-2 text-right">Orders</div>
+                    <div className="col-span-5">{t("product")}</div>
+                    <div className="col-span-2 text-right">{t("revenue")}</div>
+                    <div className="col-span-2 text-right">{t("qtySold")}</div>
+                    <div className="col-span-2 text-right">{t("orders")}</div>
                   </div>
                   {data.topProducts.map((product, idx) => (
                     <div key={`${product.productId}-${idx}`} className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center">
@@ -871,7 +873,7 @@ export default function AnalyticsPage() {
           {data.topProducts.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Revenue by Product</CardTitle>
+                <CardTitle className="text-base">{t("revenueByProduct")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -903,7 +905,7 @@ export default function AnalyticsPage() {
                       }}
                       itemStyle={{ color: "var(--foreground)" }}
                       labelStyle={{ color: "var(--foreground)" }}
-                      formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                      formatter={(value: number) => [formatCurrency(value), t("revenue")]}
                     />
                     <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
                       {data.topProducts.slice(0, 8).map((_, i) => (
@@ -922,7 +924,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Unique Customers</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("uniqueCustomers")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{data.customerInsights.uniqueCustomers}</div>
@@ -930,7 +932,7 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">New Customer Orders</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("newCustomerOrders")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{data.customerInsights.newCustomerOrders}</div>
@@ -938,7 +940,7 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Returning Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("returningRate")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{data.customerInsights.returningRate.toFixed(1)}%</div>
@@ -948,8 +950,8 @@ export default function AnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>New vs Returning Customers</CardTitle>
-              <CardDescription>Click a card to see customer details</CardDescription>
+              <CardTitle>{t("newVsReturning")}</CardTitle>
+              <CardDescription>{t("clickCardDetails")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -960,8 +962,8 @@ export default function AnalyticsPage() {
                 >
                   <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                   <p className="text-3xl font-bold text-blue-600">{data.customerInsights.newCustomerOrders}</p>
-                  <p className="text-sm text-muted-foreground mt-1">New Customer Orders</p>
-                  <p className="text-xs text-blue-600 mt-2 font-medium">View customers →</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("newCustomerOrders")}</p>
+                  <p className="text-xs text-blue-600 mt-2 font-medium">{t("viewCustomers")}</p>
                 </button>
                 <button
                   type="button"
@@ -970,8 +972,8 @@ export default function AnalyticsPage() {
                 >
                   <RotateCcw className="h-8 w-8 mx-auto mb-2 text-green-600" />
                   <p className="text-3xl font-bold text-green-600">{data.customerInsights.returningCustomerOrders}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Returning Customer Orders</p>
-                  <p className="text-xs text-green-600 mt-2 font-medium">View customers →</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("returningCustomerOrders")}</p>
+                  <p className="text-xs text-green-600 mt-2 font-medium">{t("viewCustomers")}</p>
                 </button>
               </div>
             </CardContent>
@@ -982,20 +984,20 @@ export default function AnalyticsPage() {
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {customerDialog === "new" ? "New Customers" : "Returning Customers"}
+                  {customerDialog === "new" ? t("newCustomersTitle") : t("returningCustomersTitle")}
                 </DialogTitle>
                 <DialogDescription>
                   {customerDialog === "new"
-                    ? `${data.customerInsights.newCustomers.length} customers with their first order in this period`
-                    : `${data.customerInsights.returningCustomers.length} customers with multiple orders in this period`}
+                    ? t("newCustomersDesc", { count: data.customerInsights.newCustomers.length })
+                    : t("returningCustomersDesc", { count: data.customerInsights.returningCustomers.length })}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-1 mt-2">
                 <div className="grid grid-cols-12 gap-2 py-2 text-xs font-medium text-muted-foreground border-b">
-                  <div className="col-span-5">Customer</div>
-                  <div className="col-span-2 text-right">Orders</div>
-                  <div className="col-span-3 text-right">Revenue</div>
-                  <div className="col-span-2 text-right">Last Order</div>
+                  <div className="col-span-5">{t("customer")}</div>
+                  <div className="col-span-2 text-right">{t("orders")}</div>
+                  <div className="col-span-3 text-right">{t("revenue")}</div>
+                  <div className="col-span-2 text-right">{t("lastOrder")}</div>
                 </div>
                 {(customerDialog === "new"
                   ? data.customerInsights.newCustomers
@@ -1003,7 +1005,7 @@ export default function AnalyticsPage() {
                 ).map((customer, idx) => (
                   <div key={`${customer.email}-${idx}`} className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center">
                     <div className="col-span-5 min-w-0">
-                      <p className="text-sm font-medium truncate">{customer.name || "Guest"}</p>
+                      <p className="text-sm font-medium truncate">{customer.name || t("guest")}</p>
                       <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
                     </div>
                     <div className="col-span-2 text-right text-sm">{customer.orders}</div>
@@ -1017,7 +1019,7 @@ export default function AnalyticsPage() {
                   ? data.customerInsights.newCustomers
                   : data.customerInsights.returningCustomers
                 ).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">No customers found</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("noCustomersFound")}</p>
                 )}
               </div>
             </DialogContent>
@@ -1029,7 +1031,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Abandoned</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("totalAbandoned")}</CardTitle>
                 <ShoppingBag className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1038,7 +1040,7 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Emails Sent</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("emailsSent")}</CardTitle>
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1047,7 +1049,7 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Recovered</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("recovered")}</CardTitle>
                 <RotateCcw className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -1056,7 +1058,7 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Recovery Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("recoveryRate")}</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -1067,23 +1069,23 @@ export default function AnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Abandoned Cart Value</CardTitle>
-              <CardDescription>Potential revenue from unrecovered carts</CardDescription>
+              <CardTitle>{t("abandonedCartValue")}</CardTitle>
+              <CardDescription>{t("abandonedCartDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="text-center p-6 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <p className="text-sm text-muted-foreground mb-1">Lost Revenue</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("lostRevenue")}</p>
                   <p className="text-3xl font-bold text-red-600">{formatCurrency(data.abandonedCarts.abandonedValue)}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {data.abandonedCarts.abandoned} carts still abandoned
+                    {t("cartsAbandoned", { count: data.abandonedCarts.abandoned })}
                   </p>
                 </div>
                 <div className="text-center p-6 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <p className="text-sm text-muted-foreground mb-1">Recovered</p>
-                  <p className="text-3xl font-bold text-green-600">{data.abandonedCarts.recovered} orders</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("recovered")}</p>
+                  <p className="text-3xl font-bold text-green-600">{t("recoveredOrders", { count: data.abandonedCarts.recovered })}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {data.abandonedCarts.recoveryRate.toFixed(1)}% recovery rate
+                    {t("recoveryRateText", { rate: data.abandonedCarts.recoveryRate.toFixed(1) })}
                   </p>
                 </div>
               </div>
@@ -1093,20 +1095,20 @@ export default function AnalyticsPage() {
           {/* Abandoned Carts List */}
           <Card>
             <CardHeader>
-              <CardTitle>Abandoned Carts</CardTitle>
-              <CardDescription>Click a cart to see the items left behind</CardDescription>
+              <CardTitle>{t("abandonedCarts")}</CardTitle>
+              <CardDescription>{t("clickCartItems")}</CardDescription>
             </CardHeader>
             <CardContent>
               {data.abandonedCarts.carts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No abandoned carts in this period</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("noAbandonedCarts")}</p>
               ) : (
                 <div className="space-y-1">
                   <div className="grid grid-cols-12 gap-2 py-2 text-xs font-medium text-muted-foreground border-b">
-                    <div className="col-span-4">Customer</div>
-                    <div className="col-span-2 text-right">Items</div>
-                    <div className="col-span-2 text-right">Value</div>
-                    <div className="col-span-2 text-center">Status</div>
-                    <div className="col-span-2 text-right">Date</div>
+                    <div className="col-span-4">{t("customer")}</div>
+                    <div className="col-span-2 text-right">{t("items")}</div>
+                    <div className="col-span-2 text-right">{t("value")}</div>
+                    <div className="col-span-2 text-center">{t("status")}</div>
+                    <div className="col-span-2 text-right">{t("date")}</div>
                   </div>
                   {data.abandonedCarts.carts.map((cart) => (
                     <button
@@ -1116,11 +1118,11 @@ export default function AnalyticsPage() {
                       className="grid grid-cols-12 gap-2 py-3 border-b last:border-0 items-center w-full text-left hover:bg-muted/50 rounded-md px-1 transition-colors cursor-pointer"
                     >
                       <div className="col-span-4 min-w-0">
-                        <p className="text-sm font-medium truncate">{cart.email || "Guest"}</p>
+                        <p className="text-sm font-medium truncate">{cart.email || t("guest")}</p>
                         {cart.phone && <p className="text-xs text-muted-foreground">{cart.phone}</p>}
                       </div>
                       <div className="col-span-2 text-right text-sm">
-                        {cart.items.reduce((s, i) => s + i.quantity, 0)} items
+                        {cart.items.reduce((s, i) => s + i.quantity, 0)} {t("items").toLowerCase()}
                       </div>
                       <div className="col-span-2 text-right text-sm font-bold">
                         {formatCurrency(cart.subtotal)}
@@ -1146,9 +1148,9 @@ export default function AnalyticsPage() {
               {selectedCart && (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Abandoned Cart</DialogTitle>
+                    <DialogTitle>{t("abandonedCartDialog")}</DialogTitle>
                     <DialogDescription>
-                      {selectedCart.email || "Guest"} · {new Date(selectedCart.createdAt).toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {selectedCart.email || t("guest")} · {new Date(selectedCart.createdAt).toLocaleDateString("en-SA", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-2">
@@ -1157,12 +1159,12 @@ export default function AnalyticsPage() {
                         {selectedCart.status.replace(/_/g, " ")}
                       </Badge>
                       {selectedCart.phone && (
-                        <span className="text-muted-foreground">Phone: {selectedCart.phone}</span>
+                        <span className="text-muted-foreground">{t("phone", { phone: selectedCart.phone })}</span>
                       )}
                     </div>
                     <Separator />
                     <div className="space-y-3">
-                      <p className="text-sm font-medium">Items in cart ({selectedCart.items.length})</p>
+                      <p className="text-sm font-medium">{t("itemsInCart", { count: selectedCart.items.length })}</p>
                       {selectedCart.items.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border">
                           {item.image ? (
@@ -1174,7 +1176,7 @@ export default function AnalyticsPage() {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                            <p className="text-xs text-muted-foreground">{t("qty", { count: item.quantity })}</p>
                           </div>
                           <span className="font-bold text-sm">{formatCurrency(item.price * item.quantity)}</span>
                         </div>
@@ -1182,7 +1184,7 @@ export default function AnalyticsPage() {
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center font-bold text-lg">
-                      <span>Total</span>
+                      <span>{t("total")}</span>
                       <span>{formatCurrency(selectedCart.subtotal)}</span>
                     </div>
                   </div>

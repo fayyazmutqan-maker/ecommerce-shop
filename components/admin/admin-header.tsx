@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, LogOut, User, Settings, Package, AlertTriangle, Users, Star, RotateCcw, CheckCheck, Loader2 } from "lucide-react";
 import { getInitials } from "@/lib/helpers";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LanguageSwitcher } from "@/components/store/language-switcher";
 import Link from "next/link";
 
 interface Notification {
@@ -41,19 +43,20 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   NEW_REVIEW: Star,
 };
 
-function timeAgo(dateStr: string) {
+function timeAgo(dateStr: string, t: ReturnType<typeof useTranslations>) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("justNow");
+  if (mins < 60) return t("minsAgo", { mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t("hrsAgo", { hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t("daysAgo", { days });
 }
 
 export function AdminHeader() {
   const { data: session } = useSession();
+  const t = useTranslations("admin.header");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -102,6 +105,7 @@ export function AdminHeader() {
 
       <div className="flex-1" />
 
+      <LanguageSwitcher />
       <ThemeToggle />
 
       <Popover open={open} onOpenChange={setOpen}>
@@ -117,14 +121,14 @@ export function AdminHeader() {
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
           <div className="flex items-center justify-between px-4 py-3 border-b">
-            <p className="text-sm font-semibold">Notifications</p>
+            <p className="text-sm font-semibold">{t("notifications")}</p>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <CheckCheck className="h-3 w-3" />
-                Mark all read
+                {t("markAllRead")}
               </button>
             )}
           </div>
@@ -136,7 +140,7 @@ export function AdminHeader() {
             ) : notifications.length === 0 ? (
               <div className="py-8 text-center">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">No notifications yet</p>
+                <p className="text-sm text-muted-foreground">{t("noNotifications")}</p>
               </div>
             ) : (
               notifications.map((notif) => {
@@ -158,7 +162,7 @@ export function AdminHeader() {
                       {notif.message && (
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1">{timeAgo(notif.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{timeAgo(notif.createdAt, t)}</p>
                     </div>
                     {!notif.isRead && (
                       <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
@@ -174,7 +178,7 @@ export function AdminHeader() {
               onClick={() => setOpen(false)}
               className="text-xs text-primary hover:underline w-full block text-center"
             >
-              View all notifications
+              {t("viewAllNotifications")}
             </Link>
           </div>
         </PopoverContent>
@@ -209,13 +213,13 @@ export function AdminHeader() {
           <DropdownMenuItem asChild>
             <Link href="/admin/settings">
               <Settings className="mr-2 h-4 w-4" />
-              Settings
+              {t("settings")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/account">
               <User className="mr-2 h-4 w-4" />
-              Profile
+              {t("profile")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -224,7 +228,7 @@ export function AdminHeader() {
             className="text-destructive cursor-pointer"
           >
             <LogOut className="mr-2 h-4 w-4" />
-            Log out
+            {t("logOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

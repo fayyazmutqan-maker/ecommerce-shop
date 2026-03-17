@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface ImageData {
   url: string;
@@ -11,11 +12,12 @@ interface ImageData {
 
 export function ProductImageGallery({ images }: { images: ImageData[] }) {
   const [selected, setSelected] = useState(0);
+  const t = useTranslations("common");
 
   if (images.length === 0) {
     return (
       <div className="aspect-square rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
-        No image available
+        {t("noImageAvailable")}
       </div>
     );
   }

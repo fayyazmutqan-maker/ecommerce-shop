@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/schema";
 import { eq, and, ne, desc } from "drizzle-orm";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { applyTranslations, applyTranslationsBatch } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -57,11 +57,12 @@ export default async function BlogPostPage({ params }: Props) {
   const locale = await getLocale();
   const post = await applyTranslations("blogPost", rawPost as Record<string, unknown>, locale) as typeof rawPost;
   const relatedPosts = await applyTranslationsBatch("blogPost", rawRelated as Record<string, unknown>[], locale) as typeof rawRelated;
+  const t = await getTranslations("blog");
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
-        { label: "Blog", href: "/blog" },
+        { label: t("title"), href: "/blog" },
         { label: post.title },
       ]} />
 
@@ -116,7 +117,7 @@ export default async function BlogPostPage({ params }: Props) {
         <>
           <Separator className="my-12" />
           <section>
-            <h2 className="text-2xl font-bold mb-6">More Posts</h2>
+            <h2 className="text-2xl font-bold mb-6">{t("morePosts")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {relatedPosts.map((related) => (
                 <Link key={related.id} href={`/blog/${related.slug}`}
@@ -143,7 +144,7 @@ export default async function BlogPostPage({ params }: Props) {
       {/* Back to blog */}
       <div className="mt-12">
         <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to Blog
+          <ArrowLeft className="h-4 w-4" /> {t("backToBlog")}
         </Link>
       </div>
     </div>

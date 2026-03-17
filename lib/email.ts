@@ -278,7 +278,7 @@ export async function sendWelcomeEmail(data: {
 }
 
 // ============================================================
-// EMAIL VERIFICATION
+// EMAIL VERIFICATION (OTP)
 // ============================================================
 
 export async function sendEmailVerification(data: {
@@ -301,6 +301,38 @@ export async function sendEmailVerification(data: {
     subject: "Verify Your Email - ShopFlow",
     html,
     tags: [{ name: "type", value: "email-verification" }],
+  });
+}
+
+export async function sendEmailVerificationOTP(data: {
+  email: string;
+  name: string;
+  otp: string;
+}) {
+  const html = baseLayout(`
+    <h2 style="margin-top:0">Verify Your Email</h2>
+    <p>Hi ${escapeHtml(data.name)},</p>
+    <p>Thank you for creating an account! Use the verification code below to confirm your email address:</p>
+    <div style="text-align:center;margin:32px 0">
+      <div style="display:inline-block;background:#f8f8f8;border:2px dashed #ddd;border-radius:12px;padding:20px 40px">
+        <span style="font-size:36px;font-weight:800;letter-spacing:12px;color:#000;font-family:'Courier New',monospace">${escapeHtml(data.otp)}</span>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:14px;color:#555">Enter this code on the verification page to activate your account.</p>
+    <div style="background:#f0f9ff;border-radius:8px;padding:16px;margin:24px 0;border:1px solid #bae6fd">
+      <p style="margin:0;font-size:13px;color:#0369a1">
+        <strong>⏱ This code expires in 10 minutes.</strong><br>
+        If you didn't create an account, you can safely ignore this email.
+      </p>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#999;margin-top:24px">For security reasons, never share this code with anyone. ShopFlow staff will never ask for your verification code.</p>
+  `);
+
+  return sendEmail({
+    to: data.email,
+    subject: "Your Verification Code - ShopFlow",
+    html,
+    tags: [{ name: "type", value: "email-verification-otp" }],
   });
 }
 

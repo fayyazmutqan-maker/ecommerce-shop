@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 type PageItem = {
   id: string;
@@ -36,6 +37,7 @@ function PageForm({
   page?: PageItem;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.pages");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(page?.title || "");
@@ -49,11 +51,11 @@ function PageForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("Title is required");
+      toast.error(t("titleRequired"));
       return;
     }
     if (!content.trim()) {
-      toast.error("Content is required");
+      toast.error(t("contentRequired"));
       return;
     }
 
@@ -77,15 +79,15 @@ function PageForm({
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to save page");
+        toast.error(data.error || t("toasts.saveFailed"));
         return;
       }
 
-      toast.success(isEdit ? "Page updated" : "Page created");
+      toast.success(isEdit ? t("toasts.pageUpdated") : t("toasts.pageCreated"));
       onClose();
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error(t("toasts.error"));
     } finally {
       setLoading(false);
     }
@@ -94,36 +96,37 @@ function PageForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Page title" required />
+        <Label htmlFor="title">{t("pageTitle")}</Label>
+        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("titlePlaceholder")} required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="content">Content</Label>
-        <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Page content (HTML supported)" rows={8} required />
+        <Label htmlFor="content">{t("content")}</Label>
+        <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("contentPlaceholder")} rows={8} required />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="metaTitle">SEO Title</Label>
-          <Input id="metaTitle" value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} placeholder="Optional SEO title" />
+          <Label htmlFor="metaTitle">{t("seoTitle")}</Label>
+          <Input id="metaTitle" value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} placeholder={t("seoTitlePlaceholder")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="metaDesc">SEO Description</Label>
-          <Input id="metaDesc" value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} placeholder="Optional SEO description" />
+          <Label htmlFor="metaDesc">{t("seoDescription")}</Label>
+          <Input id="metaDesc" value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} placeholder={t("seoDescPlaceholder")} />
         </div>
       </div>
       <div className="flex items-center gap-3">
         <Switch checked={isPublished} onCheckedChange={setIsPublished} />
-        <Label>Published</Label>
+        <Label>{t("published")}</Label>
       </div>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={loading}>{loading ? "Saving..." : isEdit ? "Update" : "Create"}</Button>
+        <Button type="button" variant="outline" onClick={onClose}>{t("cancel")}</Button>
+        <Button type="submit" disabled={loading}>{loading ? t("saving") : isEdit ? t("update") : t("create")}</Button>
       </DialogFooter>
     </form>
   );
 }
 
 export function PageCreateButton() {
+  const t = useTranslations("admin.pages");
   const [open, setOpen] = useState(false);
 
   return (
@@ -131,13 +134,13 @@ export function PageCreateButton() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Create Page
+          {t("createPage")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create Page</DialogTitle>
-          <DialogDescription>Add a new content page to your store.</DialogDescription>
+          <DialogTitle>{t("createPageTitle")}</DialogTitle>
+          <DialogDescription>{t("createPageDesc")}</DialogDescription>
         </DialogHeader>
         <PageForm onClose={() => setOpen(false)} />
       </DialogContent>
@@ -146,6 +149,7 @@ export function PageCreateButton() {
 }
 
 export function PageEditButton({ page }: { page: PageItem }) {
+  const t = useTranslations("admin.pages");
   const [open, setOpen] = useState(false);
 
   return (
@@ -157,8 +161,8 @@ export function PageEditButton({ page }: { page: PageItem }) {
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit Page</DialogTitle>
-          <DialogDescription>Update page content and settings.</DialogDescription>
+          <DialogTitle>{t("editPageTitle")}</DialogTitle>
+          <DialogDescription>{t("editPageDesc")}</DialogDescription>
         </DialogHeader>
         <PageForm page={page} onClose={() => setOpen(false)} />
       </DialogContent>
@@ -167,24 +171,25 @@ export function PageEditButton({ page }: { page: PageItem }) {
 }
 
 export function PageDeleteButton({ pageId, title }: { pageId: string; title: string }) {
+  const t = useTranslations("admin.pages");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
-    if (!confirm(`Delete page "${title}"? This action cannot be undone.`)) return;
+    if (!confirm(t("deleteConfirm", { pageTitle: title }))) return;
 
     setLoading(true);
     try {
       const res = await fetch(`/api/pages?id=${pageId}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to delete");
+        toast.error(data.error || t("toasts.deleteFailed"));
         return;
       }
-      toast.success("Page deleted");
+      toast.success(t("toasts.pageDeleted"));
       router.refresh();
     } catch {
-      toast.error("Failed to delete page");
+      toast.error(t("toasts.deleteFailed"));
     } finally {
       setLoading(false);
     }

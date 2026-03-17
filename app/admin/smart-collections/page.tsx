@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,44 +57,45 @@ interface SmartCollection {
 }
 
 const RULE_FIELDS = [
-  { value: "tags", label: "Product Tags" },
-  { value: "vendor", label: "Vendor" },
-  { value: "productType", label: "Product Type" },
-  { value: "price", label: "Price" },
-  { value: "name", label: "Product Name" },
-  { value: "status", label: "Status" },
+  { value: "tags" },
+  { value: "vendor" },
+  { value: "productType" },
+  { value: "price" },
+  { value: "name" },
+  { value: "status" },
 ];
 
-const RULE_OPERATORS: Record<string, { value: string; label: string }[]> = {
+const RULE_OPERATORS: Record<string, { value: string }[]> = {
   tags: [
-    { value: "contains", label: "Contains" },
-    { value: "not_contains", label: "Does not contain" },
+    { value: "contains" },
+    { value: "not_contains" },
   ],
   vendor: [
-    { value: "equals", label: "Equals" },
-    { value: "not_equals", label: "Does not equal" },
-    { value: "contains", label: "Contains" },
+    { value: "equals" },
+    { value: "not_equals" },
+    { value: "contains" },
   ],
   productType: [
-    { value: "equals", label: "Equals" },
-    { value: "not_equals", label: "Does not equal" },
+    { value: "equals" },
+    { value: "not_equals" },
   ],
   price: [
-    { value: "greater_than", label: "Greater than" },
-    { value: "less_than", label: "Less than" },
-    { value: "equals", label: "Equals" },
+    { value: "greater_than" },
+    { value: "less_than" },
+    { value: "equals" },
   ],
   name: [
-    { value: "contains", label: "Contains" },
-    { value: "starts_with", label: "Starts with" },
-    { value: "ends_with", label: "Ends with" },
+    { value: "contains" },
+    { value: "starts_with" },
+    { value: "ends_with" },
   ],
   status: [
-    { value: "equals", label: "Equals" },
+    { value: "equals" },
   ],
 };
 
 export default function SmartCollectionsPage() {
+  const t = useTranslations("admin.smartCollections");
   const [collections, setCollections] = useState<SmartCollection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -123,7 +125,7 @@ export default function SmartCollectionsPage() {
         );
       }
     } catch {
-      toast.error("Failed to load smart collections");
+      toast.error(t("toasts.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -166,12 +168,12 @@ export default function SmartCollectionsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast.error("Name is required");
+      toast.error(t("toasts.nameRequired"));
       return;
     }
     const validRules = form.rules.filter((r) => r.value.trim());
     if (validRules.length === 0) {
-      toast.error("At least one rule with a value is required");
+      toast.error(t("toasts.ruleRequired"));
       return;
     }
 
@@ -202,31 +204,31 @@ export default function SmartCollectionsPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error || "Failed to save");
+        toast.error(err.error || t("toasts.saveFailed"));
         return;
       }
 
-      toast.success(editing ? "Collection updated" : "Collection created");
+      toast.success(editing ? t("toasts.updated") : t("toasts.created"));
       setDialogOpen(false);
       resetForm();
       fetchCollections();
     } catch {
-      toast.error("Failed to save collection");
+      toast.error(t("toasts.saveFailed"));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this smart collection?")) return;
+    if (!confirm(t("toasts.deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/smart-collections?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Collection deleted");
+        toast.success(t("toasts.deleted"));
         fetchCollections();
       } else {
-        toast.error("Failed to delete");
+        toast.error(t("toasts.deleteFailed"));
       }
     } catch {
-      toast.error("Failed to delete collection");
+      toast.error(t("toasts.deleteFailed"));
     }
   };
 
@@ -263,45 +265,45 @@ export default function SmartCollectionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Smart Collections</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Auto-populate collections based on product rules
+            {t("subtitle")}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Create Collection
+              {t("createCollection")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editing ? "Edit Smart Collection" : "Create Smart Collection"}
+                {editing ? t("editTitle") : t("createTitle")}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Summer Sale" />
+                  <Label>{t("nameLabel")}</Label>
+                  <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("namePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto-generated from name" />
+                  <Label>{t("slugLabel")}</Label>
+                  <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder={t("slugPlaceholder")} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t("description")}</Label>
                 <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Rules *</Label>
+                  <Label>{t("rulesLabel")}</Label>
                   <Button type="button" variant="outline" size="sm" onClick={addRule}>
                     <Plus className="h-3 w-3 mr-1" />
-                    Add Rule
+                    {t("addRule")}
                   </Button>
                 </div>
                 {form.rules.map((rule, idx) => (
@@ -312,7 +314,7 @@ export default function SmartCollectionsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {RULE_FIELDS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                          <SelectItem key={f.value} value={f.value}>{t(`ruleFields.${f.value}`)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -322,14 +324,14 @@ export default function SmartCollectionsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {(RULE_OPERATORS[rule.field] || []).map((op) => (
-                          <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                          <SelectItem key={op.value} value={op.value}>{t(`ruleOperators.${op.value}`)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Input
                       value={rule.value}
                       onChange={(e) => updateRule(idx, "value", e.target.value)}
-                      placeholder="Value"
+                      placeholder={t("value")}
                       className="flex-1 min-w-[120px]"
                     />
                     {form.rules.length > 1 && (
@@ -342,22 +344,22 @@ export default function SmartCollectionsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={form.isActive} onCheckedChange={(v) => setForm((f) => ({ ...f, isActive: v }))} />
-                <Label>Active</Label>
+                <Label>{t("active")}</Label>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>SEO Title</Label>
+                  <Label>{t("seoTitle")}</Label>
                   <Input value={form.seoTitle} onChange={(e) => setForm((f) => ({ ...f, seoTitle: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>SEO Description</Label>
+                  <Label>{t("seoDescription")}</Label>
                   <Input value={form.seoDescription} onChange={(e) => setForm((f) => ({ ...f, seoDescription: e.target.value }))} />
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Cancel</Button>
-              <Button onClick={handleSave}>{editing ? "Update" : "Create"}</Button>
+              <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>{t("cancel")}</Button>
+              <Button onClick={handleSave}>{editing ? t("update") : t("create")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -367,7 +369,7 @@ export default function SmartCollectionsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FolderKanban className="h-5 w-5" />
-            Collections ({collections.length})
+            {t("collectionsCount", { count: collections.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -383,16 +385,16 @@ export default function SmartCollectionsPage() {
               ))}
             </div>
           ) : collections.length === 0 ? (
-            <p className="text-muted-foreground py-8 text-center">No smart collections yet. Create one to get started.</p>
+            <p className="text-muted-foreground py-8 text-center">{t("noCollectionsYet")}</p>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Rules</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("name")}</TableHead>
+                  <TableHead>{t("rules")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                  <TableHead className="text-right">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -415,7 +417,7 @@ export default function SmartCollectionsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={c.isActive ? "default" : "secondary"}>
-                        {c.isActive ? "Active" : "Inactive"}
+                        {c.isActive ? t("active") : t("inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

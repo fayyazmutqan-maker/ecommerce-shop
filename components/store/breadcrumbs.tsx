@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export interface BreadcrumbItem {
   label: string;
@@ -23,7 +24,8 @@ interface BreadcrumbsProps {
  * "Home" is always prepended automatically.
  * The last item (or any item without `href`) renders as plain text.
  */
-export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+export async function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+  const t = await getTranslations("common");
   return (
     <nav
       aria-label="Breadcrumb"
@@ -33,7 +35,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
         href="/"
         className="hover:text-foreground transition-colors"
       >
-        Home
+        {t("home")}
       </Link>
 
       {items.map((item, index) => {

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { products, productImages, productVariants, productCategories, reviews, productBundles } from "@/lib/schema";
 import { eq, desc, asc, and, inArray } from "drizzle-orm";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { applyTranslations, applyTranslationsBatch } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 
   if (!rawProduct) {
-    return { title: "Product Not Found" };
+    const t = await getTranslations("common");
+    return { title: t("productNotFound") };
   }
 
   const product = {
@@ -38,12 +39,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     compareAtPrice: rawProduct.compareAtPrice ? Number(rawProduct.compareAtPrice) : null,
   };
 
+  const tCommon = await getTranslations("common");
   const title = product.seoTitle || product.name;
   const description =
     product.seoDescription ||
     product.shortDescription ||
     product.description?.slice(0, 160) ||
-    `Buy ${product.name} for SAR ${product.price.toFixed(2)}`;
+    `${product.name} - ${tCommon("sar")} ${product.price.toFixed(2)}`;
 
   return {
     title: `${title} | ShopFlow`,

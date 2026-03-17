@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 type Coupon = {
   id: string;
@@ -46,6 +47,7 @@ function DiscountForm({
   coupon?: Coupon;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.discounts");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState(coupon?.code || "");
@@ -68,7 +70,7 @@ function DiscountForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!code.trim()) {
-      toast.error("Discount code is required");
+      toast.error(t("toasts.codeRequired"));
       return;
     }
 
@@ -95,15 +97,15 @@ function DiscountForm({
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to save discount");
+        toast.error(data.error || t("toasts.saveFailed"));
         return;
       }
 
-      toast.success(isEdit ? "Discount updated" : "Discount created");
+      toast.success(isEdit ? t("toasts.updated") : t("toasts.created"));
       onClose();
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error(t("toasts.error"));
     } finally {
       setLoading(false);
     }
@@ -113,17 +115,17 @@ function DiscountForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="code">Code</Label>
-          <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="SUMMER20" className="font-mono uppercase" required />
+          <Label htmlFor="code">{t("code")}</Label>
+          <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("codePlaceholder")} className="font-mono uppercase" required />
         </div>
         <div className="space-y-2">
-          <Label>Type</Label>
+          <Label>{t("type")}</Label>
           <Select value={type} onValueChange={setType}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-              <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
-              <SelectItem value="FREE_SHIPPING">Free Shipping</SelectItem>
+              <SelectItem value="PERCENTAGE">{t("percentage")}</SelectItem>
+              <SelectItem value="FIXED_AMOUNT">{t("fixedAmount")}</SelectItem>
+              <SelectItem value="FREE_SHIPPING">{t("freeShipping")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -131,19 +133,19 @@ function DiscountForm({
 
       {type !== "FREE_SHIPPING" && (
         <div className="space-y-2">
-          <Label htmlFor="value">Value {type === "PERCENTAGE" ? "(%)" : "(SAR)"}</Label>
+          <Label htmlFor="value">{type === "PERCENTAGE" ? t("valuePercent") : t("valueSar")}</Label>
           <Input id="value" type="number" step="0.01" min="0" max={type === "PERCENTAGE" ? 100 : undefined} value={value} onChange={(e) => setValue(Number(e.target.value))} />
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="minOrder">Min Order (SAR)</Label>
+          <Label htmlFor="minOrder">{t("minOrderSar")}</Label>
           <Input id="minOrder" type="number" step="0.01" min="0" value={minOrderAmount} onChange={(e) => setMinOrderAmount(Number(e.target.value))} />
         </div>
         {type === "PERCENTAGE" && (
           <div className="space-y-2">
-            <Label htmlFor="maxDiscount">Max Discount (SAR)</Label>
+            <Label htmlFor="maxDiscount">{t("maxDiscountSar")}</Label>
             <Input id="maxDiscount" type="number" step="0.01" min="0" value={maxDiscountAmount} onChange={(e) => setMaxDiscountAmount(Number(e.target.value))} />
           </div>
         )}
@@ -151,29 +153,30 @@ function DiscountForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="usageLimit">Usage Limit (0 = unlimited)</Label>
+          <Label htmlFor="usageLimit">{t("usageLimit")}</Label>
           <Input id="usageLimit" type="number" min="0" value={usageLimit} onChange={(e) => setUsageLimit(Number(e.target.value))} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="expiresAt">Expires At</Label>
+          <Label htmlFor="expiresAt">{t("expiresAt")}</Label>
           <Input id="expiresAt" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
         </div>
       </div>
 
       <div className="flex items-center gap-3">
         <Switch checked={isActive} onCheckedChange={setIsActive} />
-        <Label>Active</Label>
+        <Label>{t("active")}</Label>
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={loading}>{loading ? "Saving..." : isEdit ? "Update" : "Create"}</Button>
+        <Button type="button" variant="outline" onClick={onClose}>{t("cancel")}</Button>
+        <Button type="submit" disabled={loading}>{loading ? t("saving") : isEdit ? t("update") : t("create")}</Button>
       </DialogFooter>
     </form>
   );
 }
 
 export function DiscountCreateButton() {
+  const t = useTranslations("admin.discounts");
   const [open, setOpen] = useState(false);
 
   return (
@@ -181,13 +184,13 @@ export function DiscountCreateButton() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Create Discount
+          {t("createDiscount")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create Discount</DialogTitle>
-          <DialogDescription>Add a new discount code for your store.</DialogDescription>
+          <DialogTitle>{t("createTitle")}</DialogTitle>
+          <DialogDescription>{t("createDesc")}</DialogDescription>
         </DialogHeader>
         <DiscountForm onClose={() => setOpen(false)} />
       </DialogContent>
@@ -196,6 +199,7 @@ export function DiscountCreateButton() {
 }
 
 export function DiscountEditButton({ coupon }: { coupon: Coupon }) {
+  const t = useTranslations("admin.discounts");
   const [open, setOpen] = useState(false);
 
   return (
@@ -207,8 +211,8 @@ export function DiscountEditButton({ coupon }: { coupon: Coupon }) {
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Discount</DialogTitle>
-          <DialogDescription>Update discount code details.</DialogDescription>
+          <DialogTitle>{t("editTitle")}</DialogTitle>
+          <DialogDescription>{t("editDesc")}</DialogDescription>
         </DialogHeader>
         <DiscountForm coupon={coupon} onClose={() => setOpen(false)} />
       </DialogContent>
@@ -217,24 +221,25 @@ export function DiscountEditButton({ coupon }: { coupon: Coupon }) {
 }
 
 export function DiscountDeleteButton({ couponId, code }: { couponId: string; code: string }) {
+  const t = useTranslations("admin.discounts");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
-    if (!confirm(`Delete discount code "${code}"?`)) return;
+    if (!confirm(t("deleteConfirm", { code }))) return;
 
     setLoading(true);
     try {
       const res = await fetch(`/api/discounts?id=${couponId}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to delete");
+        toast.error(data.error || t("toasts.deleteFailed"));
         return;
       }
-      toast.success("Discount deleted");
+      toast.success(t("toasts.deleted"));
       router.refresh();
     } catch {
-      toast.error("Failed to delete discount");
+      toast.error(t("toasts.deleteFailed"));
     } finally {
       setLoading(false);
     }

@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,9 @@ export default async function OrdersPage() {
   if (!session?.user) {
     redirect("/login");
   }
+
+  const t = await getTranslations("account");
+  const tCommon = await getTranslations("common");
 
   const orderList = await db.query.orders.findMany({
     where: eq(orders.userId, session.user.id),
@@ -44,8 +48,8 @@ export default async function OrdersPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
-        { label: "Account", href: "/account" },
-        { label: "Orders" },
+        { label: t("title"), href: "/account" },
+        { label: t("orders") },
       ]} />
 
       <div className="flex items-center gap-4 mb-10">
@@ -55,8 +59,8 @@ export default async function OrdersPage() {
           </Link>
         </Button>
         <div>
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">Account</p>
-          <h1 className="text-3xl font-bold">My Orders</h1>
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">{t("title")}</p>
+          <h1 className="text-3xl font-bold">{t("myOrders")}</h1>
         </div>
       </div>
 
@@ -64,10 +68,10 @@ export default async function OrdersPage() {
         <Card className="shadow-none border">
           <CardContent className="py-20 text-center">
             <p className="text-muted-foreground mb-5 font-medium">
-              You haven&apos;t placed any orders yet.
+              {t("noOrdersYet")}
             </p>
             <Button asChild className="h-11 px-6 font-semibold">
-              <Link href="/products">Start Shopping</Link>
+              <Link href="/products">{t("startShopping")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -79,14 +83,15 @@ export default async function OrdersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base font-bold">
-                      Order #{order.orderNumber}
+                      {t("orderNumber", { number: order.orderNumber })}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Placed on{" "}
-                      {new Date(order.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
+                      {t("placedOn", {
+                        date: new Date(order.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }),
                       })}
                     </p>
                   </div>
@@ -103,7 +108,7 @@ export default async function OrdersPage() {
                       {order.status}
                     </Badge>
                     <span className="font-bold text-[15px]">
-                      SAR {Number(order.totalAmount).toFixed(2)}
+                      {tCommon("sar")} {Number(order.totalAmount).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -112,9 +117,9 @@ export default async function OrdersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead>{t("productColumn")}</TableHead>
+                      <TableHead className="text-center">{t("qtyColumn")}</TableHead>
+                      <TableHead className="text-end">{t("priceColumn")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -131,8 +136,8 @@ export default async function OrdersPage() {
                         <TableCell className="text-center">
                           {item.quantity}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          SAR {(Number(item.price) * item.quantity).toFixed(2)}
+                        <TableCell className="text-end font-medium">
+                          {tCommon("sar")} {(Number(item.price) * item.quantity).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))}

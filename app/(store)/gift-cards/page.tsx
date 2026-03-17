@@ -12,10 +12,13 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CreditCard, Gift, Search, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const presetAmounts = [50, 100, 200, 500, 1000];
 
 export default function GiftCardsPage() {
+  const t = useTranslations("giftCards");
+  const tCommon = useTranslations("common");
   const [tab, setTab] = useState<"buy" | "check">("buy");
   const [amount, setAmount] = useState<number>(100);
   const [customAmount, setCustomAmount] = useState("");
@@ -32,7 +35,7 @@ export default function GiftCardsPage() {
     e.preventDefault();
     const finalAmount = customAmount ? parseFloat(customAmount) : amount;
     if (!finalAmount || finalAmount < 1) {
-      toast.error("Please select a valid amount");
+      toast.error(t("selectValidAmount"));
       return;
     }
     setPurchasing(true);
@@ -51,7 +54,7 @@ export default function GiftCardsPage() {
       });
 
       if (res.status === 401) {
-        toast.error("Please sign in to purchase a gift card");
+        toast.error(t("signInRequired"));
         return;
       }
 
@@ -61,7 +64,7 @@ export default function GiftCardsPage() {
       }
 
       const card = await res.json();
-      toast.success(`Gift card created! Code: ${card.code}`);
+      toast.success(t("cardCreated", { code: card.code }));
       setRecipientName("");
       setRecipientEmail("");
       setSenderName("");
@@ -95,35 +98,35 @@ export default function GiftCardsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
-      <Breadcrumbs items={[{ label: "Gift Cards" }]} />
+      <Breadcrumbs items={[{ label: t("title") }]} />
 
       <div className="text-center mb-10">
         <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
-        <h1 className="text-3xl font-bold mb-2">Gift Cards</h1>
+        <h1 className="text-3xl font-bold mb-2">{t("title")}</h1>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Give the perfect gift. Our gift cards can be used for any product in the store.
+          {t("description")}
         </p>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-center gap-2 mb-8">
         <Button variant={tab === "buy" ? "default" : "outline"} onClick={() => setTab("buy")}>
-          <CreditCard className="mr-2 h-4 w-4" />Purchase Gift Card
+          <CreditCard className="mr-2 h-4 w-4" />{t("purchaseGiftCard")}
         </Button>
         <Button variant={tab === "check" ? "default" : "outline"} onClick={() => setTab("check")}>
-          <Search className="mr-2 h-4 w-4" />Check Balance
+          <Search className="mr-2 h-4 w-4" />{t("checkBalance")}
         </Button>
       </div>
 
       {tab === "buy" && (
         <Card className="max-w-xl mx-auto">
           <CardHeader>
-            <CardTitle>Purchase a Gift Card</CardTitle>
+            <CardTitle>{t("purchaseGiftCard")}</CardTitle>
             <CardDescription>Select an amount and personalize your gift</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePurchase} className="space-y-6">
               <div className="space-y-3">
-                <Label>Select Amount (SAR)</Label>
+                <Label>{t("selectAmount")}</Label>
                 <div className="flex flex-wrap gap-2">
                   {presetAmounts.map((a) => (
                     <Button
@@ -138,13 +141,13 @@ export default function GiftCardsPage() {
                   ))}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">or</span>
+                  <span className="text-sm text-muted-foreground">{t("or")}</span>
                   <Input
                     type="number"
                     min="1"
                     max="100000"
                     step="0.01"
-                    placeholder="Custom amount"
+                    placeholder={t("customAmount")}
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     className="max-w-[200px]"
@@ -156,26 +159,26 @@ export default function GiftCardsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Recipient Name</Label>
-                  <Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Their name" />
+                  <Label>{t("recipientName")}</Label>
+                  <Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder={t("recipientNamePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Recipient Email</Label>
-                  <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="their@email.com" />
+                  <Label>{t("recipientEmail")}</Label>
+                  <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder={t("recipientEmailPlaceholder")} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Your Name</Label>
-                <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Your name" />
+                <Label>{t("yourName")}</Label>
+                <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder={t("yourNamePlaceholder")} />
               </div>
               <div className="space-y-2">
-                <Label>Personal Message (optional)</Label>
-                <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write a personal message..." maxLength={1000} rows={3} />
+                <Label>{t("personalMessage")}</Label>
+                <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("messagePlaceholder")} maxLength={1000} rows={3} />
               </div>
 
               <Button type="submit" className="w-full" size="lg" disabled={purchasing}>
                 {purchasing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Purchase Gift Card — SAR {customAmount ? parseFloat(customAmount || "0").toFixed(2) : amount.toFixed(2)}
+                {t("purchase", { amount: customAmount ? parseFloat(customAmount || "0").toFixed(2) : amount.toFixed(2) })}
               </Button>
             </form>
           </CardContent>
@@ -185,13 +188,13 @@ export default function GiftCardsPage() {
       {tab === "check" && (
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle>Check Gift Card Balance</CardTitle>
-            <CardDescription>Enter your gift card code below</CardDescription>
+            <CardTitle>{t("checkTitle")}</CardTitle>
+            <CardDescription>{t("checkDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCheckBalance} className="space-y-4">
               <div className="space-y-2">
-                <Label>Gift Card Code</Label>
+                <Label>{t("giftCardCode")}</Label>
                 <Input
                   value={checkCode}
                   onChange={(e) => setCheckCode(e.target.value.toUpperCase())}
@@ -202,12 +205,12 @@ export default function GiftCardsPage() {
               </div>
               <Button type="submit" className="w-full" disabled={checking}>
                 {checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Check Balance
+                {t("checkBalance")}
               </Button>
 
               {balance && (
                 <div className="text-center p-6 bg-accent/50 rounded-lg mt-4">
-                  <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("availableBalance")}</p>
                   <p className="text-3xl font-bold text-primary">
                     {balance.currency} {Number(balance.currentBalance).toFixed(2)}
                   </p>
