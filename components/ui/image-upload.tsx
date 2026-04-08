@@ -17,7 +17,7 @@ interface ImageUploadProps {
   value: string[];
   /** Called whenever the image list changes */
   onChange: (urls: string[]) => void;
-  /** S3 folder prefix (e.g. "products", "categories", "store") */
+  /** Upload folder prefix (e.g. "products", "categories", "store") */
   folder?: string;
   /** Maximum number of images allowed */
   maxImages?: number;
@@ -96,7 +96,7 @@ export function ImageUpload({
           body: JSON.stringify({ url }),
         });
       } catch {
-        // Silently continue — image may already be deleted from S3
+        // Silently continue — image may already be deleted from Cloudinary
       }
       onChange(value.filter((u) => u !== url));
     },

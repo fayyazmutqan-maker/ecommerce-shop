@@ -154,6 +154,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // Enforce return window (14 days from last status update / delivery)
+    const RETURN_WINDOW_DAYS = 14;
+    const orderDate = order.updatedAt ? new Date(order.updatedAt) : new Date(order.createdAt);
+    const daysSinceOrder = Math.floor((Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (!isAdmin && daysSinceOrder > RETURN_WINDOW_DAYS) {
+      return NextResponse.json(
+        { error: `Return window has expired. Returns must be requested within ${RETURN_WINDOW_DAYS} days of delivery.` },
+        { status: 400 }
+      );
+    }
+
     // Validate items
     const orderItemMap = new Map(order.items.map((i) => [i.id, i]));
     for (const item of data.items) {

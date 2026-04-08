@@ -1,91 +1,79 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v2 as cloudinary } from "cloudinary";
 
-if (!process.env.AWS_REGION || !process.env.AWS_S3_BUCKET) {
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
   if (process.env.NODE_ENV === "production") {
-    throw new Error("AWS S3 environment variables (AWS_REGION, AWS_S3_BUCKET) are required in production.");
+    throw new Error("Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are required in production.");
   }
-  console.warn("AWS S3 environment variables are not fully configured. Uploads will fail.");
+  console.warn("Cloudinary environment variables are not fully configured. Uploads will fail.");
 }
 
-export const s3Client = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
+  secure: true,
 });
 
-export const S3_BUCKET = process.env.AWS_S3_BUCKET!;
-
-/**
- * Generate a presigned URL for direct client-side upload.
- */
-export async function getPresignedUploadUrl(
-  key: string,
-  contentType: string,
-  expiresIn = 300
-) {
-  const command = new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: key,
-    ContentType: contentType,
-  });
-  return getSignedUrl(s3Client, command, { expiresIn });
-}
+export { cloudinary };
 
 /**
  * Upload a file buffer directly from the server.
+ * Returns the secure URL of the uploaded image.
  */
-export async function uploadToS3(
+export async function uploadToCloudinary(
   key: string,
   body: Buffer | Uint8Array,
   contentType: string
-) {
-  const command = new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: key,
-    Body: body,
-    ContentType: contentType,
+): Promise<string> {
+  const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
+  const base64 = buffer.toString("base64");
+  const dataUri = `data:${contentType};base64,${base64}`;
+
+  // Use the key (without extension) as the public_id, folder is derived from key
+  const parts = key.split("/");
+  const folder = parts.slice(0, -1).join("/") || "uploads";
+  const filename = parts[parts.length - 1].replace(/\.[^/.]+$/, "");
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    public_id: filename,
+    folder,
+    resource_type: "image",
+    overwrite: true,
   });
-  await s3Client.send(command);
-  return getPublicUrl(key);
+
+  return result.secure_url;
 }
 
 /**
- * Delete an object from S3 by its key.
+ * Delete an image from Cloudinary by its key (public_id with folder).
  */
-export async function deleteFromS3(key: string) {
-  const command = new DeleteObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: key,
-  });
-  await s3Client.send(command);
+export async function deleteFromCloudinary(key: string): Promise<void> {
+  // key format: "folder/timestamp-random.ext" → public_id: "folder/timestamp-random"
+  const publicId = key.replace(/\.[^/.]+$/, "");
+  await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
 }
 
 /**
- * Get the public URL for an S3 object.
+ * Get the public URL for a Cloudinary image by key.
  */
-export function getPublicUrl(key: string) {
-  return `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+export function getPublicUrl(key: string): string {
+  const publicId = key.replace(/\.[^/.]+$/, "");
+  return cloudinary.url(publicId, { secure: true });
 }
 
 /**
- * Extract the S3 key from a full S3 URL.
+ * Extract the Cloudinary public_id from a Cloudinary URL.
  */
 export function getKeyFromUrl(url: string): string | null {
   try {
     const u = new URL(url);
-    // Handle path-style: https://bucket.s3.region.amazonaws.com/key
-    if (u.hostname.includes("amazonaws.com")) {
-      return decodeURIComponent(u.pathname.slice(1)); // remove leading /
+    if (!u.hostname.includes("cloudinary.com") && !u.hostname.includes("res.cloudinary.com")) {
+      return null;
     }
-    return null;
+    // Cloudinary URL format: https://res.cloudinary.com/<cloud>/image/upload/v<version>/<public_id>.<ext>
+    const match = u.pathname.match(/\/image\/upload\/(?:v\d+\/)?(.+)$/);
+    if (!match) return null;
+    return decodeURIComponent(match[1]);
   } catch {
     return null;
   }
@@ -156,7 +144,7 @@ export function validateImageMagicBytes(buffer: ArrayBuffer): string | null {
 }
 
 /**
- * Generate a unique S3 key for an upload.
+ * Generate a unique key for an upload.
  */
 export function generateImageKey(
   folder: string,

@@ -17,7 +17,7 @@ interface RouteParams {
 const updateOrderSchema = z.object({
   status: z.enum(["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"]).optional(),
   fulfillmentStatus: z.enum(["UNFULFILLED", "PARTIALLY_FULFILLED", "FULFILLED"]).optional(),
-  paymentStatus: z.enum(["PENDING", "PAID", "PARTIALLY_PAID", "REFUNDED", "FAILED"]).optional(),
+  paymentStatus: z.enum(["PENDING", "PAID", "PARTIALLY_PAID", "REFUNDED", "PARTIALLY_REFUNDED", "FAILED"]).optional(),
   trackingNumber: z.string().max(200).nullable().optional(),
   shippingMethod: z.string().max(200).nullable().optional(),
   cancelReason: z.string().max(500).nullable().optional(),
@@ -249,6 +249,21 @@ async function issueCancellationCreditNote(
   existing: { totalAmount: string | number; currency: string },
   processedBy: string,
 ) {
+  // Check if a full refund already exists for this order (prevents duplicate credit notes)
+  const existingRefunds = await db.query.refunds.findMany({
+    where: eq(refunds.orderId, orderId),
+  });
+  const alreadyRefunded = existingRefunds
+    .filter((r) => r.status === "COMPLETED" || r.status === "APPROVED")
+    .reduce((sum, r) => sum + Number(r.amount), 0);
+  const totalAmount = Number(existing.totalAmount);
+  const maxRefundable = totalAmount - alreadyRefunded;
+
+  if (maxRefundable < 0.01) {
+    // Already fully refunded — no need for another credit note
+    return;
+  }
+
   // Fetch order items to create refund line items
   const items = await db.query.orderItems.findMany({
     where: eq(orderItems.orderId, orderId),
@@ -256,21 +271,19 @@ async function issueCancellationCreditNote(
 
   if (items.length === 0) return;
 
-  const totalAmount = Number(existing.totalAmount);
-
-  // Create a full refund record (COMPLETED, no payment processing needed — cancellation reversal)
+  // Create a refund for the remaining un-refunded amount
   const [refund] = await db.insert(refunds).values({
     orderId,
-    amount: totalAmount.toFixed(2),
+    amount: maxRefundable.toFixed(2),
     reason: "Order cancelled",
     notes: "Auto-generated credit note for cancelled order",
     status: "COMPLETED",
-    type: "FULL",
+    type: Math.abs(maxRefundable - totalAmount) < 0.01 ? "FULL" : "PARTIAL",
     restockItems: false, // Inventory already restocked in the cancellation logic
     processedBy,
   }).returning();
 
-  // Create refund items
+  // Create refund items (proportional to un-refunded amount)
   await db.insert(refundItems).values(
     items.map((item) => ({
       refundId: refund.id,

@@ -1112,6 +1112,18 @@ export default function PosPage() {
 
       if (soundEnabled) playSound("success");
 
+      // Generate ZATCA QR for refund receipt (credit note compliance)
+      const refundTax = refundTotal * storeConfig.taxRate / (1 + storeConfig.taxRate);
+      const refundZatcaQr = storeConfig.zatcaEnabled && storeConfig.vatNumber
+        ? generateZatcaQR({
+            sellerName: storeConfig.storeName,
+            vatNumber: storeConfig.vatNumber,
+            timestamp: new Date(),
+            totalWithVat: refundTotal,
+            vatAmount: refundTax,
+          })
+        : undefined;
+
       // Build & show refund receipt
       const refundReceipt: ReceiptData = {
         storeName: storeConfig.storeName,
@@ -1130,10 +1142,11 @@ export default function PosPage() {
         subtotal: -refundTotal,
         discount: 0,
         taxRate: storeConfig.taxRate,
-        taxAmount: -(refundTotal * storeConfig.taxRate / (1 + storeConfig.taxRate)),
+        taxAmount: -refundTax,
         total: -refundTotal,
         paymentMethod: `Refund (${result.refund?.status || "Completed"})`,
         currency: curr,
+        zatcaQrData: refundZatcaQr,
         footerMessage: t("toasts.refundReceipt"),
       };
 

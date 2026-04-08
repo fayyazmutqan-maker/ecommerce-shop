@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
-  uploadToS3,
-  deleteFromS3,
+  uploadToCloudinary,
+  deleteFromCloudinary,
   getKeyFromUrl,
   generateImageKey,
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_SIZE,
   validateImageMagicBytes,
-} from "@/lib/s3";
+} from "@/lib/cloudinary";
 
 /**
- * POST /api/upload — Upload one or more images to S3.
+ * POST /api/upload — Upload one or more images to Cloudinary.
  * Accepts multipart/form-data with field name "files".
  * Optional query param: ?folder=products (default: "uploads")
  */
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
       const key = generateImageKey(folder, file.name);
       const buffer = Buffer.from(arrayBuffer);
-      const url = await uploadToS3(key, buffer, detectedType);
+      const url = await uploadToCloudinary(key, buffer, detectedType);
 
       results.push({ url, key, name: file.name });
     }
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
 }
 
 /**
- * DELETE /api/upload — Delete an image from S3.
+ * DELETE /api/upload — Delete an image from Cloudinary.
  * Body: { url: string } or { key: string }
  */
 const ALLOWED_KEY_PREFIXES = ["products/", "uploads/", "categories/", "settings/", "templates/"];
@@ -104,7 +104,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Validate key is within allowed prefixes to prevent arbitrary S3 deletion
+    // Validate key is within allowed prefixes to prevent arbitrary deletion
     const isAllowed = ALLOWED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
     if (!isAllowed) {
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await deleteFromS3(key);
+    await deleteFromCloudinary(key);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete error:", error);

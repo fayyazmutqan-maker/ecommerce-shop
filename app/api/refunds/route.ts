@@ -117,7 +117,9 @@ export async function POST(req: Request) {
         transactions: {
           orderBy: (t, { desc: d }) => [d(t.createdAt)],
         },
-        refunds: true,
+        refunds: {
+          with: { items: true },
+        },
       },
     });
 
@@ -143,14 +145,36 @@ export async function POST(req: Request) {
 
     const maxRefundable = totalAmount - alreadyRefunded;
 
+    // Build a map of already-refunded quantity per order item
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const completedRefunds = order.refunds.filter((r: any) => r.status === "COMPLETED" || r.status === "APPROVED");
+    const alreadyRefundedQty = new Map<string, number>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of completedRefunds as any[]) {
+      for (const ri of (r.items || [])) {
+        alreadyRefundedQty.set(ri.orderItemId, (alreadyRefundedQty.get(ri.orderItemId) || 0) + ri.quantity);
+      }
+    }
+
     if (data.type === "FULL") {
-      refundAmount = maxRefundable;
-      // Auto-populate items for full refund
-      refundItemsData = order.items.map((item: { id: string; quantity: number; totalPrice: string | number }) => ({
-        orderItemId: item.id,
-        quantity: item.quantity,
-        amount: Number(item.totalPrice),
-      }));
+      // For full refund, only refund remaining un-refunded quantities
+      refundItemsData = [];
+      for (const item of order.items as { id: string; quantity: number; totalPrice: string | number; price: string | number }[]) {
+        const alreadyQty = alreadyRefundedQty.get(item.id) || 0;
+        const remainingQty = item.quantity - alreadyQty;
+        if (remainingQty > 0) {
+          const unitPrice = Number(item.totalPrice) / item.quantity;
+          refundItemsData.push({
+            orderItemId: item.id,
+            quantity: remainingQty,
+            amount: Math.round(unitPrice * remainingQty * 100) / 100,
+          });
+        }
+      }
+      refundAmount = refundItemsData.reduce((sum, i) => sum + i.amount, 0);
+      if (refundAmount > maxRefundable + 0.01) {
+        refundAmount = maxRefundable;
+      }
     } else {
       if (!data.items || data.items.length === 0) {
         return NextResponse.json(
@@ -159,12 +183,21 @@ export async function POST(req: Request) {
         );
       }
 
-      // Validate items belong to this order
-      const orderItemIds = new Set(order.items.map((i: { id: string }) => i.id));
+      // Validate items belong to this order and check per-item quantity limits
+      const orderItemMap = new Map(order.items.map((i: { id: string; quantity: number }) => [i.id, i]));
       for (const item of data.items) {
-        if (!orderItemIds.has(item.orderItemId)) {
+        const orderItem = orderItemMap.get(item.orderItemId);
+        if (!orderItem) {
           return NextResponse.json(
             { error: `Item ${item.orderItemId} does not belong to this order` },
+            { status: 400 }
+          );
+        }
+        const alreadyQty = alreadyRefundedQty.get(item.orderItemId) || 0;
+        const maxQty = orderItem.quantity - alreadyQty;
+        if (item.quantity > maxQty) {
+          return NextResponse.json(
+            { error: `Item "${item.orderItemId}" — requested ${item.quantity} but only ${maxQty} remaining to refund` },
             { status: 400 }
           );
         }

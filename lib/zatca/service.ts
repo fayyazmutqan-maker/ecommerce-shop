@@ -151,6 +151,12 @@ export async function reportOrderToZatca(orderId: string): Promise<ZatcaReportRe
     const addr = parseAddress(config.storeAddress);
     const buyerName = o.user?.name || (o.shippingAddress ? `${o.shippingAddress.firstName} ${o.shippingAddress.lastName}` : "Customer");
 
+    // Determine payment means code based on payment method
+    const pm = (o.paymentMethod || "cash").toLowerCase();
+    const paymentMeansCode = pm.includes("card") || pm.includes("tap") ? "48"
+      : pm.includes("transfer") || pm.includes("bank") ? "42"
+      : "10"; // Default cash
+
     const xml = buildZatcaXml({
       invoiceNumber: o.orderNumber,
       uuid,
@@ -176,6 +182,7 @@ export async function reportOrderToZatca(orderId: string): Promise<ZatcaReportRe
       discountAmount: toNumber(o.discountAmount),
       previousInvoiceHash: previousHash,
       invoiceCounter,
+      paymentMeansCode,
     });
 
     // 6. Hash the XML
@@ -328,30 +335,40 @@ export async function reportCreditNoteToZatca(refundId: string): Promise<ZatcaRe
     const invoiceCounter = updated.counter;
     const previousHash = updated.prevHash;
 
-    // Build credit note line items from refund items
+    // Build credit note line items from refund items.
+    // Refund item `amount` is the tax-inclusive total (matches order item totalPrice).
+    // We need to reverse-calculate the tax-exclusive amount for ZATCA.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lineItems: ZatcaInvoiceLineItem[] = r.items.map((item: any) => {
       const unitPrice = toNumber(item.orderItem.price);
-      const lineTotal = toNumber(item.amount);
-      const taxAmount = lineTotal * (taxRate / 100);
+      const totalInclVat = toNumber(item.amount);
+      // Reverse-calculate: lineTotal = totalInclVat / (1 + taxRate/100)
+      const lineTotal = totalInclVat / (1 + config.taxRate);
+      const taxAmount = totalInclVat - lineTotal;
       return {
         id: item.id,
         name: item.orderItem.name,
         quantity: item.quantity,
         unitPrice,
-        taxAmount,
-        lineTotal,
+        taxAmount: Math.round(taxAmount * 100) / 100,
+        lineTotal: Math.round(lineTotal * 100) / 100,
         taxPercent: taxRate,
       };
     });
 
-    // Calculate totals
-    const totalWithoutVat = toNumber(r.amount);
-    const totalVat = totalWithoutVat * (taxRate / 100);
-    const totalWithVat = totalWithoutVat + totalVat;
+    // Calculate totals — refund.amount is tax-inclusive
+    const totalWithVat = toNumber(r.amount);
+    const totalWithoutVat = Math.round((totalWithVat / (1 + config.taxRate)) * 100) / 100;
+    const totalVat = Math.round((totalWithVat - totalWithoutVat) * 100) / 100;
 
     // Build credit note number
     const creditNoteNumber = `CN-${r.order.orderNumber}-${refundId.slice(-6)}`;
+
+    // Determine payment means code based on original order
+    const paymentMethod = r.order.paymentMethod || "cash";
+    const paymentMeansCode = paymentMethod.toLowerCase().includes("card") || paymentMethod.toLowerCase().includes("tap") ? "48"
+      : paymentMethod.toLowerCase().includes("transfer") || paymentMethod.toLowerCase().includes("bank") ? "42"
+      : "10"; // Default cash
 
     const now = new Date();
     const uuid = generateInvoiceUUID();
@@ -384,10 +401,21 @@ export async function reportCreditNoteToZatca(refundId: string): Promise<ZatcaRe
       previousInvoiceHash: previousHash,
       invoiceCounter,
       billingReferenceId: r.order.orderNumber, // Reference to original invoice
+      paymentMeansCode,
+      instructionNote: r.reason || "Refund",
     });
 
     const invoiceHash = hashInvoiceXml(xml);
     const invoiceXmlBase64 = Buffer.from(xml, "utf-8").toString("base64");
+
+    // Generate ZATCA QR code for the credit note
+    const qrCode = generateZatcaQR({
+      sellerName: config.storeName,
+      vatNumber: config.vatNumber,
+      timestamp: now,
+      totalWithVat,
+      vatAmount: totalVat,
+    });
 
     // Report to ZATCA
     let response: ZatcaReportingResponse;
@@ -410,7 +438,7 @@ export async function reportCreditNoteToZatca(refundId: string): Promise<ZatcaRe
 
       await db.update(storeSettings).set({ zatcaPreviousHash: invoiceHash });
 
-      return { success: false, status: "FAILED", invoiceHash, errors: [errorMsg] };
+      return { success: false, status: "FAILED", invoiceHash, qrCode, errors: [errorMsg] };
     }
 
     // Update refund and settings

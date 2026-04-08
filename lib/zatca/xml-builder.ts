@@ -53,6 +53,10 @@ export interface ZatcaInvoiceInput {
   invoiceCounter: number;
   // Credit Note / Debit Note — reference to original invoice
   billingReferenceId?: string; // Original invoice number (required for 381/383)
+  // Payment means code (10=Cash, 30=Credit, 42=Bank transfer, 48=Card)
+  paymentMeansCode?: string;
+  // Credit note instruction note (reason for credit note - required by ZATCA for 381)
+  instructionNote?: string;
 }
 
 /**
@@ -68,13 +72,26 @@ function escapeXml(str: string): string {
 }
 
 /**
- * Build the UBL 2.1 XML string for a ZATCA simplified tax invoice
+ * Build the UBL 2.1 XML string for a ZATCA simplified tax invoice or credit note
  */
 export function buildZatcaXml(input: ZatcaInvoiceInput): string {
+  const isCreditNote = input.invoiceTypeCode === "381";
+  const isDebitNote = input.invoiceTypeCode === "383";
+  const quantityTag = isCreditNote ? "CreditedQuantity" : isDebitNote ? "DebitedQuantity" : "InvoicedQuantity";
+  const lineTag = isCreditNote ? "CreditNoteLine" : isDebitNote ? "DebitNoteLine" : "InvoiceLine";
+  const rootTag = isCreditNote ? "CreditNote" : isDebitNote ? "DebitNote" : "Invoice";
+  const rootNs = isCreditNote
+    ? "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2"
+    : isDebitNote
+      ? "urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"
+      : "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
+  const typeCodeTag = isCreditNote ? "CreditNoteTypeCode" : isDebitNote ? "DebitNoteTypeCode" : "InvoiceTypeCode";
+  const paymentMeansCode = input.paymentMeansCode || "10"; // Default cash
+
   const lines = input.lineItems.map((item, idx) => `
-    <cac:InvoiceLine>
+    <cac:${lineTag}>
       <cbc:ID>${idx + 1}</cbc:ID>
-      <cbc:InvoicedQuantity unitCode="PCE">${item.quantity}</cbc:InvoicedQuantity>
+      <cbc:${quantityTag} unitCode="PCE">${item.quantity}</cbc:${quantityTag}>
       <cbc:LineExtensionAmount currencyID="${input.currency}">${item.lineTotal.toFixed(2)}</cbc:LineExtensionAmount>
       <cac:TaxTotal>
         <cbc:TaxAmount currencyID="${input.currency}">${item.taxAmount.toFixed(2)}</cbc:TaxAmount>
@@ -93,10 +110,10 @@ export function buildZatcaXml(input: ZatcaInvoiceInput): string {
       <cac:Price>
         <cbc:PriceAmount currencyID="${input.currency}">${item.unitPrice.toFixed(2)}</cbc:PriceAmount>
       </cac:Price>
-    </cac:InvoiceLine>`).join("");
+    </cac:${lineTag}>`).join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+<${rootTag} xmlns="${rootNs}"
          xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
          xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
          xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
@@ -105,9 +122,10 @@ export function buildZatcaXml(input: ZatcaInvoiceInput): string {
   <cbc:UUID>${escapeXml(input.uuid)}</cbc:UUID>
   <cbc:IssueDate>${input.issueDate}</cbc:IssueDate>
   <cbc:IssueTime>${input.issueTime}</cbc:IssueTime>
-  <cbc:InvoiceTypeCode name="${input.invoiceSubType}">${input.invoiceTypeCode}</cbc:InvoiceTypeCode>
+  <cbc:${typeCodeTag} name="${input.invoiceSubType}">${input.invoiceTypeCode}</cbc:${typeCodeTag}>
   <cbc:DocumentCurrencyCode>${input.currency}</cbc:DocumentCurrencyCode>
-  <cbc:TaxCurrencyCode>${input.currency}</cbc:TaxCurrencyCode>
+  <cbc:TaxCurrencyCode>${input.currency}</cbc:TaxCurrencyCode>${input.instructionNote ? `
+  <cbc:Note>${escapeXml(input.instructionNote)}</cbc:Note>` : ""}
   <cac:AdditionalDocumentReference>
     <cbc:ID>ICV</cbc:ID>
     <cbc:UUID>${input.invoiceCounter}</cbc:UUID>
@@ -155,7 +173,10 @@ export function buildZatcaXml(input: ZatcaInvoiceInput): string {
         <cbc:RegistrationName>${escapeXml(input.buyerName || "Customer")}</cbc:RegistrationName>
       </cac:PartyLegalEntity>
     </cac:Party>
-  </cac:AccountingCustomerParty>${input.discountAmount > 0 ? `
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode>${paymentMeansCode}</cbc:PaymentMeansCode>
+  </cac:PaymentMeans>${input.discountAmount > 0 ? `
   <cac:AllowanceCharge>
     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
     <cbc:AllowanceChargeReason>Discount</cbc:AllowanceChargeReason>
@@ -192,7 +213,7 @@ export function buildZatcaXml(input: ZatcaInvoiceInput): string {
     <cbc:AllowanceTotalAmount currencyID="${input.currency}">${input.discountAmount.toFixed(2)}</cbc:AllowanceTotalAmount>
     <cbc:PayableAmount currencyID="${input.currency}">${input.totalWithVat.toFixed(2)}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>${lines}
-</Invoice>`;
+</${rootTag}>`;
 
   return xml;
 }
