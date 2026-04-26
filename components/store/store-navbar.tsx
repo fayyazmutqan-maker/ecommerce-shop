@@ -29,12 +29,19 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WishlistNavIcon } from "@/components/store/wishlist-nav-icon";
 import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 
 export function StoreNavbar() {
   const t = useTranslations("common");
   const tNav = useTranslations("nav");
   const { data: session, status } = useSession();
+  const [isSessionLoaded, setIsSessionLoaded] = useState(false);
   const isAuthenticated = status === "authenticated";
+
+  // Defer session check to after page load to avoid permission prompts
+  useEffect(() => {
+    setIsSessionLoaded(true);
+  }, []);
 
   const navLinks = [
     { title: tNav("home"), href: "/" },

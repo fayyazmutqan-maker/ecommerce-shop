@@ -17,6 +17,7 @@ export function useAbandonedCartTracker() {
   const getTotal = useCartStore((s) => s.getTotal);
   const lastSyncRef = useRef<number>(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasInitializedRef = useRef(false);
 
   // Sync cart to server — debounced & deduplicated
   const syncCart = async (force = false) => {
@@ -59,7 +60,11 @@ export function useAbandonedCartTracker() {
   };
 
   useEffect(() => {
-    if (items.length === 0) return;
+    // Only initialize event listeners when cart has items
+    if (items.length === 0) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      return;
+    }
 
     // Debounce: sync 5 seconds after any cart change
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -72,6 +77,9 @@ export function useAbandonedCartTracker() {
   }, [items]);
 
   useEffect(() => {
+    // Skip if cart is empty or we haven't fully initialized
+    if (items.length === 0 || !hasInitializedRef.current) return;
+
     // Sync on tab close / navigate away
     const handleBeforeUnload = () => {
       if (items.length > 0) syncCart(true);
@@ -97,4 +105,9 @@ export function useAbandonedCartTracker() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
+
+  // Initialize listeners only after hydration
+  useEffect(() => {
+    hasInitializedRef.current = true;
+  }, []);
 }
