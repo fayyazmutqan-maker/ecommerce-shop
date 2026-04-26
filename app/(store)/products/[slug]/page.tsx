@@ -227,6 +227,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* Image Gallery */}
         <ProductImageGallery
           images={product.images.map((i) => ({ url: i.url, alt: i.alt }))}
+          productId={product.id}
         />
 
         {/* Product Info */}
