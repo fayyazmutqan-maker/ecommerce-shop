@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 export interface BreadcrumbItem {
   label: string;
@@ -24,8 +26,8 @@ interface BreadcrumbsProps {
  * "Home" is always prepended automatically.
  * The last item (or any item without `href`) renders as plain text.
  */
-export async function Breadcrumbs({ items, className }: BreadcrumbsProps) {
-  const t = await getTranslations("common");
+export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+  const t = useTranslations("common");
   return (
     <nav
       aria-label="Breadcrumb"

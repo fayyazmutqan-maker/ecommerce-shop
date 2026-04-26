@@ -242,7 +242,13 @@ export default async function ProductDetailPage({ params }: Props) {
             </h1>
             {product.vendor && (
               <p className="text-sm text-muted-foreground mt-2">
-                by {product.vendor}
+                by{" "}
+                <Link
+                  href={`/products?vendor=${encodeURIComponent(product.vendor)}`}
+                  className="text-foreground hover:underline font-medium transition-colors"
+                >
+                  {product.vendor}
+                </Link>
               </p>
             )}
           </div>
