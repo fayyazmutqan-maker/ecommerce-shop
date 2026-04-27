@@ -1,5 +1,6 @@
 import { Providers } from "@/components/providers";
 import { getLocale, getMessages } from "next-intl/server";
+import { defaultTimeZone } from "@/i18n/request";
 
 export default async function AuthLayout({
   children,
@@ -10,7 +11,7 @@ export default async function AuthLayout({
   const messages = await getMessages();
 
   return (
-    <Providers locale={locale} messages={messages as Record<string, unknown>}>
+    <Providers locale={locale} messages={messages as Record<string, unknown>} timeZone={defaultTimeZone}>
       {children}
     </Providers>
   );

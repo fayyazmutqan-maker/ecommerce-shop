@@ -5,6 +5,7 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { Providers } from "@/components/providers";
 import { auth } from "@/lib/auth";
 import { getLocale, getMessages } from "next-intl/server";
+import { defaultTimeZone } from "@/i18n/request";
 
 export default async function AdminLayout({
   children,
@@ -25,7 +26,7 @@ export default async function AdminLayout({
   const messages = await getMessages();
 
   return (
-    <Providers locale={locale} messages={messages as Record<string, unknown>}>
+    <Providers locale={locale} messages={messages as Record<string, unknown>} timeZone={defaultTimeZone}>
       <SidebarProvider>
         <AdminSidebar />
         <SidebarInset>

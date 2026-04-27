@@ -4,6 +4,7 @@ import { AbandonedCartTracker } from "@/components/store/abandoned-cart-tracker"
 import { Providers } from "@/components/providers";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getActiveTemplateColors } from "@/components/store/template-renderer";
+import { defaultTimeZone } from "@/i18n/request";
 
 export default async function StoreLayout({
   children,
@@ -25,7 +26,7 @@ export default async function StoreLayout({
   );
 
   return (
-    <Providers locale={locale} messages={messages as Record<string, unknown>}>
+    <Providers locale={locale} messages={messages as Record<string, unknown>} timeZone={defaultTimeZone}>
       <div className="flex min-h-screen flex-col" style={colorOverrides}>
         <a
           href="#main-content"

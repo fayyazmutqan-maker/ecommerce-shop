@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://res.cloudinary.com https://placehold.co https://lh3.googleusercontent.com https://cdn.jsdelivr.net https://unpkg.com https://*.b-cdn.net",
               "font-src 'self' https://fonts.gstatic.com",
-              `connect-src 'self' http://localhost:* ws://localhost:* https://api.tap.company https://vitals.vercel-insights.com`,
+              `connect-src 'self' https://api.tap.company https://vitals.vercel-insights.com${isDev ? " http://localhost:* ws://localhost:*" : ""}`,
               "frame-src 'self' https://goSellJSLib.b-cdn.net https://challenges.cloudflare.com",
               "object-src 'none'",
               "base-uri 'self'",

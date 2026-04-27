@@ -526,7 +526,7 @@ export default function CheckoutPage() {
                 <div className="space-y-2 min-w-0">
                   <Label htmlFor="country" className="text-sm font-medium">{tCheckout("country")}</Label>
                   <Select value={country} onValueChange={handleCountryChange}>
-                    <SelectTrigger id="country" className="h-11 w-full">
+                    <SelectTrigger id="country" size="lg" className="w-full">
                       <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -551,7 +551,7 @@ export default function CheckoutPage() {
                     {t("region")}
                   </Label>
                   <Select value={region} onValueChange={setRegion}>
-                    <SelectTrigger className="h-11 w-full">
+                    <SelectTrigger size="lg" className="w-full">
                       <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
