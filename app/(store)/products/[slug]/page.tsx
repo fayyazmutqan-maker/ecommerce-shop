@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { products, productImages, productVariants, productCategories, reviews, productBundles } from "@/lib/schema";
+import { products, productImages, productVariants, productCategories, reviews } from "@/lib/schema";
 import { eq, desc, asc, and, inArray } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { applyTranslations, applyTranslationsBatch } from "@/lib/translations";
@@ -146,14 +146,6 @@ export default async function ProductDetailPage({ params }: Props) {
         product.reviews.length
       : 0;
 
-  const discount =
-    product.compareAtPrice && product.compareAtPrice > product.price
-      ? Math.round(
-          ((product.compareAtPrice - product.price) / product.compareAtPrice) *
-            100
-        )
-      : null;
-
   // JSON-LD Product structured data for SEO
   const jsonLd = {
     "@context": "https://schema.org",
@@ -172,12 +164,6 @@ export default async function ProductDetailPage({ params }: Props) {
         product.quantity > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
-      ...(product.compareAtPrice &&
-        product.compareAtPrice > product.price && {
-          priceValidUntil: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString().split("T")[0],
-        }),
     },
     ...(product.reviews.length > 0 && {
       aggregateRating: {
@@ -274,24 +260,6 @@ export default async function ProductDetailPage({ params }: Props) {
               </span>
             </div>
           )}
-
-          {/* Price */}
-          <div className="flex items-baseline gap-4">
-            <span className="text-3xl font-bold tracking-tight">
-              SAR {product.price.toFixed(2)}
-            </span>
-            {product.compareAtPrice &&
-              product.compareAtPrice > product.price && (
-                <span className="text-lg text-muted-foreground line-through">
-                  SAR {product.compareAtPrice.toFixed(2)}
-                </span>
-              )}
-            {discount && (
-              <Badge className="bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive">
-                Save {discount}%
-              </Badge>
-            )}
-          </div>
 
           {product.shortDescription && (
             <p className="text-muted-foreground leading-relaxed text-[15px]">
