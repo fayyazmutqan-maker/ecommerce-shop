@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdnjs.cloudflare.com https://challenges.cloudflare.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://placehold.co https://lh3.googleusercontent.com",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://placehold.co https://lh3.googleusercontent.com https://cdn.jsdelivr.net https://unpkg.com https://*.b-cdn.net",
               "font-src 'self' https://fonts.gstatic.com",
               `connect-src 'self' http://localhost:* ws://localhost:* https://api.tap.company https://vitals.vercel-insights.com`,
               "frame-src 'self' https://goSellJSLib.b-cdn.net https://challenges.cloudflare.com",
