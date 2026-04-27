@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/store";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export function CartSheet() {
   const { items, removeItem, updateQuantity, getTotal, getItemCount } =
@@ -70,6 +71,7 @@ export function CartSheet() {
                           fill
                           sizes="80px"
                           className="object-cover"
+                          unoptimized={shouldUseUnoptimizedImage(item.image)}
                         />
                       )}
                     </div>

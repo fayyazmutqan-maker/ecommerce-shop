@@ -29,6 +29,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/helpers";
 import { useFetch } from "@/hooks/use-fetch";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 interface BlogCategory {
   id: string;
@@ -127,7 +128,7 @@ function PostList({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {post.featuredImage ? (
-                            <Image src={post.featuredImage} alt="" width={32} height={32} className="h-8 w-8 rounded object-cover" />
+                            <Image src={post.featuredImage} alt="" width={32} height={32} className="h-8 w-8 rounded object-cover" unoptimized={shouldUseUnoptimizedImage(post.featuredImage)} />
                           ) : (
                             <FileText className="h-4 w-4 text-muted-foreground" />
                           )}

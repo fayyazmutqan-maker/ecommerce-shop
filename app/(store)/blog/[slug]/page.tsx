@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, User, ArrowLeft } from "lucide-react";
 import { formatDate } from "@/lib/helpers";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,7 @@ export default async function BlogPostPage({ params }: Props) {
                   {related.featuredImage && (
                     <div className="aspect-video rounded-lg overflow-hidden relative">
                       <Image src={related.featuredImage} alt={related.title}
-                        fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" />
+                        fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw" unoptimized={shouldUseUnoptimizedImage(related.featuredImage)} />
                     </div>
                   )}
                   <h3 className="font-semibold group-hover:text-primary transition-colors line-clamp-2">

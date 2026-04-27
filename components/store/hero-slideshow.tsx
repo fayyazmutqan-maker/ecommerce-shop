@@ -7,6 +7,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export interface HeroSlide {
   title: string;
@@ -119,6 +120,7 @@ function SlideMedia({
           )}
           style={parallax ? { transform: "translateZ(0)" } : undefined}
           priority
+          unoptimized={shouldUseUnoptimizedImage(slide.imageUrl)}
         />
       ) : null}
       {overlay && (slide.imageUrl || slide.videoUrl) && (

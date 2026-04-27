@@ -27,7 +27,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 import { PhoneInputField } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import type { Country } from "react-phone-number-input";
 import { useTranslations } from "next-intl";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 interface PaymentSettings {
   tapEnabled: boolean;
@@ -52,6 +55,50 @@ interface AutoDiscountApplied {
   description: string;
 }
 
+const CHECKOUT_COUNTRIES = [
+  {
+    code: "SA",
+    name: "Saudi Arabia",
+    labelKey: "countrySaudiArabia",
+    cityPlaceholder: "Riyadh",
+    postalCodePlaceholder: "12345",
+    regions: [
+      "Riyadh",
+      "Makkah",
+      "Madinah",
+      "Eastern Province",
+      "Asir",
+      "Tabuk",
+      "Hail",
+      "Northern Borders",
+      "Jazan",
+      "Najran",
+      "Al Baha",
+      "Al Jawf",
+      "Qassim",
+    ],
+  },
+  {
+    code: "AE",
+    name: "United Arab Emirates",
+    labelKey: "countryUnitedArabEmirates",
+    cityPlaceholder: "Dubai",
+    postalCodePlaceholder: "00000",
+    regions: [
+      "Abu Dhabi",
+      "Dubai",
+      "Sharjah",
+      "Ajman",
+      "Umm Al Quwain",
+      "Ras Al Khaimah",
+      "Fujairah",
+    ],
+  },
+] as const;
+
+type CheckoutCountryCode = (typeof CHECKOUT_COUNTRIES)[number]["code"];
+const CHECKOUT_PHONE_COUNTRIES: CheckoutCountryCode[] = ["SA", "AE"];
+
 export default function CheckoutPage() {
   const t = useTranslations("checkoutPage");
   const tCommon = useTranslations("common");
@@ -65,6 +112,7 @@ export default function CheckoutPage() {
   const [selectedShippingRate, setSelectedShippingRate] = useState<string>("");
   const [shippingRates, setShippingRates] = useState<ShippingRateOption[]>([]);
   const [loadingShipping, setLoadingShipping] = useState(false);
+  const [country, setCountry] = useState<CheckoutCountryCode>("SA");
   const [region, setRegion] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [autoDiscounts, setAutoDiscounts] = useState<AutoDiscountApplied[]>([]);
@@ -94,6 +142,28 @@ export default function CheckoutPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const selectedCountry = CHECKOUT_COUNTRIES.find((option) => option.code === country) ?? CHECKOUT_COUNTRIES[0];
+
+  const syncCheckoutCountry = (value: string, options: { clearPhone: boolean }) => {
+    const nextCountry = CHECKOUT_COUNTRIES.find((option) => option.code === value);
+    if (!nextCountry) return;
+    setCountry(nextCountry.code);
+    setRegion("");
+    setShippingRates([]);
+    setSelectedShippingRate("");
+    if (options.clearPhone) setPhone(undefined);
+  };
+
+  const handleCountryChange = (value: string) => {
+    syncCheckoutCountry(value, { clearPhone: true });
+  };
+
+  const handlePhoneCountryChange = (value?: Country) => {
+    if (!value || !CHECKOUT_PHONE_COUNTRIES.includes(value as CheckoutCountryCode)) return;
+    if (value === country) return;
+    syncCheckoutCountry(value, { clearPhone: false });
+  };
+
   // Fetch payment settings to know which methods are available
   useEffect(() => {
     fetch("/api/settings")
@@ -118,13 +188,18 @@ export default function CheckoutPage() {
 
   // Fetch shipping rates when region changes
   useEffect(() => {
-    if (!region) return;
+    if (!country || !region) {
+      setShippingRates([]);
+      setSelectedShippingRate("");
+      return;
+    }
     setLoadingShipping(true);
+    setSelectedShippingRate("");
     const totalWeight = items.reduce((s, i) => s + (i.quantity * 0.5), 0);
     fetch("/api/shipping-zones/calculate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: "Saudi Arabia", region, totalWeight, orderAmount: getTotal() }),
+      body: JSON.stringify({ country, region, totalWeight, orderAmount: getTotal() }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -137,7 +212,7 @@ export default function CheckoutPage() {
       .catch(() => setShippingRates([]))
       .finally(() => setLoadingShipping(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [region]);
+  }, [country, region]);
 
   // Evaluate auto discounts
   useEffect(() => {
@@ -180,6 +255,13 @@ export default function CheckoutPage() {
   const shipping = couponFreeShipping ? 0 : (selectedRate?.price ?? 0);
   const tax = subtotal * 0.15;
   const total = Math.max(0, subtotal + shipping + tax - autoDiscountTotal - couponDiscount);
+  const shippingSelectionRequired = Boolean(country && region && !loadingShipping);
+  const hasAvailableShipping = shippingRates.length > 0 && Boolean(selectedRate);
+  const canPlaceOrder =
+    !loading &&
+    !loadingShipping &&
+    (!shippingSelectionRequired || hasAvailableShipping) &&
+    (paymentSettings.tapEnabled || paymentSettings.codEnabled);
 
   // ── Coupon validation handler ──
   const handleApplyCoupon = async () => {
@@ -228,11 +310,14 @@ export default function CheckoutPage() {
     const newErrors: Record<string, string> = {};
     if (!email) newErrors.email = t("emailRequired");
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = t("invalidEmail");
+    if (!phone || !isValidPhoneNumber(phone)) newErrors.phone = t("phoneRequired");
     if (!firstName) newErrors.firstName = t("firstNameRequired");
     if (!lastName) newErrors.lastName = t("lastNameRequired");
     if (!address1) newErrors.address1 = t("addressRequired");
     if (!city) newErrors.city = t("cityRequired");
+    if (!country) newErrors.country = t("countryRequired");
     if (!region) newErrors.region = t("regionRequired");
+    if (shippingSelectionRequired && !hasAvailableShipping) newErrors.shipping = t("shippingRequired");
     if (!postalCode) newErrors.postalCode = t("postalCodeRequired");
     if (!agreeTerms) newErrors.terms = t("agreeTermsRequired");
 
@@ -263,7 +348,7 @@ export default function CheckoutPage() {
             city: city.trim(),
             state: region,
             postalCode: postalCode.trim(),
-            country: "Saudi Arabia",
+            country: selectedCountry.name,
             phone: phone || undefined,
           },
           shippingMethod: selectedRate?.name || "Standard",
@@ -347,11 +432,15 @@ export default function CheckoutPage() {
                   </Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    inputMode="email"
                     placeholder="your@email.com"
                     className="h-11"
                     value={form.email}
                     onChange={(e) => updateForm("email", e.target.value)}
+                    aria-invalid={Boolean(errors.email)}
                     required
                   />
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
@@ -361,10 +450,16 @@ export default function CheckoutPage() {
                     {tCheckout("phone")}
                   </Label>
                   <PhoneInputField
+                    key={country}
                     value={phone}
                     onChange={setPhone}
+                    defaultCountry={country}
+                    countries={CHECKOUT_PHONE_COUNTRIES}
+                    onCountryChange={handlePhoneCountryChange}
+                    placeholder={country === "AE" ? "+971 5X XXX XXXX" : "+966 5X XXX XXXX"}
                     id="phone"
                   />
+                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
               </div>
             </CardContent>
@@ -383,14 +478,14 @@ export default function CheckoutPage() {
                   <Label htmlFor="firstName" className="text-sm font-medium">
                     {tCheckout("firstName")}
                   </Label>
-                  <Input id="firstName" placeholder="Mohammed" className="h-11" value={form.firstName} onChange={(e) => updateForm("firstName", e.target.value)} required />
+                  <Input id="firstName" name="given-name" autoComplete="given-name" placeholder="Mohammed" className="h-11" value={form.firstName} onChange={(e) => updateForm("firstName", e.target.value)} aria-invalid={Boolean(errors.firstName)} required />
                   {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName" className="text-sm font-medium">
                     {tCheckout("lastName")}
                   </Label>
-                  <Input id="lastName" placeholder="Al-Salem" className="h-11" value={form.lastName} onChange={(e) => updateForm("lastName", e.target.value)} required />
+                  <Input id="lastName" name="family-name" autoComplete="family-name" placeholder="Al-Salem" className="h-11" value={form.lastName} onChange={(e) => updateForm("lastName", e.target.value)} aria-invalid={Boolean(errors.lastName)} required />
                   {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
                 </div>
               </div>
@@ -400,10 +495,13 @@ export default function CheckoutPage() {
                 </Label>
                 <Input
                   id="address1"
+                  name="address-line1"
+                  autoComplete="address-line1"
                   placeholder="King Fahd Road, Building 12"
                   className="h-11"
                   value={form.address1}
                   onChange={(e) => updateForm("address1", e.target.value)}
+                  aria-invalid={Boolean(errors.address1)}
                   required
                 />
                 {errors.address1 && <p className="text-xs text-destructive">{errors.address1}</p>}
@@ -412,14 +510,30 @@ export default function CheckoutPage() {
                 <Label htmlFor="address2" className="text-sm font-medium">
                   {t("apartment")}
                 </Label>
-                <Input id="address2" placeholder="Floor 3, Office 301" className="h-11" value={form.address2} onChange={(e) => updateForm("address2", e.target.value)} />
+                <Input id="address2" name="address-line2" autoComplete="address-line2" placeholder="Floor 3, Office 301" className="h-11" value={form.address2} onChange={(e) => updateForm("address2", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country" className="text-sm font-medium">{tCheckout("country")}</Label>
+                <Select value={country} onValueChange={handleCountryChange}>
+                  <SelectTrigger id="country" className="h-11">
+                    <SelectValue placeholder={t("select")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHECKOUT_COUNTRIES.map((option) => (
+                      <SelectItem key={option.code} value={option.code}>
+                        {t(option.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city" className="text-sm font-medium">
                     {tCheckout("city")}
                   </Label>
-                  <Input id="city" placeholder="Riyadh" className="h-11" value={form.city} onChange={(e) => updateForm("city", e.target.value)} required />
+                  <Input id="city" name="address-level2" autoComplete="address-level2" placeholder={selectedCountry.cityPlaceholder} className="h-11" value={form.city} onChange={(e) => updateForm("city", e.target.value)} aria-invalid={Boolean(errors.city)} required />
                   {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
                 </div>
                 <div className="space-y-2">
@@ -431,19 +545,9 @@ export default function CheckoutPage() {
                       <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Riyadh">Riyadh</SelectItem>
-                      <SelectItem value="Makkah">Makkah</SelectItem>
-                      <SelectItem value="Madinah">Madinah</SelectItem>
-                      <SelectItem value="Eastern Province">Eastern Province</SelectItem>
-                      <SelectItem value="Asir">Asir</SelectItem>
-                      <SelectItem value="Tabuk">Tabuk</SelectItem>
-                      <SelectItem value="Hail">Hail</SelectItem>
-                      <SelectItem value="Northern Borders">Northern Borders</SelectItem>
-                      <SelectItem value="Jazan">Jazan</SelectItem>
-                      <SelectItem value="Najran">Najran</SelectItem>
-                      <SelectItem value="Al Baha">Al Baha</SelectItem>
-                      <SelectItem value="Al Jawf">Al Jawf</SelectItem>
-                      <SelectItem value="Qassim">Qassim</SelectItem>
+                      {selectedCountry.regions.map((option) => (
+                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {errors.region && <p className="text-xs text-destructive">{errors.region}</p>}
@@ -452,13 +556,9 @@ export default function CheckoutPage() {
                   <Label htmlFor="postalCode" className="text-sm font-medium">
                     {tCheckout("postalCode")}
                   </Label>
-                  <Input id="postalCode" placeholder="12345" className="h-11" value={form.postalCode} onChange={(e) => updateForm("postalCode", e.target.value)} required />
+                  <Input id="postalCode" name="postal-code" autoComplete="postal-code" inputMode="numeric" placeholder={selectedCountry.postalCodePlaceholder} className="h-11" value={form.postalCode} onChange={(e) => updateForm("postalCode", e.target.value)} aria-invalid={Boolean(errors.postalCode)} required />
                   {errors.postalCode && <p className="text-xs text-destructive">{errors.postalCode}</p>}
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{tCheckout("country")}</Label>
-                <Input value="Saudi Arabia" disabled className="h-11 bg-muted" />
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox id="sameAsBilling" defaultChecked />
@@ -491,6 +591,7 @@ export default function CheckoutPage() {
               {region && !loadingShipping && shippingRates.length === 0 && (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t("noShippingOptions")}</p>
               )}
+              {errors.shipping && <p className="text-xs text-destructive text-center">{errors.shipping}</p>}
               {shippingRates.map((rate) => (
                 <label
                   key={rate.id}
@@ -658,6 +759,7 @@ export default function CheckoutPage() {
                           fill
                           sizes="64px"
                           className="object-cover"
+                          unoptimized={shouldUseUnoptimizedImage(item.image)}
                         />
                       )}
                       <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background rounded-full h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold">
@@ -698,19 +800,19 @@ export default function CheckoutPage() {
                 </div>
                 {autoDiscountTotal > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>Auto Discounts</span>
+                    <span>{t("autoDiscountSummary")}</span>
                     <span className="font-medium">-{tCommon("sar")} {autoDiscountTotal.toFixed(2)}</span>
                   </div>
                 )}
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>Coupon ({appliedCoupon})</span>
+                    <span>{t("couponLabel", { code: appliedCoupon ?? "" })}</span>
                     <span className="font-medium">-{tCommon("sar")} {couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 {couponFreeShipping && !couponDiscount && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>Coupon ({appliedCoupon})</span>
+                    <span>{t("couponLabel", { code: appliedCoupon ?? "" })}</span>
                     <span className="font-medium">{t("freeShipping")}</span>
                   </div>
                 )}
@@ -722,7 +824,7 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5" />
-                  {t("couponCode") || "Coupon Code"}
+                  {t("couponCode")}
                 </Label>
                 {appliedCoupon ? (
                   <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
@@ -741,7 +843,7 @@ export default function CheckoutPage() {
                       onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
                     />
                     <Button variant="outline" className="h-10 px-4" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()}>
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : tCommon("apply") || "Apply"}
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("applyCoupon")}
                     </Button>
                   </div>
                 )}
@@ -755,10 +857,21 @@ export default function CheckoutPage() {
                 <span>{tCommon("sar")} {total.toFixed(2)}</span>
               </div>
 
+              {/* Terms */}
+              <div className="flex items-start gap-2">
+                <Checkbox id="agreeTerms" checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(v === true)} className="mt-0.5" />
+                <Label htmlFor="agreeTerms" className="text-xs text-muted-foreground leading-relaxed">
+                  {t("agreeTerms")}{" "}
+                  <Link href="/pages/terms" className="underline hover:text-foreground">{t("termsConditions")}</Link>{" "}{t("and")}{" "}
+                  <Link href="/pages/privacy" className="underline hover:text-foreground">{t("privacyPolicy")}</Link>
+                </Label>
+              </div>
+              {errors.terms && <p className="text-xs text-destructive">{errors.terms}</p>}
+
               <Button
                 className="w-full h-12 text-[15px] font-semibold"
                 onClick={handlePlaceOrder}
-                disabled={loading || (!paymentSettings.tapEnabled && !paymentSettings.codEnabled)}
+                disabled={!canPlaceOrder}
               >
                 {loading ? (
                   <>
@@ -776,17 +889,6 @@ export default function CheckoutPage() {
                 <ShieldCheck className="h-3.5 w-3.5" />
                 {t("secureCheckout")}
               </div>
-
-              {/* Terms */}
-              <div className="flex items-start gap-2">
-                <Checkbox id="agreeTerms" checked={agreeTerms} onCheckedChange={(v) => setAgreeTerms(v === true)} className="mt-0.5" />
-                <Label htmlFor="agreeTerms" className="text-xs text-muted-foreground leading-relaxed">
-                  {t("agreeTerms")}{" "}
-                  <Link href="/pages/terms" className="underline hover:text-foreground">{t("termsConditions")}</Link>{" "}{t("and")}{" "}
-                  <Link href="/pages/privacy" className="underline hover:text-foreground">{t("privacyPolicy")}</Link>
-                </Label>
-              </div>
-              {errors.terms && <p className="text-xs text-destructive">{errors.terms}</p>}
 
               <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
                 {t("vatNotice")}

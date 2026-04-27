@@ -95,7 +95,8 @@
     "priceRange": "{min} - {max}",
     "onSale": "On Sale",
     "new": "New",
-    "featured": "Featured"
+    "featured": "Featured",
+    "addedToCart": "{name} has been added to your cart."
   },
   "cart": {
     "title": "Shopping Cart",
@@ -113,8 +114,8 @@
     "continueShopping": "Continue Shopping",
     "couponCode": "Coupon Code",
     "apply": "Apply",
-    "couponApplied": "Coupon applied!",
-    "invalidCoupon": "Invalid coupon code"
+    "couponApplied": "Coupon code applied successfully.",
+    "invalidCoupon": "Enter a valid coupon code."
   },
   "checkout": {
     "title": "Checkout",
@@ -241,8 +242,8 @@
   },
   "cartPage": {
     "recoveringCart": "Recovering your cart...",
-    "failedRecover": "Failed to recover cart",
-    "cartRecovered": "Your cart has been recovered!",
+    "failedRecover": "We could not recover your cart. Please try again.",
+    "cartRecovered": "Your cart has been restored.",
     "emptyCartDesc": "Looks like you haven't added any products to your cart yet.",
     "items": "{count} {count, plural, =1 {item} other {items}}",
     "clearCart": "Clear Cart",
@@ -250,10 +251,10 @@
     "couponCode": "Coupon code",
     "apply": "Apply",
     "calculatedAtCheckout": "Calculated at checkout",
-    "couponApplied": "✓ Coupon '{code}' applied! You save SAR {amount}",
-    "invalidCoupon": "This coupon code is not valid or has expired",
+    "couponApplied": "Coupon {code} applied. You saved SAR {amount}.",
+    "invalidCoupon": "This coupon code is invalid or has expired.",
     "failedValidateCoupon": "Unable to apply coupon. Please check the code and try again.",
-    "addedToCart": "✓ {name} added to cart",
+    "addedToCart": "{name} has been added to your cart.",
     "removeFromCart": "Remove {name} from cart",
     "decreaseQuantity": "Decrease quantity of {name}",
     "increaseQuantity": "Increase quantity of {name}"
@@ -264,11 +265,14 @@
     "apartment": "Apartment, suite, etc.",
     "region": "Region",
     "select": "Select",
+    "countrySaudiArabia": "Saudi Arabia",
+    "countryUnitedArabEmirates": "United Arab Emirates",
     "billingShippingSame": "Billing address is the same as shipping",
     "shippingMethod": "Shipping Method",
-    "selectRegionShipping": "Select your region above to see available shipping options.",
-    "noShippingOptions": "No shipping options available for your region. Standard rate will be applied.",
+    "selectRegionShipping": "Select your country and region to see available shipping options.",
+    "noShippingOptions": "No shipping options are available for this destination.",
     "autoDiscounts": "Automatic Discounts Applied",
+    "autoDiscountSummary": "Automatic discounts",
     "onlinePayment": "Online Payment",
     "onlinePaymentMethods": "Visa, Mastercard, mada, Apple Pay, STC Pay",
     "secure": "Secure",
@@ -276,7 +280,10 @@
     "securePaymentRedirect": "You will be redirected to a secure payment page to complete your purchase.",
     "noPaymentMethods": "No payment methods available. Please contact the store.",
     "vat15": "VAT (15%)",
+    "couponCode": "Coupon code",
+    "couponLabel": "Coupon ({code})",
     "enterCode": "Enter code",
+    "applyCoupon": "Apply",
     "remove": "Remove",
     "freeShipping": "Free Shipping",
     "pay": "Pay SAR {amount}",
@@ -287,23 +294,26 @@
     "and": "and",
     "privacyPolicy": "Privacy Policy",
     "vatNotice": "All prices are in Saudi Riyal (SAR) and include VAT as per ZATCA regulations.",
-    "orderPlaced": "✓ Thank you! Order {orderNumber} has been placed successfully. You'll receive a confirmation email shortly.",
+    "orderPlaced": "Order {orderNumber} has been placed. You will receive a confirmation email shortly.",
     "failedPlaceOrder": "Unable to place order. Please check your information and try again.",
     "failedPayment": "Payment could not be processed. Your order has been saved and you can try again later.",
-    "fillRequired": "Please fill in all required fields",
+    "fillRequired": "Please complete all required fields.",
     "emailRequired": "Email address is required",
     "invalidEmail": "Please enter a valid email address",
+    "phoneRequired": "Enter a valid phone number",
     "firstNameRequired": "First name is required",
     "lastNameRequired": "Last name is required",
     "addressRequired": "Address is required",
     "cityRequired": "City is required",
+    "countryRequired": "Country is required",
     "regionRequired": "Region is required",
+    "shippingRequired": "Select an available shipping method to continue.",
     "postalCodeRequired": "Postal code is required",
     "agreeTermsRequired": "You must accept the terms and conditions to proceed",
     "sslEncryption": "Secure 256-bit SSL encryption",
-    "invalidCoupon": "Coupon code is invalid or has expired",
+    "invalidCoupon": "This coupon code is invalid or has expired.",
     "failedValidateCoupon": "Unable to apply coupon. Please check the code and try again.",
-    "couponApplied": "✓ Coupon '{code}' applied! You save SAR {amount}"
+    "couponApplied": "Coupon {code} applied. You saved SAR {amount}."
   },
   "searchPage": {
     "title": "Search Products",
@@ -324,8 +334,8 @@
     "phonePlaceholder": "+966...",
     "subjectPlaceholder": "How can we help?",
     "messagePlaceholder": "Tell us more about your inquiry...",
-    "fillRequired": "Please fill in all required fields",
-    "messageSent": "✓ Message sent successfully! We'll get back to you within 24 hours.",
+    "fillRequired": "Please complete all required fields.",
+    "messageSent": "Your message has been sent. We will get back to you within 24 hours.",
     "failedSend": "Unable to send message. Please try again.",
     "nameRequired": "Name *",
     "emailRequired": "Email *",
@@ -378,7 +388,7 @@
     "purchase": "Purchase Gift Card — SAR {amount}",
     "selectValidAmount": "Please select a valid amount",
     "signInRequired": "Please sign in to purchase a gift card",
-    "cardCreated": "Gift card created! Code: {code}",
+    "cardCreated": "Gift card created successfully. Code: {code}",
     "checkTitle": "Check Gift Card Balance",
     "checkDesc": "Enter your gift card code below",
     "giftCardCode": "Gift Card Code",
@@ -398,9 +408,9 @@
     "invalidCredentials": "Invalid email or password",
     "accountLocked": "Too many failed attempts. Your account is temporarily locked. Please try again in 15 minutes.",
     "verifyEmailFirst": "Please verify your email before signing in. Check your inbox for the verification link.",
-    "loggedIn": "✓ Welcome back! You're now signed in.",
+    "loggedIn": "Welcome back. You are now signed in.",
     "failedGoogleSignIn": "Unable to sign in with Google. Please try again or use another method.",
-    "emailVerified": "✓ Email verified successfully! You can now sign in.",
+    "emailVerified": "Your email has been verified. You can now sign in.",
     "verificationExpired": "Verification link has expired. Please sign up again to get a new one.",
     "invalidVerification": "Invalid verification link. Please request a new one.",
     "verificationError": "Something went wrong during verification. Please try again.",
@@ -413,12 +423,12 @@
     "passwordMinLength": "Password must be at least 8 characters long",
     "passwordRequirements": "Password must contain an uppercase letter, lowercase letter, and a number",
     "completeCaptcha": "Please complete the CAPTCHA",
-    "accountCreated": "Account created! Check your email to verify your account.",
+    "accountCreated": "Your account has been created. Check your email to verify it.",
     "phone": "Phone Number",
     "invalidPhone": "Please enter a valid phone number",
     "disposableEmail": "Temporary or disposable email addresses cannot be used. Please use a valid email.",
-    "otpSent": "✓ Verification code sent! Check your email.",
-    "otpResent": "✓ New verification code has been sent to your email.",
+    "otpSent": "Verification code sent. Check your email to continue.",
+    "otpResent": "A new verification code has been sent to your email.",
     "verifyYourEmail": "Verify Your Email",
     "otpSentTo": "We've sent a 6-digit verification code to {email}",
     "otpExpiresIn": "Code expires in 10 minutes",
@@ -430,20 +440,20 @@
     "forgotPasswordTitle": "Forgot password?",
     "forgotPasswordDesc": "Enter your email and we'll send you a reset link",
     "sendResetLink": "Send Reset Link",
-    "resetLinkSent": "Reset link sent! Check your email.",
+    "resetLinkSent": "Password reset link sent. Check your email.",
     "checkYourEmail": "Check your email",
-    "resetEmailSent": "✓ We've sent a password reset link to {email}. The link will expire in 1 hour.",
+    "resetEmailSent": "We sent a password reset link to {email}. The link expires in 1 hour.",
     "backToLogin": "Back to login",
     "invalidLink": "Invalid or Expired Link",
     "invalidLinkDesc": "This password reset link is invalid or has expired. Request a new one to proceed.",
     "requestNewLink": "Request a new reset link",
-    "passwordReset": "Password Reset!",
+    "passwordReset": "Password reset",
     "passwordResetDesc": "Your password has been reset successfully. You can now sign in.",
     "goToLogin": "Go to Login",
     "resetPassword": "Reset Password",
     "resetPasswordDesc": "Enter your new password below",
     "newPassword": "New Password",
-    "passwordResetSuccess": "✓ Your password has been reset successfully. You can now sign in."
+    "passwordResetSuccess": "Your password has been reset. You can now sign in."
   },
   "review": {
     "signIn": "Sign in",
@@ -466,7 +476,7 @@
     "veryGood": "Very Good",
     "excellent": "Excellent",
     "alreadyReviewed": "You've already reviewed this product",
-    "reviewSubmitted": "✓ Thank you! Your review has been submitted and is pending approval.",
+    "reviewSubmitted": "Thank you. Your review has been submitted and is pending approval.",
     "failedSubmit": "Unable to submit your review. Please try again."
   },
   "sort": {
@@ -514,8 +524,8 @@
   },
   "wishlist": {
     "signInRequired": "Sign in to add items to your wishlist",
-    "added": "✓ Added to your wishlist",
-    "removed": "✓ Removed from your wishlist"
+    "added": "Added to your wishlist.",
+    "removed": "Removed from your wishlist."
   },
   "admin": {
     "nav": {
@@ -626,21 +636,21 @@
       "free": "Free",
 
       "toasts": {
-        "fetchFailed": "Failed to load order",
-        "updateSuccess": "Order updated successfully",
-        "updateFailed": "Failed to update order",
-        "copiedToClipboard": "Copied to clipboard",
+        "fetchFailed": "Unable to load order. Please try again.",
+        "updateSuccess": "✓ Order updated successfully",
+        "updateFailed": "Unable to update order. Please check and try again.",
+        "copiedToClipboard": "✓ Copied to clipboard",
         "selectRefundItem": "Please select at least one item to refund",
-        "fullRefundSuccess": "Full refund processed successfully",
-        "partialRefundSuccess": "Partial refund processed successfully",
-        "refundFailed": "Failed to process refund",
-        "selectFulfillItem": "Select at least one item to fulfill",
-        "fulfillmentCreated": "Fulfillment created",
-        "fulfillmentFailed": "Fulfillment failed",
-        "zatcaInvoiceSuccess": "Invoice reported to ZATCA successfully",
-        "zatcaRetryFailed": "ZATCA retry failed",
-        "zatcaCreditNoteSuccess": "Credit note reported to ZATCA",
-        "zatcaCreditNoteFailed": "ZATCA retry failed"
+        "fullRefundSuccess": "✓ Full refund processed successfully",
+        "partialRefundSuccess": "✓ Partial refund processed successfully",
+        "refundFailed": "Unable to process refund. Please check the amount and try again.",
+        "selectFulfillItem": "Please select at least one item to fulfill",
+        "fulfillmentCreated": "✓ Fulfillment created and tracking updated",
+        "fulfillmentFailed": "Unable to create fulfillment. Please check the details and try again.",
+        "zatcaInvoiceSuccess": "✓ Invoice reported to ZATCA successfully",
+        "zatcaRetryFailed": "Unable to retry ZATCA reporting. Please try again later.",
+        "zatcaCreditNoteSuccess": "✓ Credit note reported to ZATCA successfully",
+        "zatcaCreditNoteFailed": "Unable to report credit note to ZATCA. Please try again later."
       },
 
       "items": {
@@ -1358,31 +1368,31 @@
       "itemDiscountPrompt": "Item discount %",
       "toasts": {
         "productNotFound": "Product not found: {code}",
-        "productNotFoundDesc": "Check the barcode or add the product to your inventory.",
-        "scanned": "Scanned: {name}",
-        "failedLoadProducts": "Failed to load products",
+        "productNotFoundDesc": "Check the barcode and verify the product exists in your inventory.",
+        "scanned": "✓ Scanned: {name}",
+        "failedLoadProducts": "Unable to load products. Please try again.",
         "giftCardBalance": "Gift card balance: {curr} {balance}",
         "giftCardNoBalance": "Gift card has no balance or not found",
         "giftCardNotFound": "Gift card not found",
-        "giftCardFailed": "Failed to check gift card",
-        "saleHeld": "Sale held",
-        "saleRecalled": "Sale recalled",
-        "cannotCustomOnly": "Cannot create POS order with only custom items",
-        "saleCompleted": "Sale completed!",
-        "saleCompletedDesc": "{curr} {total} — syncing in background",
-        "registerOpened": "Register opened",
-        "registerOpenedDesc": "Opening balance: {curr} {balance}",
-        "registerClosed": "Register closed",
-        "registerClosedDesc": "Closing balance: {curr} {balance}",
-        "failedOpenRegister": "Failed to open register",
-        "failedCloseRegister": "Failed to close register",
-        "cashDrawerOpened": "Cash drawer opened",
-        "failedSearchOrders": "Failed to search orders",
-        "refundProcessed": "Refund processed!",
-        "refundProcessedDesc": "{curr} {amount} refunded for {orderNumber}",
-        "refundFailed": "Refund failed",
-        "syncFailed": "{count} order(s) failed to sync — will retry",
-        "thankYou": "Thank you for your purchase!",
+        "giftCardFailed": "Unable to check gift card. Please try again.",
+        "saleHeld": "✓ Sale held — you can recall it later",
+        "saleRecalled": "✓ Sale recalled and ready to complete",
+        "cannotCustomOnly": "Cannot create order with only custom items. Please add products from inventory.",
+        "saleCompleted": "✓ Sale completed! {curr} {total} — syncing in background",
+        "saleCompletedDesc": "Order will appear in your orders list when sync completes",
+        "registerOpened": "✓ Register opened with opening balance: {curr} {balance}",
+        "registerOpenedDesc": "You can now start processing sales",
+        "registerClosed": "✓ Register closed with closing balance: {curr} {balance}",
+        "registerClosedDesc": "Session has been recorded",
+        "failedOpenRegister": "Unable to open register. Please check the opening balance and try again.",
+        "failedCloseRegister": "Unable to close register. Please check your details and try again.",
+        "cashDrawerOpened": "✓ Cash drawer opened",
+        "failedSearchOrders": "Unable to search orders. Please try again.",
+        "refundProcessed": "✓ Refund processed! {curr} {amount} refunded for {orderNumber}",
+        "refundProcessedDesc": "Customer will see the credit in 3-5 business days",
+        "refundFailed": "Unable to process refund. Please check the amount and try again.",
+        "syncFailed": "{count} order(s) failed to sync — will retry automatically",
+        "thankYou": "✓ Thank you for your purchase!",
         "refundReceipt": "Refund processed successfully"
       }
     },
@@ -1533,11 +1543,11 @@
       "anonymous": "Anonymous",
       "deleteConfirm": "Delete this review permanently?",
       "toasts": {
-        "reviewApproved": "Review approved",
-        "reviewRejected": "Review rejected",
-        "updateFailed": "Failed to update review",
-        "reviewDeleted": "Review deleted",
-        "deleteFailed": "Failed to delete review"
+        "reviewApproved": "✓ Review approved and published",
+        "reviewRejected": "✓ Review rejected",
+        "updateFailed": "Unable to update review. Please try again.",
+        "reviewDeleted": "✓ Review deleted",
+        "deleteFailed": "Unable to delete review. Please try again."
       }
     },
     "discounts": {
@@ -1581,12 +1591,12 @@
       "deleteConfirm": "Delete discount code \"{code}\"?",
       "toasts": {
         "codeRequired": "Discount code is required",
-        "saveFailed": "Failed to save discount",
-        "updated": "Discount updated",
-        "created": "Discount created",
-        "error": "Something went wrong",
-        "deleted": "Discount deleted",
-        "deleteFailed": "Failed to delete discount"
+        "saveFailed": "Unable to save discount. Please check the details and try again.",
+        "updated": "✓ Discount updated",
+        "created": "✓ Discount created",
+        "error": "Something went wrong. Please try again.",
+        "deleted": "✓ Discount deleted",
+        "deleteFailed": "Unable to delete discount. Please try again."
       }
     },
     "autoDiscounts": {
@@ -1660,16 +1670,16 @@
         "createDiscount": "Create Discount"
       },
       "toasts": {
-        "loadFailed": "Failed to load auto discounts",
-        "nameRequired": "Name is required",
-        "updated": "Auto discount updated",
-        "created": "Auto discount created",
-        "saveFailed": "Failed to save",
-        "deleted": "Auto discount deleted",
-        "deleteFailed": "Failed to delete",
-        "enabled": "Discount enabled",
-        "disabled": "Discount disabled",
-        "statusFailed": "Failed to update status"
+        "loadFailed": "Unable to load auto discounts. Please try again.",
+        "nameRequired": "Discount name is required",
+        "updated": "✓ Auto discount updated",
+        "created": "✓ Auto discount created",
+        "saveFailed": "Unable to save. Please check the details and try again.",
+        "deleted": "✓ Auto discount deleted",
+        "deleteFailed": "Unable to delete. Please try again.",
+        "enabled": "✓ Discount enabled",
+        "disabled": "✓ Discount disabled",
+        "statusFailed": "Unable to update discount status. Please try again."
       },
       "deleteConfirm": "Delete \"{name}\"?"
     },
@@ -1814,9 +1824,9 @@
       "statusValues": "Status should be one of:",
       "csvOnlyError": "Please select a CSV file",
       "toasts": {
-        "exportSuccess": "{type} exported successfully",
-        "exportFailed": "Export failed",
-        "importFailed": "Import failed"
+        "exportSuccess": "✓ {type} exported successfully",
+        "exportFailed": "Unable to export. Please try again.",
+        "importFailed": "Unable to import. Please check the file and try again."
       }
     },
     "pages": {
@@ -1852,12 +1862,12 @@
       "create": "Create",
       "deleteConfirm": "Delete page \"{pageTitle}\"? This action cannot be undone.",
       "toasts": {
-        "pageCreated": "Page created",
-        "pageUpdated": "Page updated",
-        "saveFailed": "Failed to save page",
-        "pageDeleted": "Page deleted",
-        "deleteFailed": "Failed to delete page",
-        "error": "Something went wrong"
+        "pageCreated": "✓ Page created",
+        "pageUpdated": "✓ Page updated",
+        "saveFailed": "Unable to save page. Please check the details and try again.",
+        "pageDeleted": "✓ Page deleted",
+        "deleteFailed": "Unable to delete page. Please try again.",
+        "error": "Something went wrong. Please try again."
       }
     },
     "templates": {
@@ -1879,20 +1889,20 @@
       "activate": "Activate",
 
       "toasts": {
-        "loadFailed": "Failed to load templates",
-        "activated": "Template activated",
-        "activateFailed": "Failed to activate template",
-        "exported": "Template exported",
+        "loadFailed": "Unable to load templates. Please try again.",
+        "activated": "✓ Template activated",
+        "activateFailed": "Unable to activate template. Please try again.",
+        "exported": "✓ Template exported",
         "invalidFile": "Invalid template file: missing name, slug, or sections",
-        "imported": "Template \"{name}\" imported",
-        "invalidJson": "Invalid JSON file",
-        "importFailed": "Failed to import template",
-        "deleted": "Template deleted",
-        "deleteFailed": "Failed to delete template",
-        "nameRequired": "Name and slug are required",
-        "saveFailed": "Failed to save template",
-        "updated": "Template updated",
-        "created": "Template created",
+        "imported": "✓ Template '{name}' imported successfully",
+        "invalidJson": "Invalid JSON file. Please check the format and try again.",
+        "importFailed": "Unable to import template. Please check the file and try again.",
+        "deleted": "✓ Template deleted",
+        "deleteFailed": "Unable to delete template. Please try again.",
+        "nameRequired": "Template name and slug are required",
+        "saveFailed": "Unable to save template. Please check the details and try again.",
+        "updated": "✓ Template updated",
+        "created": "✓ Template created",
         "copiedToClipboard": "{label} copied to clipboard"
       },
 
@@ -2209,15 +2219,15 @@
         "ends_with": "Ends with"
       },
       "toasts": {
-        "loadFailed": "Failed to load smart collections",
-        "nameRequired": "Name is required",
+        "loadFailed": "Unable to load smart collections. Please try again.",
+        "nameRequired": "Collection name is required",
         "ruleRequired": "At least one rule with a value is required",
-        "updated": "Collection updated",
-        "created": "Collection created",
-        "saveFailed": "Failed to save collection",
+        "updated": "✓ Collection updated",
+        "created": "✓ Collection created",
+        "saveFailed": "Unable to save collection. Please check the details and try again.",
         "deleteConfirm": "Delete this smart collection?",
-        "deleted": "Collection deleted",
-        "deleteFailed": "Failed to delete collection"
+        "deleted": "✓ Collection deleted",
+        "deleteFailed": "Unable to delete collection. Please try again."
       }
     },
     "translationsPage": {
@@ -2257,10 +2267,10 @@
         "estimatedDelivery": "Estimated Delivery"
       },
       "toasts": {
-        "loadEntitiesFailed": "Failed to load entities",
-        "loadTranslationsFailed": "Failed to load translations",
-        "saved": "Saved translations for \"{label}\"",
-        "saveFailed": "Failed to save translations"
+        "loadEntitiesFailed": "Unable to load entities. Please try again.",
+        "loadTranslationsFailed": "Unable to load translations. Please try again.",
+        "saved": "✓ Translations saved for '{label}'",
+        "saveFailed": "Unable to save translations. Please try again."
       }
     },
     "navigations": {
@@ -2527,19 +2537,19 @@
       "platformSnapchatCatalog": "Snapchat catalog",
       "platformMetaCatalog": "Meta catalog",
       "toasts": {
-        "loadFailed": "Failed to load channels",
-        "connectionFailed": "Connection failed",
+        "loadFailed": "Unable to load channels. Please try again.",
+        "connectionFailed": "Connection failed. Please check your credentials and try again.",
         "waFieldsRequired": "All WhatsApp fields are required",
-        "waConnected": "WhatsApp Business connected successfully",
-        "detailsFailed": "Failed to load channel details",
-        "settingsSaved": "Channel settings saved",
-        "saveFailed": "Save failed",
-        "disconnected": "Channel disconnected",
-        "disconnectFailed": "Failed to disconnect channel",
-        "syncComplete": "Sync complete: {synced}/{total} products synced",
-        "channelActivated": "Channel activated",
-        "channelPaused": "Channel paused",
-        "statusFailed": "Failed to update channel status"
+        "waConnected": "✓ WhatsApp Business connected successfully",
+        "detailsFailed": "Unable to load channel details. Please try again.",
+        "settingsSaved": "✓ Channel settings saved",
+        "saveFailed": "Unable to save. Please try again.",
+        "disconnected": "✓ Channel disconnected",
+        "disconnectFailed": "Unable to disconnect channel. Please try again.",
+        "syncComplete": "✓ Sync complete: {synced}/{total} products synced",
+        "channelActivated": "✓ Channel activated",
+        "channelPaused": "✓ Channel paused",
+        "statusFailed": "Unable to update channel status. Please try again."
       }
     },
     "storeCredit": {
@@ -2594,7 +2604,7 @@
       "noActivityYet": "No activity logs yet",
       "pageOf": "Page {page} of {totalPages}",
       "toasts": {
-        "fetchFailed": "Failed to fetch activity logs"
+        "fetchFailed": "Unable to fetch activity logs. Please try again."
       }
     },
     "notifications": {

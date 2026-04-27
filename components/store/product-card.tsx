@@ -10,6 +10,7 @@ import { useCartStore } from "@/lib/store";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 interface ProductCardProps {
   id: string;
@@ -91,6 +92,7 @@ export function ProductCard({
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              unoptimized={shouldUseUnoptimizedImage(images[0])}
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center text-muted-foreground/40">

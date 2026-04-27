@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { toast } from "sonner";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 interface ImageData {
   url: string;
@@ -57,6 +58,7 @@ export function ProductImageGallery({ images, productId }: ProductImageGalleryPr
           sizes="(max-width: 1024px) 100vw, 50vw"
           className="object-cover"
           priority
+          unoptimized={shouldUseUnoptimizedImage(images[selected]?.url)}
         />
         {productId && (
           <div className="absolute top-4 right-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300">
@@ -91,6 +93,7 @@ export function ProductImageGallery({ images, productId }: ProductImageGalleryPr
                 fill
                 sizes="80px"
                 className="object-cover"
+                unoptimized={shouldUseUnoptimizedImage(img.url)}
               />
             </button>
           ))}

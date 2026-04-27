@@ -14,6 +14,7 @@ import { ProductCardGrid } from "@/components/store/product-card-grid";
 import { ProductImageGallery } from "@/components/store/product-image-gallery";
 import { VariantSelector } from "@/components/store/variant-selector";
 import { ReviewForm } from "@/components/store/review-form";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -436,7 +437,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 <div className="border rounded-lg p-3 hover:shadow-md transition-shadow">
                   <div className="relative aspect-square overflow-hidden rounded-md bg-accent/50 mb-3">
                     {bi.child.images[0] ? (
-                      <Image src={bi.child.images[0].url} alt={bi.child.name} fill className="object-cover group-hover:scale-105 transition-transform" />
+                      <Image src={bi.child.images[0].url} alt={bi.child.name} fill className="object-cover group-hover:scale-105 transition-transform" unoptimized={shouldUseUnoptimizedImage(bi.child.images[0].url)} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
                     )}

@@ -19,6 +19,7 @@ import { CategoryCarousel, type CategoryGridLayout } from "@/components/store/ca
 import { HeroSlideshow, type HeroSlide } from "@/components/store/hero-slideshow";
 import { HeroCountdown } from "@/components/store/hero-countdown";
 import { db } from "@/lib/db";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 import {
   products,
   categories as categoriesTable,
@@ -166,7 +167,7 @@ function HeroSection({ config, content }: { config: Record<string, unknown>; con
         className="absolute inset-0 h-full w-full object-cover"
       />
     ) : imageUrl ? (
-      <Image src={imageUrl} alt={title} fill className="object-cover" priority />
+      <Image src={imageUrl} alt={title} fill className="object-cover" priority unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
     ) : null;
 
   /** Render solid + gradient overlay */
@@ -286,7 +287,7 @@ function HeroSection({ config, content }: { config: Record<string, unknown>; con
               {videoUrl ? (
                 <video src={videoUrl} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover" />
               ) : (
-                <Image src={imageUrl} alt={title} fill className="object-cover" priority />
+                <Image src={imageUrl} alt={title} fill className="object-cover" priority unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
               )}
             </div>
           </div>
@@ -900,7 +901,7 @@ function PromoBannerSection({ config, content }: { config: Record<string, unknow
       >
         {imageUrl && (
           <>
-            <Image src={imageUrl} alt={title} fill className="object-cover" />
+            <Image src={imageUrl} alt={title} fill className="object-cover" unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
             {overlay && <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity }} />}
           </>
         )}
@@ -930,7 +931,7 @@ function PromoBannerSection({ config, content }: { config: Record<string, unknow
                 {renderPromoContent()}
               </div>
               <div className="relative min-h-75 lg:min-h-0">
-                <Image src={imageUrl} alt={title} fill className="object-cover" />
+                <Image src={imageUrl} alt={title} fill className="object-cover" unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
               </div>
             </div>
           </div>
@@ -985,7 +986,7 @@ function PromoBannerSection({ config, content }: { config: Record<string, unknow
       >
         {imageUrl && (
           <>
-            <Image src={imageUrl} alt={title} fill className="object-cover" />
+            <Image src={imageUrl} alt={title} fill className="object-cover" unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
             {overlay && <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity }} />}
           </>
         )}
@@ -1021,7 +1022,7 @@ function PromoBannerSection({ config, content }: { config: Record<string, unknow
           <div className="relative rounded-2xl overflow-hidden min-h-87.5 flex items-center">
             {imageUrl ? (
               <>
-                <Image src={imageUrl} alt={title} fill className="object-cover" />
+                <Image src={imageUrl} alt={title} fill className="object-cover" unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
                 {overlay && <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity }} />}
               </>
             ) : (
@@ -1074,7 +1075,7 @@ function PromoBannerSection({ config, content }: { config: Record<string, unknow
         >
           {imageUrl && (
             <>
-              <Image src={imageUrl} alt={title} fill className="object-cover" />
+              <Image src={imageUrl} alt={title} fill className="object-cover" unoptimized={shouldUseUnoptimizedImage(imageUrl)} />
               {overlay && <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity }} />}
             </>
           )}

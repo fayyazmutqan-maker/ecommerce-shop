@@ -13,6 +13,7 @@ import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart, addItem } =
@@ -157,6 +158,7 @@ export default function CartPage() {
                       fill
                       sizes="112px"
                       className="object-cover"
+                      unoptimized={shouldUseUnoptimizedImage(item.image)}
                     />
                   )}
                 </div>

@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingBag, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ShoppingBag, Loader2, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -219,10 +219,28 @@ function LoginForm() {
                 className="h-11"
               />
             </div>
-            <Button type="submit" className="w-full h-12 text-[15px] font-semibold" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("signIn") || "Sign In"}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 text-[15px] font-semibold"
+                disabled={isLoading || isGoogleLoading}
+                asChild={!isLoading && !isGoogleLoading}
+              >
+                {isLoading || isGoogleLoading ? (
+                  <span>{tCommon("cancel")}</span>
+                ) : (
+                  <Link href="/">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tCommon("cancel")}
+                  </Link>
+                )}
+              </Button>
+              <Button type="submit" className="h-12 text-[15px] font-semibold" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t("signIn") || "Sign In"}
+              </Button>
+            </div>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground px-7 pt-2">

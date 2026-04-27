@@ -348,10 +348,28 @@ export default function RegisterPage() {
               />
             )}
 
-            <Button type="submit" className="w-full h-12 text-[15px] font-semibold" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("createAccountTitle")}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 text-[15px] font-semibold"
+                disabled={isLoading}
+                asChild={!isLoading}
+              >
+                {isLoading ? (
+                  <span>{tCommon("cancel")}</span>
+                ) : (
+                  <Link href="/login">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tCommon("cancel")}
+                  </Link>
+                )}
+              </Button>
+              <Button type="submit" className="h-12 text-[15px] font-semibold" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t("createAccountTitle")}
+              </Button>
+            </div>
           </form>
         </CardContent>
         <CardFooter className="text-center text-sm text-muted-foreground px-7 pt-2">

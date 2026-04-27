@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 import {
   Search, Plus, Minus, Trash2, CreditCard, Banknote, Receipt, X,
   ShoppingBag, Barcode, User, Pause, Play, Gift, Wallet, Printer,
@@ -1414,7 +1415,7 @@ export default function PosPage() {
                   >
                     <div className="aspect-square bg-muted relative">
                       {product.image ? (
-                        <Image src={product.image} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 20vw" />
+                        <Image src={product.image} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 20vw" unoptimized={shouldUseUnoptimizedImage(product.image)} />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-muted-foreground">
                           <Package className="h-8 w-8 opacity-30" />
