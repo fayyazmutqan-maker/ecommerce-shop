@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { serializeDecimal } from "@/lib/decimal";
+import { isRequestAbortedError } from "@/lib/request-errors";
 import { eq, desc, count, and } from "drizzle-orm";
 import { abandonedCarts } from "@/lib/schema";
 
@@ -64,6 +65,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(serializeDecimal(cart), { status: 201 });
   } catch (error) {
+    if (isRequestAbortedError(error)) {
+      return new Response(null, { status: 204 });
+    }
     console.error("Abandoned cart POST error:", error);
     return NextResponse.json({ error: "Failed to save abandoned cart" }, { status: 500 });
   }

@@ -45,7 +45,8 @@ export function useAbandonedCartTracker() {
       // Use sendBeacon for beforeunload, fetch otherwise
       const url = "/api/abandoned-carts";
       if (typeof navigator.sendBeacon === "function" && force) {
-        navigator.sendBeacon(url, JSON.stringify(payload));
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        navigator.sendBeacon(url, blob);
       } else {
         await fetch(url, {
           method: "POST",
