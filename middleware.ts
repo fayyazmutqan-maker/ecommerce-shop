@@ -63,6 +63,7 @@ export default auth(async (req) => {
   const isAdmin = req.auth?.user?.role === "ADMIN";
   const isStaff = req.auth?.user?.role === "STAFF";
   const isAdminOrStaff = isAdmin || isStaff;
+  const isLocaleSettingsRoute = pathname === "/api/settings/locale";
 
   // ── Redirect authenticated users away from auth pages ──
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password";
@@ -141,6 +142,7 @@ export default auth(async (req) => {
     isStaff &&
     pathname.startsWith("/api/") &&
     // Exclude public/checkout endpoints
+    !isLocaleSettingsRoute &&
     !pathname.startsWith("/api/auto-discounts/evaluate") &&
     !pathname.startsWith("/api/shipping-zones/calculate") &&
     !pathname.startsWith("/api/payments/")
@@ -171,7 +173,7 @@ export default auth(async (req) => {
   }
 
   // Settings — ADMIN only
-  if (pathname.startsWith("/api/settings") && req.method !== "GET") {
+  if (pathname.startsWith("/api/settings") && !isLocaleSettingsRoute && req.method !== "GET") {
     if (!isLoggedIn || !isAdmin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

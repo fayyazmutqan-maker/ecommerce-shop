@@ -179,6 +179,11 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
+    transition: opacity 180ms ease, filter 180ms ease;
+  }
+  body[data-locale-switching="true"] {
+    opacity: 0.94;
+    filter: saturate(0.96);
   }
   button,
   a,

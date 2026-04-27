@@ -286,14 +286,14 @@
     "applyCoupon": "تطبيق",
     "remove": "إزالة",
     "freeShipping": "شحن مجاني",
-    "pay": "ادفع {amount} ر.س",
-    "placeOrder": "تأكيد الطلب — {amount} ر.س",
+    "pay": "ادفع {currency} {amount}",
+    "placeOrder": "تأكيد الطلب — {currency} {amount}",
     "secureCheckout": "دفع آمن بواسطة ShopFlow",
     "agreeTerms": "أوافق على",
     "termsConditions": "الشروط والأحكام",
     "and": "و",
     "privacyPolicy": "سياسة الخصوصية",
-    "vatNotice": "جميع الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة وفقًا لأنظمة هيئة الزكاة والضريبة والجمارك.",
+    "vatNotice": "جميع الأسعار معروضة بعملة الدولة المختارة وتشمل ضريبة القيمة المضافة عند تطبيقها.",
     "orderPlaced": "تم تقديم الطلب {orderNumber}. ستتلقى بريد تأكيد قريبًا.",
     "failedPlaceOrder": "لم نتمكن من تقديم طلبك. يرجى التحقق من المعلومات والمحاولة مرة أخرى.",
     "failedPayment": "لم يتمكن نظام الدفع من معالجة طلبك. تم حفظ الطلب وبإمكانك إعادة المحاولة لاحقًا.",
@@ -313,7 +313,8 @@
     "sslEncryption": "تشفير SSL آمن 256-بت",
     "invalidCoupon": "رمز القسيمة غير صالح أو انتهت صلاحيته.",
     "failedValidateCoupon": "لم نتمكن من التحقق من القسيمة. يرجى التحقق من الرمز والمحاولة مرة أخرى.",
-    "couponApplied": "تم تطبيق رمز القسيمة {code}. وفرت {amount} ر.س."
+    "couponApplied": "تم تطبيق رمز القسيمة {code}. وفرت {currency} {amount}.",
+    "couponFreeShippingApplied": "تم تطبيق رمز القسيمة {code}. تمت إضافة الشحن المجاني."
   },
   "searchPage": {
     "title": "البحث عن منتجات",

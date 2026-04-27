@@ -53,6 +53,7 @@ const checkoutSchema = z.object({
   shippingAddress: addressSchema,
   notes: z.string().max(500).optional(),
   paymentMethod: z.enum(["tap", "cod", "pos_card"]).optional().default("cod"),
+  currency: z.enum(["SAR", "AED"]).optional().default("SAR"),
   source: z.enum(["ONLINE", "POS"]).optional().default("ONLINE"),
   // ── New: server-side validated coupon & shipping ──
   couponCode: z.string().max(50).optional(),
@@ -477,7 +478,7 @@ export async function POST(req: Request) {
           shippingAmount: String(shippingAmount),
           discountAmount: String(totalDiscount),
           totalAmount: String(totalAmount),
-          currency: "SAR",
+          currency: data.currency,
           notes: data.notes || null,
           source: data.source === "POS" ? "POS" : "ONLINE",
           couponCode: couponCode || null,
@@ -612,6 +613,7 @@ export async function POST(req: Request) {
         couponCode,
         autoDiscountIds: appliedAutoDiscountIds,
         paymentMethod: data.paymentMethod,
+        currency: data.currency,
       },
       success: true,
     });
@@ -676,7 +678,7 @@ export async function POST(req: Request) {
       {
         orderId: order.id,
         value: totalAmount,
-        currency: "SAR",
+        currency: data.currency,
         items: orderItems.map((item) => ({
           id: item.sku || item.productId,
           quantity: item.quantity,

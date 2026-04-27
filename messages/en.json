@@ -286,14 +286,14 @@
     "applyCoupon": "Apply",
     "remove": "Remove",
     "freeShipping": "Free Shipping",
-    "pay": "Pay SAR {amount}",
-    "placeOrder": "Place Order — SAR {amount}",
+    "pay": "Pay {currency} {amount}",
+    "placeOrder": "Place Order — {currency} {amount}",
     "secureCheckout": "Secure checkout powered by ShopFlow",
     "agreeTerms": "I agree to the",
     "termsConditions": "Terms & Conditions",
     "and": "and",
     "privacyPolicy": "Privacy Policy",
-    "vatNotice": "All prices are in Saudi Riyal (SAR) and include VAT as per ZATCA regulations.",
+    "vatNotice": "All prices are shown in the selected checkout currency and include VAT where applicable.",
     "orderPlaced": "Order {orderNumber} has been placed. You will receive a confirmation email shortly.",
     "failedPlaceOrder": "Unable to place order. Please check your information and try again.",
     "failedPayment": "Payment could not be processed. Your order has been saved and you can try again later.",
@@ -313,7 +313,8 @@
     "sslEncryption": "Secure 256-bit SSL encryption",
     "invalidCoupon": "This coupon code is invalid or has expired.",
     "failedValidateCoupon": "Unable to apply coupon. Please check the code and try again.",
-    "couponApplied": "Coupon {code} applied. You saved SAR {amount}."
+    "couponApplied": "Coupon {code} applied. You saved {currency} {amount}.",
+    "couponFreeShippingApplied": "Coupon {code} applied. Free shipping has been added."
   },
   "searchPage": {
     "title": "Search Products",

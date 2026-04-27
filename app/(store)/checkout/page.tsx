@@ -59,6 +59,7 @@ const CHECKOUT_COUNTRIES = [
   {
     code: "SA",
     name: "Saudi Arabia",
+    currency: "SAR",
     labelKey: "countrySaudiArabia",
     cityPlaceholder: "Riyadh",
     postalCodePlaceholder: "12345",
@@ -81,6 +82,7 @@ const CHECKOUT_COUNTRIES = [
   {
     code: "AE",
     name: "United Arab Emirates",
+    currency: "AED",
     labelKey: "countryUnitedArabEmirates",
     cityPlaceholder: "Dubai",
     postalCodePlaceholder: "00000",
@@ -143,6 +145,8 @@ export default function CheckoutPage() {
   };
 
   const selectedCountry = CHECKOUT_COUNTRIES.find((option) => option.code === country) ?? CHECKOUT_COUNTRIES[0];
+  const checkoutCurrency = selectedCountry.currency;
+  const formatCheckoutCurrency = (amount: number) => `${checkoutCurrency} ${amount.toFixed(2)}`;
 
   const syncCheckoutCountry = (value: string, options: { clearPhone: boolean }) => {
     const nextCountry = CHECKOUT_COUNTRIES.find((option) => option.code === value);
@@ -282,10 +286,15 @@ export default function CheckoutPage() {
         setAppliedCoupon(null);
         return;
       }
-      setCouponDiscount(data.discountAmount || 0);
+      const discountAmount = data.discountAmount || 0;
+      setCouponDiscount(discountAmount);
       setCouponFreeShipping(data.freeShipping || false);
       setAppliedCoupon(data.coupon.code);
-      toast.success(t("couponApplied", { code: data.coupon.code }));
+      toast.success(
+        data.freeShipping && discountAmount <= 0
+          ? t("couponFreeShippingApplied", { code: data.coupon.code })
+          : t("couponApplied", { code: data.coupon.code, currency: checkoutCurrency, amount: discountAmount.toFixed(2) }),
+      );
     } catch {
       setCouponError(t("failedValidateCoupon"));
     } finally {
@@ -353,6 +362,7 @@ export default function CheckoutPage() {
           },
           shippingMethod: selectedRate?.name || "Standard",
           paymentMethod,
+          currency: checkoutCurrency,
           couponCode: appliedCoupon || undefined,
           shippingRateId: selectedShippingRate || undefined,
         }),
@@ -614,7 +624,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <span className="text-sm font-semibold">
-                    {rate.price === 0 ? tCommon("free") : `${tCommon("sar")} ${rate.price.toFixed(2)}`}
+                    {rate.price === 0 ? tCommon("free") : formatCheckoutCurrency(rate.price)}
                   </span>
                 </label>
               ))}
@@ -636,7 +646,7 @@ export default function CheckoutPage() {
                       <p className="font-medium text-green-700 dark:text-green-400">{d.name}</p>
                       <p className="text-xs text-green-600/70 dark:text-green-500/70">{d.description}</p>
                     </div>
-                    <span className="font-semibold text-green-700 dark:text-green-400">-{tCommon("sar")} {d.savedAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-green-700 dark:text-green-400">-{formatCheckoutCurrency(d.savedAmount)}</span>
                   </div>
                 ))}
               </CardContent>
@@ -771,11 +781,11 @@ export default function CheckoutPage() {
                         {item.name}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {tCommon("sar")} {item.price.toFixed(2)} × {item.quantity}
+                        {formatCheckoutCurrency(item.price)} × {item.quantity}
                       </p>
                     </div>
                     <span className="text-sm font-semibold flex-shrink-0">
-                      {tCommon("sar")} {(item.price * item.quantity).toFixed(2)}
+                      {formatCheckoutCurrency(item.price * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -786,28 +796,28 @@ export default function CheckoutPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{tCommon("subtotal")}</span>
-                  <span className="font-medium">{tCommon("sar")} {subtotal.toFixed(2)}</span>
+                  <span className="font-medium">{formatCheckoutCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{tCommon("shipping")}{selectedRate ? ` (${selectedRate.name})` : ""}</span>
                   <span className="font-medium">
-                    {shipping === 0 ? tCommon("free") : `${tCommon("sar")} ${shipping.toFixed(2)}`}
+                    {shipping === 0 ? tCommon("free") : formatCheckoutCurrency(shipping)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("vat15")}</span>
-                  <span className="font-medium">{tCommon("sar")} {tax.toFixed(2)}</span>
+                  <span className="font-medium">{formatCheckoutCurrency(tax)}</span>
                 </div>
                 {autoDiscountTotal > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>{t("autoDiscountSummary")}</span>
-                    <span className="font-medium">-{tCommon("sar")} {autoDiscountTotal.toFixed(2)}</span>
+                    <span className="font-medium">-{formatCheckoutCurrency(autoDiscountTotal)}</span>
                   </div>
                 )}
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>{t("couponLabel", { code: appliedCoupon ?? "" })}</span>
-                    <span className="font-medium">-{tCommon("sar")} {couponDiscount.toFixed(2)}</span>
+                    <span className="font-medium">-{formatCheckoutCurrency(couponDiscount)}</span>
                   </div>
                 )}
                 {couponFreeShipping && !couponDiscount && (
@@ -854,7 +864,7 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between font-bold text-lg">
                 <span>{tCommon("total")}</span>
-                <span>{tCommon("sar")} {total.toFixed(2)}</span>
+                <span>{formatCheckoutCurrency(total)}</span>
               </div>
 
               {/* Terms */}
@@ -879,9 +889,9 @@ export default function CheckoutPage() {
                     {tCheckout("processing")}
                   </>
                 ) : paymentMethod === "tap" ? (
-                  t("pay", { amount: total.toFixed(2) })
+                  t("pay", { currency: checkoutCurrency, amount: total.toFixed(2) })
                 ) : (
-                  t("placeOrder", { amount: total.toFixed(2) })
+                  t("placeOrder", { currency: checkoutCurrency, amount: total.toFixed(2) })
                 )}
               </Button>
 
