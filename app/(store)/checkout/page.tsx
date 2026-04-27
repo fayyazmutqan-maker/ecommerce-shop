@@ -512,23 +512,23 @@ export default function CheckoutPage() {
                 </Label>
                 <Input id="address2" name="address-line2" autoComplete="address-line2" placeholder="Floor 3, Office 301" className="h-11" value={form.address2} onChange={(e) => updateForm("address2", e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="country" className="text-sm font-medium">{tCheckout("country")}</Label>
-                <Select value={country} onValueChange={handleCountryChange}>
-                  <SelectTrigger id="country" className="h-11">
-                    <SelectValue placeholder={t("select")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CHECKOUT_COUNTRIES.map((option) => (
-                      <SelectItem key={option.code} value={option.code}>
-                        {t(option.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="space-y-2 min-w-0">
+                  <Label htmlFor="country" className="text-sm font-medium">{tCheckout("country")}</Label>
+                  <Select value={country} onValueChange={handleCountryChange}>
+                    <SelectTrigger id="country" className="h-11 w-full">
+                      <SelectValue placeholder={t("select")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CHECKOUT_COUNTRIES.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {t(option.labelKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="city" className="text-sm font-medium">
                     {tCheckout("city")}
@@ -541,7 +541,7 @@ export default function CheckoutPage() {
                     {t("region")}
                   </Label>
                   <Select value={region} onValueChange={setRegion}>
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger className="h-11 w-full">
                       <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>

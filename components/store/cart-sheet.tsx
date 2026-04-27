@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/store";
 import Link from "next/link";
@@ -18,12 +18,13 @@ import { useTranslations } from "next-intl";
 import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export function CartSheet() {
+  const [open, setOpen] = useState(false);
   const { items, removeItem, updateQuantity, getTotal, getItemCount } =
     useCartStore();
   const t = useTranslations("common");
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -53,7 +54,7 @@ export function CartSheet() {
                 {t("emptyCart")}
               </p>
               <Button asChild variant="outline" className="h-11 px-6">
-                <Link href="/products">{t("browseProducts")}</Link>
+                <Link href="/products" onClick={() => setOpen(false)}>{t("browseProducts")}</Link>
               </Button>
             </div>
           </div>
@@ -135,10 +136,10 @@ export function CartSheet() {
                 {t("shippingTaxAtCheckout")}
               </p>
               <Button asChild className="w-full h-12 font-semibold text-[15px]">
-                <Link href="/checkout">{t("proceedToCheckout")}</Link>
+                <Link href="/checkout" onClick={() => setOpen(false)}>{t("proceedToCheckout")}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full h-11">
-                <Link href="/cart">{t("viewCart")}</Link>
+                <Link href="/cart" onClick={() => setOpen(false)}>{t("viewCart")}</Link>
               </Button>
             </div>
           </>

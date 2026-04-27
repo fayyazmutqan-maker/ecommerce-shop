@@ -20,6 +20,7 @@ import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useTranslations } from "next-intl";
 import { PhoneInputField } from "@/components/ui/phone-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
+import type { Country } from "react-phone-number-input";
 import {
   InputOTP,
   InputOTPGroup,
@@ -30,6 +31,9 @@ import {
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 type Step = "register" | "verify";
+type RegisterPhoneCountry = "SA" | "AE";
+
+const REGISTER_PHONE_COUNTRIES: RegisterPhoneCountry[] = ["SA", "AE"];
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -40,6 +44,7 @@ export default function RegisterPage() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [phone, setPhone] = useState<string | undefined>();
+  const [phoneCountry, setPhoneCountry] = useState<RegisterPhoneCountry>("SA");
   const [resendCooldown, setResendCooldown] = useState(0);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>("");
@@ -50,6 +55,11 @@ export default function RegisterPage() {
     const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendCooldown]);
+
+  const handlePhoneCountryChange = (country?: Country) => {
+    if (!country || !REGISTER_PHONE_COUNTRIES.includes(country as RegisterPhoneCountry)) return;
+    setPhoneCountry(country as RegisterPhoneCountry);
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -301,8 +311,13 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-sm font-semibold">{t("phone")}</Label>
               <PhoneInputField
+                key={phoneCountry}
                 value={phone}
                 onChange={setPhone}
+                defaultCountry={phoneCountry}
+                countries={REGISTER_PHONE_COUNTRIES}
+                onCountryChange={handlePhoneCountryChange}
+                placeholder={phoneCountry === "AE" ? "+971 5X XXX XXXX" : "+966 5X XXX XXXX"}
                 id="phone"
               />
             </div>
