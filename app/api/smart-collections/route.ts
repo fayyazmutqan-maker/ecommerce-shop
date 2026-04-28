@@ -22,8 +22,11 @@ const collectionSchema = z.object({
   seoDescription: z.string().max(500).nullable().optional(),
 });
 
+type SmartCollectionRule = z.infer<typeof ruleSchema>;
+type RuleProduct = Pick<typeof products.$inferSelect, "tags" | "vendor" | "productType" | "price" | "compareAtPrice" | "name" | "isFeatured">;
+
 // Evaluate rules against products
-function evaluateRules(product: any, rules: any[]): boolean {
+function evaluateRules(product: RuleProduct, rules: SmartCollectionRule[]): boolean {
   return rules.every((rule) => {
     const value = String(rule.value).toLowerCase();
     let field: string;

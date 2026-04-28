@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { orders, orderItems, orderAddresses, orderTimeline, fulfillments } from "@/lib/schema";
+import { orders, orderTimeline } from "@/lib/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { serializeDecimal } from "@/lib/decimal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,27 @@ import { Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw } from "lucide-reac
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
+
+interface DisplayAddress {
+  firstName?: string | null;
+  lastName?: string | null;
+  address1?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  phone?: string | null;
+}
+
+interface DisplayRefund {
+  id: string;
+  type: string;
+  amount: string | number;
+  status: string;
+  reason: string | null;
+  createdAt: string | Date;
+}
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
@@ -62,6 +83,8 @@ export default async function OrderDetailPage({
   }
 
   const data = serializeDecimal(order) as typeof order;
+  const shippingAddress = data.shippingAddress as DisplayAddress | null;
+  const refunds = data.refunds as DisplayRefund[] | undefined;
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
@@ -154,18 +177,18 @@ export default async function OrderDetailPage({
 
         <div className="space-y-6">
           {/* Shipping Address */}
-          {data.shippingAddress && (
+          {shippingAddress && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base"><MapPin className="h-4 w-4" /> Shipping Address</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{data.shippingAddress.firstName} {data.shippingAddress.lastName}</p>
-                <p className="text-muted-foreground">{data.shippingAddress.address1}</p>
-                {data.shippingAddress.address2 && <p className="text-muted-foreground">{data.shippingAddress.address2}</p>}
-                <p className="text-muted-foreground">{data.shippingAddress.city}, {data.shippingAddress.state} {data.shippingAddress.postalCode}</p>
-                <p className="text-muted-foreground">{data.shippingAddress.country}</p>
-                {data.shippingAddress.phone && <p className="text-muted-foreground">{data.shippingAddress.phone}</p>}
+                <p className="font-medium">{shippingAddress.firstName} {shippingAddress.lastName}</p>
+                <p className="text-muted-foreground">{shippingAddress.address1}</p>
+                {shippingAddress.address2 && <p className="text-muted-foreground">{shippingAddress.address2}</p>}
+                <p className="text-muted-foreground">{shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}</p>
+                <p className="text-muted-foreground">{shippingAddress.country}</p>
+                {shippingAddress.phone && <p className="text-muted-foreground">{shippingAddress.phone}</p>}
               </CardContent>
             </Card>
           )}
@@ -207,13 +230,13 @@ export default async function OrderDetailPage({
           </Card>
 
           {/* Refunds */}
-          {data.refunds && data.refunds.length > 0 && (
+          {refunds && refunds.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base"><RotateCcw className="h-4 w-4" /> Refunds</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-3">
-                {data.refunds.map((refund: { id: string; type: string; amount: string | number; status: string; reason: string | null; createdAt: string | Date }) => (
+                {refunds.map((refund) => (
                   <div key={refund.id} className="border-b last:border-0 pb-3 last:pb-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium">{refund.type} Refund</span>

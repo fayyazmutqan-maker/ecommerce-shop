@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
   // Get translation counts per entity
   const entityIds = entities.map((e) => e.id);
-  let translationCounts = new Map<string, number>();
+  const translationCounts = new Map<string, number>();
 
   if (entityIds.length > 0) {
     const countRows = await db

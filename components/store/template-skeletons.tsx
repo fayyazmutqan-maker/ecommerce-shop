@@ -546,8 +546,10 @@ function StaticFallbackSkeleton() {
 // ─── Main Dynamic Skeleton ───
 
 export async function TemplateSkeleton() {
+  let activeTemplate: Awaited<ReturnType<typeof db.query.templates.findFirst>>;
+
   try {
-    const activeTemplate = await db.query.templates.findFirst({
+    activeTemplate = await db.query.templates.findFirst({
       where: eq(templates.isActive, true),
       columns: { id: true },
       with: {
@@ -557,31 +559,31 @@ export async function TemplateSkeleton() {
         },
       },
     });
-
-    if (!activeTemplate || activeTemplate.sections.length === 0) {
-      return <StaticFallbackSkeleton />;
-    }
-
-    const visibleSections = activeTemplate.sections.filter((s) => s.isVisible);
-
-    return (
-      <div>
-        {visibleSections.map((section, index) => {
-          let config: Record<string, unknown> = {};
-          try {
-            config = section.config ? JSON.parse(section.config) : {};
-          } catch {
-            /* empty */
-          }
-          return (
-            <div key={section.id}>
-              {renderSectionSkeleton(section.type, config, index)}
-            </div>
-          );
-        })}
-      </div>
-    );
   } catch {
     return <StaticFallbackSkeleton />;
   }
+
+  if (!activeTemplate || activeTemplate.sections.length === 0) {
+    return <StaticFallbackSkeleton />;
+  }
+
+  const visibleSections = activeTemplate.sections.filter((s) => s.isVisible);
+
+  return (
+    <div>
+      {visibleSections.map((section, index) => {
+        let config: Record<string, unknown> = {};
+        try {
+          config = section.config ? JSON.parse(section.config) : {};
+        } catch {
+          /* empty */
+        }
+        return (
+          <div key={section.id}>
+            {renderSectionSkeleton(section.type, config, index)}
+          </div>
+        );
+      })}
+    </div>
+  );
 }

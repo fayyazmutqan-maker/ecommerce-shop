@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/helpers";
 import { serializeDecimal } from "@/lib/decimal";
+import { normalizeVariantOptions } from "@/lib/product-variant-options";
 import { eq, ne, and, or, count } from "drizzle-orm";
 import {
   products,
@@ -121,6 +122,9 @@ export async function PUT(
     }
     if (productData.salePriceTo !== undefined) {
       productData.salePriceTo = productData.salePriceTo ? new Date(productData.salePriceTo) : null;
+    }
+    if (Array.isArray(productData.variantOptions)) {
+      productData.variantOptions = normalizeVariantOptions(productData.variantOptions);
     }
 
     await db.transaction(async (tx) => {

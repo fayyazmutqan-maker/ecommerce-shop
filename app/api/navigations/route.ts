@@ -5,7 +5,13 @@ import { auth } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 
-const navItemSchema: z.ZodType<any> = z.lazy(() =>
+type NavigationItem = {
+  title: string;
+  url: string;
+  children?: NavigationItem[];
+};
+
+const navItemSchema: z.ZodType<NavigationItem> = z.lazy(() =>
   z.object({
     title: z.string().min(1).max(100),
     url: z.string().max(500),

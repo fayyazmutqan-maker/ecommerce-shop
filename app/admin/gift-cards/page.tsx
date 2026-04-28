@@ -33,7 +33,16 @@ interface GiftCard {
   expiresAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
-  transactions?: any[];
+  transactions?: GiftCardTransaction[];
+}
+
+interface GiftCardTransaction {
+  id: string;
+  type: string;
+  amount: string;
+  balanceAfter: string;
+  note?: string | null;
+  createdAt: string;
 }
 
 export default function GiftCardsPage() {

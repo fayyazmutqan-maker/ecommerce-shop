@@ -57,7 +57,7 @@ function isOriginAllowed(origin: string | null): boolean {
   return ALLOWED_ORIGINS.some((allowed) => origin === allowed || origin === new URL(allowed).origin);
 }
 
-export default auth(async (req) => {
+export const proxy = auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const isAdmin = req.auth?.user?.role === "ADMIN";

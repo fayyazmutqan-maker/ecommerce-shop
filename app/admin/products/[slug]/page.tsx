@@ -95,9 +95,17 @@ interface Product {
   salePriceFrom: string | null;
   salePriceTo: string | null;
   scheduledAt: string | null;
+  variantOptions: VariantOptionDefinition[];
   images: ProductImage[];
   variants: ProductVariant[];
   categories: { categoryId: string; category: { id: string; name: string } }[];
+}
+
+interface VariantOptionDefinition {
+  name: string;
+  type: "color" | "size" | "text";
+  position: 1 | 2 | 3;
+  values: Array<{ value: string; label?: string; colorHex?: string }>;
 }
 
 interface ProductImage {
@@ -206,6 +214,7 @@ export default function EditProductPage() {
 
   const [images, setImages] = useState<string[]>([]);
   const [editableVariants, setEditableVariants] = useState<EditableVariant[]>([]);
+  const [variantOptions, setVariantOptions] = useState<VariantOptionDefinition[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [originalProduct, setOriginalProduct] = useState<Product | null>(null);
@@ -245,8 +254,46 @@ export default function EditProductPage() {
       prev.map((v) => (v.id === id ? { ...v, [field]: value } : v))
     );
 
+  const updateVariantOptionType = (position: number, type: VariantOptionDefinition["type"]) =>
+    setVariantOptions((prev) =>
+      prev.map((option) => (option.position === position ? { ...option, type } : option))
+    );
+
+  const updateVariantOptionColor = (position: number, value: string, colorHex: string) =>
+    setVariantOptions((prev) =>
+      prev.map((option) =>
+        option.position === position
+          ? {
+              ...option,
+              values: option.values.map((item) =>
+                item.value === value ? { ...item, colorHex } : item
+              ),
+            }
+          : option
+      )
+    );
+
+  const inferVariantOptions = (variants: ProductVariant[]): VariantOptionDefinition[] =>
+    ([1, 2, 3] as const)
+      .map((position) => {
+        const key = `option${position}` as "option1" | "option2" | "option3";
+        const values = Array.from(
+          new Set(variants.map((variant) => variant[key]).filter((value): value is string => Boolean(value))),
+        );
+        if (values.length === 0) return null;
+        const name = position === 1 ? "Color" : position === 2 ? "Size" : `Option ${position}`;
+        return {
+          name,
+          type: position === 1 ? "color" : position === 2 ? "size" : "text",
+          position,
+          values: values.map((value) => ({ value })),
+        } satisfies VariantOptionDefinition;
+      })
+      .filter((option): option is VariantOptionDefinition => Boolean(option));
+
   useEffect(() => {
     Promise.all([fetchProduct(), fetchCategories()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   async function fetchProduct() {
@@ -302,6 +349,11 @@ export default function EditProductPage() {
           option2: v.option2,
           option3: v.option3,
         }))
+      );
+      setVariantOptions(
+        product.variantOptions && product.variantOptions.length > 0
+          ? product.variantOptions
+          : inferVariantOptions(product.variants)
       );
       setSelectedCategories(product.categories.map((c) => c.categoryId));
 
@@ -385,6 +437,7 @@ export default function EditProductPage() {
           position: i,
           isPrimary: i === 0,
         })),
+        variantOptions,
         categoryIds: selectedCategories,
         // Dimensions
         length: length ? parseFloat(length) : null,
@@ -814,6 +867,63 @@ export default function EditProductPage() {
                   </TableBody>
                 </Table>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {variantOptions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Variant option display</CardTitle>
+                <CardDescription>Define storefront option types and color swatches.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {variantOptions.map((option) => (
+                  <div key={option.position} className="rounded-lg border p-4 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Option</Label>
+                        <p className="text-sm font-semibold">{option.name}</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Display type</Label>
+                        <Select
+                          value={option.type}
+                          onValueChange={(value) =>
+                            updateVariantOptionType(option.position, value as VariantOptionDefinition["type"])
+                          }
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text</SelectItem>
+                            <SelectItem value="color">Color swatch</SelectItem>
+                            <SelectItem value="size">Size</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {option.values.map((item) => (
+                        <div key={item.value} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1">
+                          {option.type === "color" && (
+                            <Input
+                              type="color"
+                              value={item.colorHex || "#e5e7eb"}
+                              onChange={(event) =>
+                                updateVariantOptionColor(option.position, item.value, event.target.value)
+                              }
+                              className="h-6 w-8 cursor-pointer border-0 p-0"
+                              aria-label={`${item.value} color`}
+                            />
+                          )}
+                          <span className="text-xs font-medium">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}

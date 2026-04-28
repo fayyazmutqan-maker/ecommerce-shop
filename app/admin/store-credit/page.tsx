@@ -117,8 +117,8 @@ export default function StoreCreditAdminPage() {
       toast.success(t(type === "CREDIT" ? "toasts.creditAdded" : "toasts.creditDeducted"));
       setOpen(false);
       fetchCustomers();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update store credit");
     } finally {
       setSaving(false);
     }

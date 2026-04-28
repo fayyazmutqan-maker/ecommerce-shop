@@ -92,9 +92,29 @@ const SECTION_TYPES = [
   { value: "custom-html", icon: Code },
 ] as const;
 
-function getSectionIcon(type: string) {
-  const found = SECTION_TYPES.find((s) => s.value === type);
-  return found?.icon || LayoutTemplate;
+function SectionTypeIcon({ type, className }: { type: string; className?: string }) {
+  switch (type) {
+    case "hero":
+      return <ImageIcon className={className} />;
+    case "trust-bar":
+      return <ShieldCheck className={className} />;
+    case "categories":
+      return <Grid3X3 className={className} />;
+    case "featured-products":
+      return <Star className={className} />;
+    case "new-arrivals":
+      return <ShoppingBag className={className} />;
+    case "promo-banner":
+      return <Megaphone className={className} />;
+    case "newsletter":
+      return <Mail className={className} />;
+    case "rich-text":
+      return <Type className={className} />;
+    case "custom-html":
+      return <Code className={className} />;
+    default:
+      return <LayoutTemplate className={className} />;
+  }
 }
 
 // ─── Section Help Documentation ───
@@ -625,7 +645,6 @@ function SectionRow({
 }) {
   const t = useTranslations("admin.templates");
   const [expanded, setExpanded] = useState(false);
-  const Icon = getSectionIcon(section.type);
 
   return (
     <div className="border rounded-lg">
@@ -634,7 +653,7 @@ function SectionRow({
         onClick={() => setExpanded(!expanded)}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        <SectionTypeIcon type={section.type} className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{section.name || t("section.untitled")}</p>
           <p className="text-xs text-muted-foreground">{t(`sectionTypes.${section.type}`)}</p>
@@ -2261,21 +2280,18 @@ export default function TemplatesPage() {
                       tmpl.sections
                         .sort((a, b) => a.sortOrder - b.sortOrder)
                         .slice(0, 5)
-                        .map((s, i) => {
-                          const Icon = getSectionIcon(s.type);
-                          return (
-                            <div
-                              key={i}
-                              className="flex items-center gap-2 text-xs bg-background rounded px-2.5 py-1.5"
-                            >
-                              <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="truncate">{s.name}</span>
-                              {!s.isVisible && (
-                                <EyeOff className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
-                              )}
-                            </div>
-                          );
-                        })
+                        .map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 text-xs bg-background rounded px-2.5 py-1.5"
+                          >
+                            <SectionTypeIcon type={s.type} className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="truncate">{s.name}</span>
+                            {!s.isVisible && (
+                              <EyeOff className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+                            )}
+                          </div>
+                        ))
                     )}
                     {tmpl.sections.length > 5 && (
                       <p className="text-[10px] text-muted-foreground text-center pt-1">

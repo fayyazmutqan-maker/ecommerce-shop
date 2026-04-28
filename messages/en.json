@@ -96,7 +96,11 @@
     "onSale": "On Sale",
     "new": "New",
     "featured": "Featured",
-    "addedToCart": "{name} has been added to your cart."
+    "addedToCart": "{name} has been added to your cart.",
+    "deliveryEstimate": "Fast delivery across supported regions",
+    "returnsWindow": "7-day returns on eligible items",
+    "secureCheckout": "Secure checkout",
+    "paymentOptions": "Cards and cash on delivery available"
   },
   "cart": {
     "title": "Shopping Cart",
@@ -512,6 +516,13 @@
   },
   "variant": {
     "options": "Options",
+    "color": "Color",
+    "capacity": "Capacity",
+    "size": "Size",
+    "connectivity": "Connectivity",
+    "optionNumber": "Option {number}",
+    "selectOption": "Select {option}: {value}",
+    "notAvailable": "Unavailable",
     "save": "Save {percent}%",
     "inStock": "In Stock",
     "outOfStock": "Out of Stock",
@@ -858,6 +869,10 @@
       "optionDefinitions": "Option Definitions",
       "option": "Option",
       "optionName": "Option Name",
+      "optionType": "Option Type",
+      "textOption": "Text",
+      "colorOption": "Color swatch",
+      "sizeOption": "Size",
       "values": "Values",
       "valuesHint": "(press Enter to add)",
       "addAnotherOption": "Add another option",

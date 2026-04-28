@@ -11,8 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductCardGrid } from "@/components/store/product-card-grid";
-import { ProductImageGallery } from "@/components/store/product-image-gallery";
-import { VariantSelector } from "@/components/store/variant-selector";
+import { ProductDetailPurchase } from "@/components/store/product-detail-purchase";
 import { ReviewForm } from "@/components/store/review-form";
 import { shouldUseUnoptimizedImage } from "@/lib/image";
 
@@ -210,111 +209,85 @@ export default async function ProductDetailPage({ params }: Props) {
         </span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-        {/* Image Gallery */}
-        <ProductImageGallery
-          images={product.images.map((i) => ({ url: i.url, alt: i.alt }))}
-          productId={product.id}
-        />
-
-        {/* Product Info */}
-        <div className="space-y-7">
-          <div>
-            {product.categories[0] && (
-              <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">
-                {product.categories[0].category.name}
-              </p>
-            )}
-            <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
-              {product.name}
-            </h1>
-            {product.vendor && (
-              <p className="text-sm text-muted-foreground mt-2">
-                by{" "}
-                <Link
-                  href={`/products?vendor=${encodeURIComponent(product.vendor)}`}
-                  className="text-foreground hover:underline font-medium transition-colors"
-                >
-                  {product.vendor}
-                </Link>
-              </p>
-            )}
-          </div>
-
-          {/* Rating */}
-          {product.reviews.length > 0 && (
-            <div className="flex items-center gap-3">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={`text-base ${star <= Math.round(avgRating) ? "text-foreground" : "text-muted-foreground/20"}`}
+      <ProductDetailPurchase
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          compareAtPrice: product.compareAtPrice,
+          quantity: product.quantity,
+          image: product.images[0]?.url || "",
+          sku: product.sku,
+          productType: product.productType,
+          tags: product.tags,
+        }}
+        images={product.images.map((i) => ({ url: i.url, alt: i.alt }))}
+        variantOptions={product.variantOptions || []}
+        variants={product.variants.map((v) => ({
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          price: v.price,
+          compareAtPrice: v.compareAtPrice,
+          quantity: v.quantity,
+          option1: v.option1,
+          option2: v.option2,
+          option3: v.option3,
+          image: v.image,
+        }))}
+        beforeSelector={
+          <>
+            <div>
+              {product.categories[0] && (
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">
+                  {product.categories[0].category.name}
+                </p>
+              )}
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
+                {product.name}
+              </h1>
+              {product.vendor && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  by{" "}
+                  <Link
+                    href={`/products?vendor=${encodeURIComponent(product.vendor)}`}
+                    className="text-foreground hover:underline font-medium transition-colors"
                   >
-                    ★
-                  </span>
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {avgRating.toFixed(1)} ({product.reviews.length} review
-                {product.reviews.length !== 1 ? "s" : ""})
-              </span>
+                    {product.vendor}
+                  </Link>
+                </p>
+              )}
             </div>
-          )}
 
-          {product.shortDescription && (
-            <p className="text-muted-foreground leading-relaxed text-[15px]">
-              {product.shortDescription}
-            </p>
-          )}
-
-          <Separator />
-
-          {/* Variant Selection + Add to Cart */}
-          <VariantSelector
-            productId={product.id}
-            productName={product.name}
-            productPrice={product.price}
-            productCompareAtPrice={product.compareAtPrice}
-            productQuantity={product.quantity}
-            productImage={product.images[0]?.url || ""}
-            variants={product.variants.map((v) => ({
-              id: v.id,
-              name: v.name,
-              price: v.price,
-              compareAtPrice: v.compareAtPrice,
-              quantity: v.quantity,
-              option1: v.option1,
-              option2: v.option2,
-              option3: v.option3,
-              image: v.image,
-            }))}
-          />
-
-          <Separator />
-
-          {/* Meta Info */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {product.sku && (
-              <div>
-                <span className="text-muted-foreground">SKU:</span>{" "}
-                <span className="font-medium">{product.sku}</span>
+            {product.reviews.length > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className={`text-base ${star <= Math.round(avgRating) ? "text-foreground" : "text-muted-foreground/20"}`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {avgRating.toFixed(1)} ({product.reviews.length} review
+                  {product.reviews.length !== 1 ? "s" : ""})
+                </span>
               </div>
             )}
-            {product.productType && (
-              <div>
-                <span className="text-muted-foreground">Type:</span>{" "}
-                <span className="font-medium">{product.productType}</span>
-              </div>
+
+            {product.shortDescription && (
+              <p className="text-muted-foreground leading-relaxed text-[15px]">
+                {product.shortDescription}
+              </p>
             )}
-            {product.tags && (
-              <div className="col-span-2">
-                <span className="text-muted-foreground">Tags:</span>{" "}
-                <span className="font-medium">{product.tags}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+
+            <Separator />
+          </>
+        }
+      />
 
       {/* Tabs: Description / Reviews */}
       <Tabs defaultValue="description" className="mt-20">

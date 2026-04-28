@@ -39,6 +39,10 @@ interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+type CategoryWithChildren = typeof categories.$inferSelect & {
+  children: Array<typeof categories.$inferSelect>;
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const category = await db.query.categories.findFirst({
@@ -235,7 +239,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
 
   // Apply locale translations
   const locale = await getLocale();
-  const tCategory = await applyTranslations("category", category as Record<string, unknown>, locale) as typeof category;
+  const tCategory = await applyTranslations("category", category as Record<string, unknown>, locale) as CategoryWithChildren;
   const tProductsList = await applyTranslationsBatch("product", productsList as Record<string, unknown>[], locale) as typeof productsList;
 
   return (
@@ -261,7 +265,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       {/* Subcategories */}
       {tCategory.children.length > 0 && (
         <div className="flex flex-wrap gap-2.5 mb-10">
-          {tCategory.children.map((child) => (
+          {tCategory.children.map((child: CategoryWithChildren["children"][number]) => (
             <Link key={child.id} href={`/collections/${child.slug}`}>
               <Badge
                 variant="outline"

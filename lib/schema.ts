@@ -9,6 +9,7 @@ import {
   timestamp,
   decimal,
   real,
+  jsonb,
   uniqueIndex,
   index,
   primaryKey,
@@ -104,6 +105,7 @@ export const categories = pgTable("Category", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   image: text("image"),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parentId: text("parentId").references((): any => categories.id, { onDelete: "set null" }),
   isActive: boolean("isActive").notNull().default(true),
   sortOrder: integer("sortOrder").notNull().default(0),
@@ -147,6 +149,12 @@ export const products = pgTable("Product", {
   productType: text("productType"),
   vendor: text("vendor"),
   tags: text("tags"),
+  variantOptions: jsonb("variantOptions").$type<Array<{
+    name: string;
+    type: "color" | "size" | "text";
+    position: 1 | 2 | 3;
+    values: Array<{ value: string; label?: string; colorHex?: string }>;
+  }>>().notNull().default([]),
   isFeatured: boolean("isFeatured").notNull().default(false),
   isDigital: boolean("isDigital").notNull().default(false),
   isGiftCard: boolean("isGiftCard").notNull().default(false),

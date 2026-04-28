@@ -49,7 +49,7 @@ export default async function ProfilePage() {
             user={{
               name: session.user.name || "",
               email: session.user.email || "",
-              phone: (session.user as any).phone || "",
+              phone: session.user.phone || "",
             }}
           />
         </div>

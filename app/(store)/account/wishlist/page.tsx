@@ -1,17 +1,32 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { wishlistItems, productImages } from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
 import { ArrowLeft, Heart, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/helpers";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { getTranslations } from "next-intl/server";
+import { shouldUseUnoptimizedImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
+
+interface WishlistProduct {
+  slug: string;
+  name: string;
+  price: string | number;
+  compareAtPrice: string | number | null;
+  images: Array<{ url: string }>;
+}
+
+type WishlistItem = {
+  id: string;
+  product: WishlistProduct;
+};
 
 export default async function WishlistPage() {
   const session = await auth();
@@ -21,7 +36,7 @@ export default async function WishlistPage() {
 
   const t = await getTranslations("account");
 
-  const items = await db.query.wishlistItems.findMany({
+  const items = (await db.query.wishlistItems.findMany({
     where: eq(wishlistItems.userId, session.user.id),
     orderBy: [desc(wishlistItems.createdAt)],
     with: {
@@ -31,7 +46,7 @@ export default async function WishlistPage() {
         },
       },
     },
-  });
+  })) as unknown as WishlistItem[];
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
@@ -73,10 +88,13 @@ export default async function WishlistPage() {
               <Link href={`/products/${item.product.slug}`}>
                 <div className="aspect-square bg-muted relative">
                   {item.product.images[0] ? (
-                    <img
+                    <Image
                       src={item.product.images[0].url}
                       alt={item.product.name}
-                      className="h-full w-full object-cover"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover"
+                      unoptimized={shouldUseUnoptimizedImage(item.product.images[0].url)}
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">

@@ -16,6 +16,10 @@ import { useTranslations } from "next-intl";
 
 const presetAmounts = [50, 100, 200, 500, 1000];
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function GiftCardsPage() {
   const t = useTranslations("giftCards");
   const tCommon = useTranslations("common");
@@ -70,8 +74,8 @@ export default function GiftCardsPage() {
       setSenderName("");
       setMessage("");
       setCustomAmount("");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to purchase gift card"));
     } finally {
       setPurchasing(false);
     }
@@ -89,8 +93,8 @@ export default function GiftCardsPage() {
         throw new Error(data.error || "Invalid gift card");
       }
       setBalance(await res.json());
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Invalid gift card"));
     } finally {
       setChecking(false);
     }

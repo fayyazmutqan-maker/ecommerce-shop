@@ -10,6 +10,7 @@ import { Bell, Loader2, Check, CheckCheck, Trash2, Package, Users, AlertTriangle
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/helpers";
 import { useFetch } from "@/hooks/use-fetch";
+import type { LucideIcon } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -22,7 +23,7 @@ interface Notification {
   createdAt: string;
 }
 
-const typeIcons: Record<string, any> = {
+const typeIcons: Record<string, LucideIcon> = {
   NEW_ORDER: Package,
   LOW_STOCK: AlertTriangle,
   NEW_CUSTOMER: Users,

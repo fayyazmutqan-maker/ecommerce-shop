@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/helpers";
 import { z } from "zod";
 import { serializeDecimal } from "@/lib/decimal";
+import { normalizeVariantOptions } from "@/lib/product-variant-options";
 import {
   products,
   productImages,
@@ -28,6 +29,11 @@ import {
   count,
   SQL,
 } from "drizzle-orm";
+
+type AdminProductRow = typeof products.$inferSelect & {
+  orderItems?: unknown[];
+  reviews?: unknown[];
+};
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -60,6 +66,22 @@ const productSchema = z.object({
   requiresShipping: z.boolean().default(true),
   continueSellingWhenOOS: z.boolean().default(false),
   images: z.array(z.string()).optional(),
+  variantOptions: z
+    .array(
+      z.object({
+        name: z.string(),
+        type: z.enum(["color", "size", "text"]).default("text"),
+        position: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+        values: z.array(
+          z.object({
+            value: z.string(),
+            label: z.string().optional(),
+            colorHex: z.string().optional(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
   // New fields
   customBadge: z.string().nullable().optional(),
   warrantyInfo: z.string().nullable().optional(),
@@ -258,7 +280,7 @@ export async function GET(req: Request) {
 
     // For admin, transform to add _count and remove raw relation arrays
     const result = admin
-      ? productsList.map((p: any) => {
+      ? (productsList as AdminProductRow[]).map((p) => {
           const { orderItems, reviews, ...rest } = p;
           return {
             ...rest,
@@ -355,6 +377,7 @@ export async function POST(req: Request) {
           productType: data.productGroupId || data.productType || null,
           vendor: data.vendor || null,
           tags: data.tags || null,
+          variantOptions: normalizeVariantOptions(data.variantOptions || []),
           seoTitle: data.seoTitle || null,
           seoDescription: data.seoDescription || null,
           isFeatured: data.isFeatured,

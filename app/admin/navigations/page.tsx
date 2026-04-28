@@ -163,8 +163,8 @@ export default function NavigationsPage() {
       toast.success(editing ? t("toasts.updated") : t("toasts.created"));
       setOpen(false);
       fetchMenus();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to save navigation");
     } finally {
       setSaving(false);
     }

@@ -40,7 +40,8 @@ export function StoreNavbar() {
 
   // Defer session check to after page load to avoid permission prompts
   useEffect(() => {
-    setIsSessionLoaded(true);
+    const timeout = window.setTimeout(() => setIsSessionLoaded(true), 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const navLinks = [

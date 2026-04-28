@@ -92,7 +92,9 @@ interface CategoryItem {
 
 interface VariantOption {
   name: string;
+  type: "color" | "size" | "text";
   values: string[];
+  colorValues?: Record<string, string>;
 }
 
 interface GeneratedVariant {
@@ -114,6 +116,12 @@ interface BundleItem {
   productName: string;
   quantity: number;
   discount: number;
+}
+
+interface ProductSearchResult {
+  id: string;
+  name: string;
+  price: number;
 }
 
 // ─── Helpers ──────────────────────────────────────
@@ -255,7 +263,7 @@ export default function NewProductPage() {
         setCategories(catsData);
       })
       .catch(() => toast.error(t("loadFailed")));
-  }, []);
+  }, [t]);
 
   // Bundle search
   useEffect(() => {
@@ -269,9 +277,9 @@ export default function NewProductPage() {
       )
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((data) => {
-          const products = Array.isArray(data) ? data : data.products || [];
+          const products: ProductSearchResult[] = Array.isArray(data) ? data : data.products || [];
           setBundleSearchResults(
-            products.slice(0, 8).map((p: any) => ({
+            products.slice(0, 8).map((p) => ({
               id: p.id,
               name: p.name,
               price: p.price,
@@ -329,12 +337,31 @@ export default function NewProductPage() {
   // ─── Variant Option Management ────────────────────
   const addVariantOption = () => {
     if (variantOptions.length >= 3) return;
-    setVariantOptions((prev) => [...prev, { name: "", values: [] }]);
+    setVariantOptions((prev) => [...prev, { name: "", type: "text", values: [], colorValues: {} }]);
   };
 
   const updateOptionName = (index: number, name: string) =>
     setVariantOptions((prev) =>
-      prev.map((o, i) => (i === index ? { ...o, name } : o))
+      prev.map((o, i) => {
+        if (i !== index) return o;
+        const normalized = name.toLowerCase();
+        const type = normalized === "color" ? "color" : normalized === "size" ? "size" : o.type;
+        return { ...o, name, type };
+      })
+    );
+
+  const updateOptionType = (index: number, type: VariantOption["type"]) =>
+    setVariantOptions((prev) =>
+      prev.map((o, i) => (i === index ? { ...o, type } : o))
+    );
+
+  const updateOptionColor = (optionIndex: number, value: string, colorHex: string) =>
+    setVariantOptions((prev) =>
+      prev.map((option, index) =>
+        index === optionIndex
+          ? { ...option, colorValues: { ...(option.colorValues || {}), [value]: colorHex } }
+          : option
+      )
     );
 
   const addOptionValue = (index: number, value: string) => {
@@ -388,12 +415,12 @@ export default function NewProductPage() {
         );
       })
     );
-  }, [variantOptions, hasVariants]);
+  }, [variantOptions, hasVariants, price]);
 
   const updateGeneratedVariant = (
     id: string,
     field: keyof GeneratedVariant,
-    value: any
+    value: string | boolean
   ) =>
     setGeneratedVariants((prev) =>
       prev.map((v) => (v.id === id ? { ...v, [field]: value } : v))
@@ -439,7 +466,7 @@ export default function NewProductPage() {
     setBundleSearchResults([]);
   };
 
-  const updateBundleItem = (index: number, field: string, value: any) =>
+  const updateBundleItem = (index: number, field: keyof BundleItem, value: string | number) =>
     setBundleItems((prev) =>
       prev.map((b, i) => (i === index ? { ...b, [field]: value } : b))
     );
@@ -527,9 +554,18 @@ export default function NewProductPage() {
         : undefined,
     };
 
-    if (hasVariants && generatedVariants.length > 0) {
-      data.variants = generatedVariants
-        .filter((v) => v.isActive)
+      if (hasVariants && generatedVariants.length > 0) {
+        data.variantOptions = variantOptions.map((option, index) => ({
+          name: option.name,
+          type: option.type,
+          position: index + 1,
+          values: option.values.map((value) => ({
+            value,
+            colorHex: option.type === "color" ? option.colorValues?.[value] : undefined,
+          })),
+        }));
+        data.variants = generatedVariants
+          .filter((v) => v.isActive)
         .map((v) => ({
           name: Object.values(v.options).join(" / "),
           sku: v.sku || undefined,
@@ -1121,7 +1157,7 @@ export default function NewProductPage() {
                           onCheckedChange={(v) => {
                             setHasVariants(v);
                             if (v && variantOptions.length === 0) {
-                              setVariantOptions([{ name: "", values: [] }]);
+                              setVariantOptions([{ name: "", type: "text", values: [], colorValues: {} }]);
                             }
                           }}
                           onClick={(e) => e.stopPropagation()}
@@ -1223,6 +1259,22 @@ export default function NewProductPage() {
                                 )}
                               </div>
                               <div className="space-y-1.5">
+                                <Label className="text-xs">{t("optionType")}</Label>
+                                <Select
+                                  value={option.type}
+                                  onValueChange={(value) => updateOptionType(optIdx, value as VariantOption["type"])}
+                                >
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">{t("textOption")}</SelectItem>
+                                    <SelectItem value="color">{t("colorOption")}</SelectItem>
+                                    <SelectItem value="size">{t("sizeOption")}</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
                                 <Label className="text-xs">
                                   {t("values")}{" "}
                                   <span className="text-muted-foreground">
@@ -1262,24 +1314,27 @@ export default function NewProductPage() {
                               </div>
                             </div>
                             {option.values.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-2">
                                 {option.values.map((val, valIdx) => (
-                                  <Badge
-                                    key={val}
-                                    variant="secondary"
-                                    className="text-xs gap-1 pl-2.5 pr-1 py-1"
-                                  >
-                                    {val}
+                                  <div key={val} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1">
+                                    {option.type === "color" && (
+                                      <Input
+                                        type="color"
+                                        value={option.colorValues?.[val] || "#e5e7eb"}
+                                        onChange={(event) => updateOptionColor(optIdx, val, event.target.value)}
+                                        className="h-6 w-8 cursor-pointer border-0 p-0"
+                                        aria-label={`${val} color`}
+                                      />
+                                    )}
+                                    <span className="text-xs font-medium">{val}</span>
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        removeOptionValue(optIdx, valIdx)
-                                      }
-                                      className="ml-0.5 hover:text-destructive"
+                                      onClick={() => removeOptionValue(optIdx, valIdx)}
+                                      className="hover:text-destructive"
                                     >
                                       <X className="h-3 w-3" />
                                     </button>
-                                  </Badge>
+                                  </div>
                                 ))}
                               </div>
                             )}

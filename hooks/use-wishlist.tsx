@@ -26,18 +26,27 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (status !== "authenticated") {
-      setIds(new Set());
-      setIsLoaded(status === "unauthenticated");
-      return;
+      const timeout = window.setTimeout(() => {
+        setIds(new Set());
+        setIsLoaded(status === "unauthenticated");
+      }, 0);
+      return () => window.clearTimeout(timeout);
     }
 
-    fetch("/api/wishlist/ids")
+    const controller = new AbortController();
+
+    fetch("/api/wishlist/ids", { signal: controller.signal })
       .then((r) => r.json())
       .then((data: string[]) => {
         setIds(new Set(data));
         setIsLoaded(true);
       })
-      .catch(() => setIsLoaded(true));
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setIsLoaded(true);
+      });
+
+    return () => controller.abort();
   }, [status]);
 
   const has = useCallback((productId: string) => ids.has(productId), [ids]);

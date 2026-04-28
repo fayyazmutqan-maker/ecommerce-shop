@@ -56,6 +56,10 @@ interface SmartCollection {
   createdAt: string;
 }
 
+type SmartCollectionResponse = Omit<SmartCollection, "rules"> & {
+  rules: string | SmartCollectionRule[];
+};
+
 const RULE_FIELDS = [
   { value: "tags" },
   { value: "vendor" },
@@ -118,7 +122,7 @@ export default function SmartCollectionsPage() {
       if (res.ok) {
         const data = await res.json();
         setCollections(
-          data.map((c: any) => ({
+          (data as SmartCollectionResponse[]).map((c) => ({
             ...c,
             rules: typeof c.rules === "string" ? JSON.parse(c.rules) : c.rules,
           }))

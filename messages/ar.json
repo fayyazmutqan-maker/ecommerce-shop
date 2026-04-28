@@ -96,7 +96,11 @@
     "onSale": "تخفيض",
     "new": "جديد",
     "featured": "مميز",
-    "addedToCart": "تمت إضافة {name} إلى سلتك."
+    "addedToCart": "تمت إضافة {name} إلى سلتك.",
+    "deliveryEstimate": "توصيل سريع داخل المناطق المدعومة",
+    "returnsWindow": "إرجاع خلال 7 أيام للمنتجات المؤهلة",
+    "secureCheckout": "دفع آمن",
+    "paymentOptions": "الدفع بالبطاقات أو عند الاستلام متاح"
   },
   "cart": {
     "title": "سلة التسوق",
@@ -512,6 +516,13 @@
   },
   "variant": {
     "options": "الخيارات",
+    "color": "اللون",
+    "capacity": "السعة",
+    "size": "المقاس",
+    "connectivity": "الاتصال",
+    "optionNumber": "الخيار {number}",
+    "selectOption": "اختر {option}: {value}",
+    "notAvailable": "غير متاح",
     "save": "وفّر {percent}%",
     "inStock": "متوفر",
     "outOfStock": "غير متوفر",
@@ -858,6 +869,10 @@
       "optionDefinitions": "تعريفات الخيارات",
       "option": "خيار",
       "optionName": "اسم الخيار",
+      "optionType": "نوع الخيار",
+      "textOption": "نص",
+      "colorOption": "عينة لون",
+      "sizeOption": "مقاس",
       "values": "القيم",
       "valuesHint": "(اضغط Enter للإضافة)",
       "addAnotherOption": "إضافة خيار آخر",

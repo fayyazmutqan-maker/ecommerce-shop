@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().optional(),
+);
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().url().optional(),
+);
+const optionalResendApiKey = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed && trimmed.startsWith("re_") ? trimmed : undefined;
+  },
+  z.string().startsWith("re_").optional(),
+);
+
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
@@ -25,7 +42,7 @@ const envSchema = z.object({
     .default("http://localhost:3000"),
 
   // Email (Resend) — required for production
-  RESEND_API_KEY: z.string().startsWith("re_").optional(),
+  RESEND_API_KEY: optionalResendApiKey,
   EMAIL_FROM: z.string().optional().default("ShopFlow <onboarding@resend.dev>"),
 
   // Node environment
@@ -34,8 +51,8 @@ const envSchema = z.object({
     .default("development"),
 
   // Upstash Redis (rate limiting) — required for production
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_URL: optionalUrl,
+  UPSTASH_REDIS_REST_TOKEN: optionalNonEmptyString,
 
   // Rate limits — format: "maxRequests/windowSeconds" e.g. "10/60"
   RATE_LIMIT_AUTH: z.string().regex(/^\d+(\/\d+)?$/).optional(),
