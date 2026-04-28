@@ -546,7 +546,17 @@ function StaticFallbackSkeleton() {
 // ─── Main Dynamic Skeleton ───
 
 export async function TemplateSkeleton() {
-  let activeTemplate: Awaited<ReturnType<typeof db.query.templates.findFirst>>;
+  let activeTemplate:
+    | {
+        id: string;
+        sections: {
+          id: string;
+          type: string;
+          config: string | null;
+          isVisible: boolean;
+        }[];
+      }
+    | undefined;
 
   try {
     activeTemplate = await db.query.templates.findFirst({
