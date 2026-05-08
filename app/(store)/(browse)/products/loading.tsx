@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { StoreProductCardGridSkeleton } from "@/components/store/store-skeletons";
 
 export default function ProductsLoading() {
   return (
@@ -18,18 +19,7 @@ export default function ProductsLoading() {
         <Skeleton className="h-9 w-36 rounded-md" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="aspect-square w-full rounded-lg" />
-            <Skeleton className="h-4 w-3/4" />
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-8 w-8 rounded-md" />
-            </div>
-          </div>
-        ))}
-      </div>
+      <StoreProductCardGridSkeleton count={12} />
 
       {/* Pagination */}
       <div className="flex items-center justify-center gap-2 mt-10">

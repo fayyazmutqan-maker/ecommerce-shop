@@ -14,6 +14,7 @@ import { useCartStore } from "@/lib/store";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { shouldUseUnoptimizedImage } from "@/lib/image";
+import { StoreCartSkeleton } from "@/components/store/store-skeletons";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal, getItemCount, clearCart, addItem } =
@@ -105,12 +106,7 @@ export default function CartPage() {
   const displayTotal = appliedCoupon ? Math.max(0, subtotal - appliedCoupon.discount) : subtotal;
 
   if (recovering) {
-    return (
-      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-28 text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">{t("recoveringCart")}</p>
-      </div>
-    );
+    return <StoreCartSkeleton />;
   }
 
   if (items.length === 0) {

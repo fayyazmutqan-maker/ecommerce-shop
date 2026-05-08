@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Loader2, ShoppingBag } from "lucide-react";
+import { Search, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/helpers";
 import { useTranslations } from "next-intl";
+import { StoreProductCardGridSkeleton } from "@/components/store/store-skeletons";
 
 interface SearchProduct {
   id: string;
@@ -78,9 +78,7 @@ export default function SearchPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <StoreProductCardGridSkeleton />
       ) : query.length >= 2 ? (
         <>
           <p className="text-sm text-muted-foreground mb-6">

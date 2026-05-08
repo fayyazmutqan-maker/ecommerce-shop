@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { StoreProductCardGridSkeleton } from "@/components/store/store-skeletons";
 
 export default function SearchLoading() {
   return (
@@ -12,22 +13,7 @@ export default function SearchLoading() {
       {/* Results count */}
       <Skeleton className="h-4 w-40 mb-6" />
 
-      {/* Product Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="rounded-xl border overflow-hidden">
-            <Skeleton className="aspect-square w-full" />
-            <div className="p-4 space-y-2">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-20" />
-              <div className="flex items-center gap-2 mt-2">
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-4 w-16" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <StoreProductCardGridSkeleton />
     </div>
   );
 }
