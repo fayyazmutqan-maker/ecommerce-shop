@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { PermissionKey } from "@/lib/permissions";
 import { getStaffPermissions } from "@/lib/permissions";
+import { db } from "@/lib/db";
 
 /**
  * Map API path prefixes to the staff permission required.
@@ -57,6 +58,40 @@ function isOriginAllowed(origin: string | null): boolean {
   return ALLOWED_ORIGINS.some((allowed) => origin === allowed || origin === new URL(allowed).origin);
 }
 
+const maintenanceCache = {
+  value: false,
+  expiresAt: 0,
+};
+
+function shouldCheckMaintenance(pathname: string): boolean {
+  if (pathname === "/maintenance") return false;
+  if (pathname.startsWith("/admin")) return false;
+  if (pathname.startsWith("/api")) return false;
+  if (pathname.startsWith("/login")) return false;
+  if (pathname.startsWith("/register")) return false;
+  if (pathname.startsWith("/forgot-password")) return false;
+  if (pathname.startsWith("/reset-password")) return false;
+  return true;
+}
+
+async function isMaintenanceModeEnabled(): Promise<boolean> {
+  const now = Date.now();
+  if (maintenanceCache.expiresAt > now) {
+    return maintenanceCache.value;
+  }
+
+  try {
+    const settings = await db.query.storeSettings.findFirst({
+      columns: { maintenanceMode: true },
+    });
+    maintenanceCache.value = settings?.maintenanceMode ?? false;
+    maintenanceCache.expiresAt = now + 5_000;
+    return maintenanceCache.value;
+  } catch {
+    return false;
+  }
+}
+
 export const proxy = auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
@@ -64,6 +99,10 @@ export const proxy = auth(async (req) => {
   const isStaff = req.auth?.user?.role === "STAFF";
   const isAdminOrStaff = isAdmin || isStaff;
   const isLocaleSettingsRoute = pathname === "/api/settings/locale";
+
+  if (!isAdminOrStaff && shouldCheckMaintenance(pathname) && await isMaintenanceModeEnabled()) {
+    return NextResponse.rewrite(new URL("/maintenance", req.url));
+  }
 
   // ── Redirect authenticated users away from auth pages ──
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password";
@@ -335,12 +374,6 @@ export const proxy = auth(async (req) => {
 
 export const config = {
   matcher: [
-    "/admin/:path*",
-    "/api/:path*",
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-    "/account/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$).*)",
   ],
 };

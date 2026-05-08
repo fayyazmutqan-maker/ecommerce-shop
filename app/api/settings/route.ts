@@ -10,21 +10,39 @@ import { eq } from "drizzle-orm";
 const settingsSchema = z.object({
   storeName: z.string().max(100).optional(),
   storeDescription: z.string().max(500).optional(),
+  storeEmail: z.string().email().max(200).or(z.literal("")).optional(),
+  storePhone: z.string().max(30).optional(),
+  storeAddress: z.string().max(500).optional(),
   contactEmail: z.string().email().max(200).optional(),
   contactPhone: z.string().max(30).optional(),
   currency: z.string().max(10).optional(),
+  currencySymbol: z.string().max(20).optional(),
   taxRate: z.number().min(0).max(100).optional(),
+  taxIncluded: z.boolean().optional(),
+  shippingEnabled: z.boolean().optional(),
+  freeShippingMin: z.number().min(0).optional(),
+  flatShippingRate: z.number().min(0).optional(),
   shippingFee: z.number().min(0).optional(),
   freeShippingThreshold: z.number().min(0).optional(),
+  timezone: z.string().max(100).optional(),
+  weightUnit: z.string().max(10).optional(),
+  storeLogo: z.string().url().max(500).optional().or(z.literal("")).nullable(),
+  storeFavicon: z.string().url().max(500).optional().or(z.literal("")).nullable(),
   logo: z.string().url().max(500).optional().nullable(),
   favicon: z.string().url().max(500).optional().nullable(),
   address: z.string().max(500).optional(),
   socialFacebook: z.string().max(300).optional().nullable(),
   socialTwitter: z.string().max(300).optional().nullable(),
   socialInstagram: z.string().max(300).optional().nullable(),
+  socialYoutube: z.string().max(300).optional().nullable(),
   socialTiktok: z.string().max(300).optional().nullable(),
+  metaTitle: z.string().max(200).optional().nullable(),
+  metaDescription: z.string().max(500).optional().nullable(),
+  googleAnalyticsId: z.string().max(100).optional().nullable(),
   commercialRegNo: z.string().max(50).optional().nullable(),
   vatNumber: z.string().max(50).optional().nullable(),
+  maintenanceMode: z.boolean().optional(),
+  posEnabled: z.boolean().optional(),
   // Payment Gateway
   tapEnabled: z.boolean().optional(),
   tapTestMode: z.boolean().optional(),
@@ -82,8 +100,10 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { id, createdAt, updatedAt, ...rawData } = body;
+    const rawData = await req.json();
+    delete rawData.id;
+    delete rawData.createdAt;
+    delete rawData.updatedAt;
     const parsed = settingsSchema.safeParse(rawData);
     if (!parsed.success) {
       return NextResponse.json(
@@ -91,7 +111,30 @@ export async function PUT(req: Request) {
         { status: 400 }
       );
     }
-    const data = parsed.data;
+    const {
+      contactEmail,
+      contactPhone,
+      shippingFee,
+      freeShippingThreshold,
+      freeShippingMin,
+      flatShippingRate,
+      logo,
+      favicon,
+      address,
+      ...parsedData
+    } = parsed.data;
+    const data = {
+      ...parsedData,
+      ...(contactEmail !== undefined ? { storeEmail: contactEmail } : {}),
+      ...(contactPhone !== undefined ? { storePhone: contactPhone } : {}),
+      ...(flatShippingRate !== undefined ? { flatShippingRate: String(flatShippingRate) } : {}),
+      ...(freeShippingMin !== undefined ? { freeShippingMin: String(freeShippingMin) } : {}),
+      ...(shippingFee !== undefined ? { flatShippingRate: String(shippingFee) } : {}),
+      ...(freeShippingThreshold !== undefined ? { freeShippingMin: String(freeShippingThreshold) } : {}),
+      ...(logo !== undefined ? { storeLogo: logo } : {}),
+      ...(favicon !== undefined ? { storeFavicon: favicon } : {}),
+      ...(address !== undefined ? { storeAddress: address } : {}),
+    };
 
     let settings = await db.query.storeSettings.findFirst();
     if (settings) {
