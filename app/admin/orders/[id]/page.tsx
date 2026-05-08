@@ -266,6 +266,7 @@ export default function OrderDetailPage() {
   }, [fetchOrder]);
 
   async function handleSave() {
+    if (isFullyRefunded) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
@@ -370,8 +371,9 @@ export default function OrderDetailPage() {
     .filter((r) => r.status === "COMPLETED" || r.status === "APPROVED")
     .reduce((sum, r) => sum + r.amount, 0);
 
+  const isFullyRefunded = order?.status === "REFUNDED" || order?.paymentStatus === "REFUNDED";
   const maxRefundable = order ? order.totalAmount - totalRefunded : 0;
-  const canRefund = order && order.paymentStatus !== "REFUNDED" && maxRefundable > 0;
+  const canRefund = order && !isFullyRefunded && maxRefundable > 0;
 
   const selectedRefundTotal = refundType === "FULL"
     ? maxRefundable
@@ -382,7 +384,7 @@ export default function OrderDetailPage() {
   const hasUnfulfilled = Object.keys(fulfillItems).length > 0;
 
   async function handleFulfill() {
-    if (!order) return;
+    if (!order || isFullyRefunded) return;
     setFulfillProcessing(true);
     try {
       const items = Object.entries(fulfillItems)
@@ -532,10 +534,10 @@ export default function OrderDetailPage() {
               )}
             </Button>
           )}
-          {hasUnfulfilled && (
+          {(hasUnfulfilled || isFullyRefunded) && (
             <Dialog open={fulfillOpen} onOpenChange={setFulfillOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={isFullyRefunded}>
                   <Truck className="mr-2 h-4 w-4" />
                   {t("fulfill")}
                 </Button>
@@ -769,7 +771,7 @@ export default function OrderDetailPage() {
               </DialogContent>
             </Dialog>
           )}
-          <Button onClick={handleSave} disabled={saving || !hasChanges}>
+          <Button onClick={handleSave} disabled={saving || !hasChanges || isFullyRefunded}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("saveChanges")}
           </Button>
@@ -883,7 +885,7 @@ export default function OrderDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>{t("management.orderStatus")}</Label>
-                  <Select value={status} onValueChange={setStatus}>
+                  <Select value={status} onValueChange={setStatus} disabled={isFullyRefunded}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -901,7 +903,7 @@ export default function OrderDetailPage() {
 
                 <div className="space-y-2">
                   <Label>{t("management.paymentStatus")}</Label>
-                  <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                  <Select value={paymentStatus} onValueChange={setPaymentStatus} disabled={isFullyRefunded}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -919,7 +921,7 @@ export default function OrderDetailPage() {
 
                 <div className="space-y-2">
                   <Label>{t("management.fulfillmentStatus")}</Label>
-                  <Select value={fulfillmentStatus} onValueChange={setFulfillmentStatus}>
+                  <Select value={fulfillmentStatus} onValueChange={setFulfillmentStatus} disabled={isFullyRefunded}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -946,6 +948,7 @@ export default function OrderDetailPage() {
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder={t("management.trackingNumberPlaceholder")}
+                  disabled={isFullyRefunded}
                 />
               </div>
 
@@ -956,6 +959,7 @@ export default function OrderDetailPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t("management.internalNotesPlaceholder")}
                   rows={3}
+                  disabled={isFullyRefunded}
                 />
               </div>
             </CardContent>
