@@ -54,6 +54,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { formatCurrency, formatDateTime, getStatusColor } from "@/lib/helpers";
+import { AdminOrderDetailSkeleton } from "@/components/admin/admin-skeletons";
 
 interface Order {
   id: string;
@@ -455,11 +456,7 @@ export default function OrderDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <AdminOrderDetailSkeleton />;
   }
 
   if (!order) {
