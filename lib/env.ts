@@ -41,7 +41,7 @@ const envSchema = z.object({
     .url("NEXT_PUBLIC_APP_URL must be a valid URL")
     .default("http://localhost:3000"),
 
-  // Email (Resend) — required for production
+  // Email (Resend) — optional; email service logs instead when missing
   RESEND_API_KEY: optionalResendApiKey,
   EMAIL_FROM: z.string().optional().default("ShopFlow <onboarding@resend.dev>"),
 
@@ -50,7 +50,7 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
 
-  // Upstash Redis (rate limiting) — required for production
+  // Upstash Redis (rate limiting) — optional; rate limiter uses in-memory fallback when missing
   UPSTASH_REDIS_REST_URL: optionalUrl,
   UPSTASH_REDIS_REST_TOKEN: optionalNonEmptyString,
 
@@ -108,32 +108,6 @@ const envSchema = z.object({
   MONITOR_RAPID_FIRE_COUNT: z.string().regex(/^\d+$/).optional(),
   MONITOR_ALERT_COOLDOWN_MS: z.string().regex(/^\d+$/).optional(),
   MONITOR_ADMIN_EMAIL: z.string().email().optional().or(z.literal("")),
-}).superRefine((data, ctx) => {
-  // next build sets NODE_ENV=production but these services aren't needed at build time
-  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
-  if (data.NODE_ENV === "production" && !isBuildPhase) {
-    if (!data.RESEND_API_KEY) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "RESEND_API_KEY is required in production",
-        path: ["RESEND_API_KEY"],
-      });
-    }
-    if (!data.UPSTASH_REDIS_REST_URL) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "UPSTASH_REDIS_REST_URL is required in production (rate limiting)",
-        path: ["UPSTASH_REDIS_REST_URL"],
-      });
-    }
-    if (!data.UPSTASH_REDIS_REST_TOKEN) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "UPSTASH_REDIS_REST_TOKEN is required in production (rate limiting)",
-        path: ["UPSTASH_REDIS_REST_TOKEN"],
-      });
-    }
-  }
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -154,7 +128,26 @@ function validateEnv(): Env {
     }
   }
 
-  return result.success ? result.data : (process.env as unknown as Env);
+  const data = result.success ? result.data : (process.env as unknown as Env);
+
+  if (
+    result.success &&
+    data.NODE_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  ) {
+    const warnings: string[] = [];
+    if (!data.RESEND_API_KEY) {
+      warnings.push("RESEND_API_KEY is not set; transactional emails will be logged, not sent.");
+    }
+    if (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN) {
+      warnings.push("Upstash Redis is not configured; rate limiting will use per-instance memory.");
+    }
+    if (warnings.length > 0) {
+      console.warn("Optional production services missing:\n" + warnings.map((msg) => `  ${msg}`).join("\n"));
+    }
+  }
+
+  return data;
 }
 
 export const env = validateEnv();
