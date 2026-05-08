@@ -33,10 +33,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Download, Mail, Users, Send, FileText, Eye, History, PenLine } from "lucide-react";
+import { Loader2, Download, Mail, Users, Send, FileText, Eye, History, PenLine, Plus, Pencil, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Newsletter email templates ──
+const BUILTIN_TEMPLATE_PREFIX = "builtin:";
+const SAVED_TEMPLATE_PREFIX = "saved:";
+const BLANK_TEMPLATE_VALUE = `${BUILTIN_TEMPLATE_PREFIX}blank`;
+
 const EMAIL_TEMPLATES = [
   {
     id: "blank",
@@ -135,6 +139,16 @@ interface Campaign {
   createdAt: string;
 }
 
+interface NewsletterTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  previewText: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function NewsletterPage() {
   const t = useTranslations("admin.newsletter");
   // ── Subscriber state ──
@@ -147,12 +161,25 @@ export default function NewsletterPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
 
+  // ── Template state ──
+  const [templates, setTemplates] = useState<NewsletterTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<NewsletterTemplate | null>(null);
+  const [templateName, setTemplateName] = useState("");
+  const [templateSubject, setTemplateSubject] = useState("");
+  const [templatePreviewText, setTemplatePreviewText] = useState("");
+  const [templateContent, setTemplateContent] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("compose");
+
   // ── Composer state ──
   const [subject, setSubject] = useState("");
   const [previewText, setPreviewText] = useState("");
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState("blank");
+  const [selectedTemplate, setSelectedTemplate] = useState(BLANK_TEMPLATE_VALUE);
 
   // ── Preview dialog ──
   const [showPreview, setShowPreview] = useState(false);
@@ -170,7 +197,7 @@ export default function NewsletterPage() {
     } finally {
       setLoading(false);
     }
-  }, [subStatus, page]);
+  }, [subStatus, page, t]);
 
   const fetchCampaigns = useCallback(async () => {
     setCampaignsLoading(true);
@@ -185,17 +212,118 @@ export default function NewsletterPage() {
     } finally {
       setCampaignsLoading(false);
     }
-  }, []);
+  }, [t]);
+
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch("/api/newsletter/templates");
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data.templates || []);
+      } else {
+        toast.error(t("toasts.loadTemplatesFailed"));
+      }
+    } catch {
+      toast.error(t("toasts.loadTemplatesFailed"));
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => { fetchSubscribers(); }, [fetchSubscribers]);
   useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
+  useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
   function applyTemplate(templateId: string) {
-    const template = EMAIL_TEMPLATES.find((t) => t.id === templateId);
+    const isSavedTemplate = templateId.startsWith(SAVED_TEMPLATE_PREFIX);
+    const template = isSavedTemplate
+      ? templates.find((t) => `${SAVED_TEMPLATE_PREFIX}${t.id}` === templateId)
+      : EMAIL_TEMPLATES.find((t) => `${BUILTIN_TEMPLATE_PREFIX}${t.id}` === templateId);
+
     if (template) {
       setSubject(template.subject);
+      setPreviewText("previewText" in template ? template.previewText || "" : "");
       setContent(template.content);
       setSelectedTemplate(templateId);
+    }
+  }
+
+  function openTemplateDialog(template?: NewsletterTemplate) {
+    if (template) {
+      setEditingTemplate(template);
+      setTemplateName(template.name);
+      setTemplateSubject(template.subject);
+      setTemplatePreviewText(template.previewText || "");
+      setTemplateContent(template.content);
+    } else {
+      setEditingTemplate(null);
+      setTemplateName("");
+      setTemplateSubject(subject);
+      setTemplatePreviewText(previewText);
+      setTemplateContent(content);
+    }
+    setShowTemplateDialog(true);
+  }
+
+  async function saveTemplate() {
+    if (!templateName.trim() || !templateContent.trim()) {
+      toast.error(t("toasts.templateRequired"));
+      return;
+    }
+
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/newsletter/templates", {
+        method: editingTemplate ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingTemplate?.id,
+          name: templateName,
+          subject: templateSubject,
+          previewText: templatePreviewText || undefined,
+          content: templateContent,
+        }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error(result.error || t("toasts.templateSaveFailed"));
+        return;
+      }
+
+      toast.success(t("toasts.templateSaved"));
+      setShowTemplateDialog(false);
+      fetchTemplates();
+    } catch {
+      toast.error(t("toasts.templateSaveFailed"));
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
+  async function deleteTemplate(id: string) {
+    setDeletingTemplateId(id);
+    try {
+      const res = await fetch(`/api/newsletter/templates?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error(result.error || t("toasts.templateDeleteFailed"));
+        return;
+      }
+
+      toast.success(t("toasts.templateDeleted"));
+      if (selectedTemplate === `${SAVED_TEMPLATE_PREFIX}${id}`) {
+        setSelectedTemplate(BLANK_TEMPLATE_VALUE);
+      }
+      fetchTemplates();
+    } catch {
+      toast.error(t("toasts.templateDeleteFailed"));
+    } finally {
+      setDeletingTemplateId(null);
     }
   }
 
@@ -239,7 +367,7 @@ export default function NewsletterPage() {
       setSubject("");
       setPreviewText("");
       setContent("");
-      setSelectedTemplate("blank");
+      setSelectedTemplate(BLANK_TEMPLATE_VALUE);
       // Refresh campaigns
       fetchCampaigns();
     } catch {
@@ -299,9 +427,10 @@ export default function NewsletterPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="compose">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="compose"><PenLine className="h-4 w-4 mr-1" />{t("tabs.compose")}</TabsTrigger>
+          <TabsTrigger value="templates"><FileText className="h-4 w-4 mr-1" />{t("tabs.templates")}</TabsTrigger>
           <TabsTrigger value="campaigns"><History className="h-4 w-4 mr-1" />{t("tabs.sentCampaigns")}</TabsTrigger>
           <TabsTrigger value="subscribers"><Users className="h-4 w-4 mr-1" />{t("tabs.subscribers")}</TabsTrigger>
         </TabsList>
@@ -319,21 +448,39 @@ export default function NewsletterPage() {
               {/* Template Selector */}
               <div className="space-y-2">
                 <Label>{t("compose.startFromTemplate")}</Label>
-                <Select value={selectedTemplate} onValueChange={applyTemplate}>
-                  <SelectTrigger className="w-full sm:w-[280px]">
-                    <SelectValue placeholder={t("compose.chooseTemplate")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMAIL_TEMPLATES.map((tmpl) => (
-                      <SelectItem key={tmpl.id} value={tmpl.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-3.5 w-3.5" />
-                          {t(`templates.${tmpl.nameKey}`)}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Select value={selectedTemplate} onValueChange={applyTemplate}>
+                    <SelectTrigger className="w-full sm:w-[320px]">
+                      <SelectValue placeholder={t("compose.chooseTemplate")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EMAIL_TEMPLATES.map((tmpl) => (
+                        <SelectItem key={tmpl.id} value={`${BUILTIN_TEMPLATE_PREFIX}${tmpl.id}`}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5" />
+                            {t(`templates.${tmpl.nameKey}`)}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {templates.map((tmpl) => (
+                        <SelectItem key={tmpl.id} value={`${SAVED_TEMPLATE_PREFIX}${tmpl.id}`}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3.5 w-3.5" />
+                            {tmpl.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => openTemplateDialog()}
+                    disabled={!content.trim()}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />{t("compose.saveAsTemplate")}
+                  </Button>
+                </div>
               </div>
 
               {/* Subject */}
@@ -396,6 +543,90 @@ export default function NewsletterPage() {
                   {sending ? t("compose.sending") : t("compose.sendTo", { count: data?.counts.active ?? 0 })}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ════════════════ Templates Tab ════════════════ */}
+        <TabsContent value="templates" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />{t("templateManager.title")}</CardTitle>
+                <CardDescription>{t("templateManager.description")}</CardDescription>
+              </div>
+              <Button onClick={() => openTemplateDialog()}>
+                <Plus className="h-4 w-4 mr-2" />{t("templateManager.addTemplate")}
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {templatesLoading ? (
+                <div className="space-y-3 p-6">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-[30%]" />
+                      <Skeleton className="h-4 w-[40%]" />
+                      <Skeleton className="h-4 w-[15%]" />
+                    </div>
+                  ))}
+                </div>
+              ) : !templates.length ? (
+                <div className="text-center py-20 text-muted-foreground">
+                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>{t("templateManager.noTemplates")}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("templateManager.name")}</TableHead>
+                        <TableHead>{t("templateManager.subject")}</TableHead>
+                        <TableHead>{t("templateManager.updatedAt")}</TableHead>
+                        <TableHead className="text-right">{t("templateManager.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templates.map((template) => (
+                        <TableRow key={template.id}>
+                          <TableCell className="font-medium">{template.name}</TableCell>
+                          <TableCell className="max-w-[320px] truncate">{template.subject || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(template.updatedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  applyTemplate(`${SAVED_TEMPLATE_PREFIX}${template.id}`);
+                                  setActiveTab("compose");
+                                }}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />{t("templateManager.use")}
+                              </Button>
+                              <Button size="icon" variant="outline" onClick={() => openTemplateDialog(template)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                onClick={() => deleteTemplate(template.id)}
+                                disabled={deletingTemplateId === template.id}
+                              >
+                                {deletingTemplateId === template.id
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Trash2 className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -547,6 +778,66 @@ export default function NewsletterPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Template Dialog ── */}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplate ? t("templateDialog.editTitle") : t("templateDialog.addTitle")}
+            </DialogTitle>
+            <DialogDescription>{t("templateDialog.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t("templateDialog.name")} <span className="text-red-500">*</span></Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder={t("templateDialog.namePlaceholder")}
+                maxLength={100}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("compose.subjectLine")}</Label>
+              <Input
+                value={templateSubject}
+                onChange={(e) => setTemplateSubject(e.target.value)}
+                placeholder={t("compose.subjectPlaceholder")}
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("compose.previewText")} <span className="text-muted-foreground text-xs">{t("compose.optional")}</span></Label>
+              <Input
+                value={templatePreviewText}
+                onChange={(e) => setTemplatePreviewText(e.target.value)}
+                placeholder={t("compose.previewTextPlaceholder")}
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("compose.emailContent")} <span className="text-red-500">*</span></Label>
+              <Textarea
+                value={templateContent}
+                onChange={(e) => setTemplateContent(e.target.value)}
+                placeholder={t("compose.emailContentPlaceholder")}
+                className="min-h-[260px] font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">{t("compose.htmlHelp")}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
+              {t("templateDialog.cancel")}
+            </Button>
+            <Button onClick={saveTemplate} disabled={savingTemplate}>
+              {savingTemplate && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editingTemplate ? t("templateDialog.update") : t("templateDialog.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Preview Dialog ── */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>

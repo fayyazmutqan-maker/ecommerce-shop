@@ -2349,7 +2349,13 @@
       "toasts": {
         "loadSubscribersFailed": "Failed to load subscribers",
         "loadCampaignsFailed": "Failed to load campaigns",
+        "loadTemplatesFailed": "Failed to load templates",
         "subjectRequired": "Subject and content are required",
+        "templateRequired": "Template name and content are required",
+        "templateSaved": "Template saved",
+        "templateDeleted": "Template deleted",
+        "templateSaveFailed": "Failed to save template",
+        "templateDeleteFailed": "Failed to delete template",
         "sendFailed": "Failed to send newsletter",
         "sendSuccess": "Newsletter sent!",
         "csvExported": "CSV exported"
@@ -2362,6 +2368,7 @@
 
       "tabs": {
         "compose": "Compose",
+        "templates": "Templates",
         "sentCampaigns": "Sent Campaigns",
         "subscribers": "Subscribers"
       },
@@ -2380,8 +2387,32 @@
         "emailContentPlaceholder": "Write your newsletter content. HTML is supported. Use '{{'store_url'}}' for your store link.",
         "htmlHelp": "Use '{{'store_url'}}' for your store URL. HTML tags like <h2>, <p>, <a> are supported.",
         "preview": "Preview",
+        "saveAsTemplate": "Save as Template",
         "sending": "Sending...",
         "sendTo": "Send to {count} Subscribers"
+      },
+
+      "templateManager": {
+        "title": "Newsletter Templates",
+        "description": "Create reusable templates for future newsletter campaigns",
+        "addTemplate": "Add Template",
+        "noTemplates": "No custom templates yet",
+        "name": "Name",
+        "subject": "Subject",
+        "updatedAt": "Updated",
+        "actions": "Actions",
+        "use": "Use"
+      },
+
+      "templateDialog": {
+        "addTitle": "Add Template",
+        "editTitle": "Edit Template",
+        "description": "Saved templates can be selected from the compose screen.",
+        "name": "Template Name",
+        "namePlaceholder": "e.g. Weekend sale",
+        "cancel": "Cancel",
+        "save": "Save Template",
+        "update": "Update Template"
       },
 
       "campaignHistory": {

@@ -2349,7 +2349,13 @@
       "toasts": {
         "loadSubscribersFailed": "فشل تحميل المشتركين",
         "loadCampaignsFailed": "فشل تحميل الحملات",
+        "loadTemplatesFailed": "فشل تحميل القوالب",
         "subjectRequired": "الموضوع والمحتوى مطلوبان",
+        "templateRequired": "اسم القالب والمحتوى مطلوبان",
+        "templateSaved": "تم حفظ القالب",
+        "templateDeleted": "تم حذف القالب",
+        "templateSaveFailed": "فشل حفظ القالب",
+        "templateDeleteFailed": "فشل حذف القالب",
         "sendFailed": "فشل إرسال النشرة البريدية",
         "sendSuccess": "تم إرسال النشرة البريدية!",
         "csvExported": "تم تصدير CSV"
@@ -2362,6 +2368,7 @@
 
       "tabs": {
         "compose": "إنشاء",
+        "templates": "القوالب",
         "sentCampaigns": "الحملات المرسلة",
         "subscribers": "المشتركون"
       },
@@ -2380,8 +2387,32 @@
         "emailContentPlaceholder": "اكتب محتوى نشرتك البريدية. يدعم HTML. استخدم '{{'store_url'}}' لرابط متجرك.",
         "htmlHelp": "استخدم '{{'store_url'}}' لرابط متجرك. علامات HTML مثل <h2>، <p>، <a> مدعومة.",
         "preview": "معاينة",
+        "saveAsTemplate": "حفظ كقالب",
         "sending": "جاري الإرسال...",
         "sendTo": "إرسال إلى {count} مشترك"
+      },
+
+      "templateManager": {
+        "title": "قوالب النشرة البريدية",
+        "description": "أنشئ قوالب قابلة لإعادة الاستخدام لحملات النشرة البريدية القادمة",
+        "addTemplate": "إضافة قالب",
+        "noTemplates": "لا توجد قوالب مخصصة بعد",
+        "name": "الاسم",
+        "subject": "الموضوع",
+        "updatedAt": "آخر تحديث",
+        "actions": "الإجراءات",
+        "use": "استخدام"
+      },
+
+      "templateDialog": {
+        "addTitle": "إضافة قالب",
+        "editTitle": "تعديل القالب",
+        "description": "يمكن اختيار القوالب المحفوظة من شاشة إنشاء النشرة.",
+        "name": "اسم القالب",
+        "namePlaceholder": "مثال: تخفيضات نهاية الأسبوع",
+        "cancel": "إلغاء",
+        "save": "حفظ القالب",
+        "update": "تحديث القالب"
       },
 
       "campaignHistory": {

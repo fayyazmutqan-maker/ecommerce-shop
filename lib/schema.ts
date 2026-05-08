@@ -879,6 +879,20 @@ export const newsletterCampaigns = pgTable("NewsletterCampaign", {
 });
 
 // ============================================================
+// NEWSLETTER TEMPLATES
+// ============================================================
+
+export const newsletterTemplates = pgTable("NewsletterTemplate", {
+  id: cuid(),
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
+  previewText: text("previewText"),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+// ============================================================
 // ABANDONED CARTS
 // ============================================================
 
