@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import {
   refunds,
   refundItems,
   orders,
-  orderItems,
   transactions,
   orderTimeline,
-  storeSettings,
   products,
   productVariants,
   channelOrders,
@@ -171,10 +169,9 @@ export async function POST(req: Request) {
           });
         }
       }
-      refundAmount = refundItemsData.reduce((sum, i) => sum + i.amount, 0);
-      if (refundAmount > maxRefundable + 0.01) {
-        refundAmount = maxRefundable;
-      }
+      // A full refund must include the full remaining order amount, including
+      // shipping, discounts, and tax adjustments, not only item line totals.
+      refundAmount = Math.round(maxRefundable * 100) / 100;
     } else {
       if (!data.items || data.items.length === 0) {
         return NextResponse.json(
@@ -298,11 +295,14 @@ export async function POST(req: Request) {
       const newTotalRefunded = alreadyRefunded + (refundStatus === "COMPLETED" ? refundAmount : 0);
       const isFullyRefunded = Math.abs(newTotalRefunded - totalAmount) < 0.01;
 
+      const nextPaymentStatus = isFullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED";
+      const nextOrderStatus = isFullyRefunded ? "REFUNDED" : order.status;
+
       await tx
         .update(orders)
         .set({
-          paymentStatus: isFullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED",
-          status: isFullyRefunded ? "REFUNDED" : order.status,
+          paymentStatus: nextPaymentStatus,
+          status: nextOrderStatus,
           refundReason: data.reason || order.refundReason,
         })
         .where(eq(orders.id, data.orderId));
@@ -337,16 +337,24 @@ export async function POST(req: Request) {
         type: "REFUND",
       });
 
-      return refund;
+      return {
+        refund,
+        order: {
+          id: data.orderId,
+          status: nextOrderStatus,
+          paymentStatus: nextPaymentStatus,
+          refundReason: data.reason || order.refundReason,
+        },
+      };
     });
 
     // Report credit note to ZATCA (non-blocking)
-    reportCreditNoteToZatca(result.id).catch((err) =>
+    reportCreditNoteToZatca(result.refund.id).catch((err) =>
       console.error("ZATCA credit note reporting failed:", err)
     );
 
     // Track for anomaly detection (non-blocking)
-    trackInvoiceEvent({ ip, type: "refund", userId: session.user.id, refundId: result.id });
+    trackInvoiceEvent({ ip, type: "refund", userId: session.user.id, refundId: result.refund.id });
 
     // Sync refund to Meta Commerce if this is a Meta order (non-blocking)
     syncRefundToMeta(data.orderId, refundItemsData, order.items, data.reason || "BUYERS_REMORSE").catch((err) =>

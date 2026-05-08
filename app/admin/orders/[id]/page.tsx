@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -143,6 +143,16 @@ interface Refund {
   items: { id: string; orderItemId: string; quantity: number; amount: number }[];
 }
 
+interface RefundResponse {
+  refund?: Refund;
+  order?: {
+    id: string;
+    status: string;
+    paymentStatus: string;
+    refundReason: string | null;
+  };
+}
+
 interface Fulfillment {
   id: string;
   status: string;
@@ -158,7 +168,6 @@ interface Fulfillment {
 
 export default function OrderDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const t = useTranslations("admin.orderDetail");
   const orderId = params.id as string;
 
@@ -195,13 +204,10 @@ export default function OrderDetailPage() {
   // ZATCA state
   const [zatcaRetrying, setZatcaRetrying] = useState(false);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [orderId]);
-
-  async function fetchOrder() {
+  const fetchOrder = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}`);
+      const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch order");
       const data = await res.json();
       setOrder(data);
@@ -212,14 +218,14 @@ export default function OrderDetailPage() {
       setNotes(data.notes || "");
 
       // Fetch refunds for this order
-      const refundsRes = await fetch(`/api/refunds?orderId=${orderId}`);
+      const refundsRes = await fetch(`/api/refunds?orderId=${orderId}`, { cache: "no-store" });
       if (refundsRes.ok) {
         const refundsData = await refundsRes.json();
         setOrderRefunds(refundsData);
       }
 
       // Fetch fulfillments
-      const fulfillRes = await fetch(`/api/fulfillments?orderId=${orderId}`);
+      const fulfillRes = await fetch(`/api/fulfillments?orderId=${orderId}`, { cache: "no-store" });
       if (fulfillRes.ok) {
         const fulfillData = await fulfillRes.json();
         setOrderFulfillments(fulfillData);
@@ -253,7 +259,11 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [orderId, t]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   async function handleSave() {
     setSaving(true);
@@ -327,12 +337,27 @@ export default function OrderDetailPage() {
         throw new Error(err.error || "Failed to process refund");
       }
 
+      const result = await res.json() as RefundResponse;
+      if (result.order) {
+        setOrder((current) => current ? {
+          ...current,
+          status: result.order!.status,
+          paymentStatus: result.order!.paymentStatus,
+        } : current);
+        setStatus(result.order.status);
+        setPaymentStatus(result.order.paymentStatus);
+      }
+      if (result.refund) {
+        setOrderRefunds((current) => [
+          result.refund!,
+          ...current.filter((refund) => refund.id !== result.refund!.id),
+        ]);
+      }
+
       toast.success(refundType === "FULL" ? t("toasts.fullRefundSuccess") : t("toasts.partialRefundSuccess"));
       setRefundOpen(false);
       setRefundReason("");
       setRefundType("PARTIAL");
-      // Refresh order data
-      setLoading(true);
       await fetchOrder();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : t("toasts.refundFailed"));
