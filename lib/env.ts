@@ -17,6 +17,21 @@ const optionalResendApiKey = z.preprocess(
   z.string().startsWith("re_").optional(),
 );
 
+const placeholderPatterns = [
+  /^your[-_]/i,
+  /[-_]here$/i,
+  /^change[-_]?me$/i,
+  /^example$/i,
+  /^\.\.\.$/,
+];
+
+export function hasRealEnvValue(value: string | undefined | null): value is string {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return !placeholderPatterns.some((pattern) => pattern.test(trimmed));
+}
+
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),

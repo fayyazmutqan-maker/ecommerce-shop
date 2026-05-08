@@ -12,7 +12,7 @@ import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/permissions";
 import { eq } from "drizzle-orm";
 import { getGoogleOAuthUrl } from "@/lib/google-merchant";
-import { env } from "@/lib/env";
+import { env, hasRealEnvValue } from "@/lib/env";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
 import crypto from "crypto";
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+  if (!hasRealEnvValue(env.GOOGLE_CLIENT_ID) || !hasRealEnvValue(env.GOOGLE_CLIENT_SECRET)) {
     return NextResponse.json(
       { error: "Google OAuth credentials not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET." },
       { status: 400 },
