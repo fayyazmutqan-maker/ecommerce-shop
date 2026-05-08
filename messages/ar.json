@@ -641,6 +641,7 @@
       "invoice": "الفاتورة",
       "retryZatca": "إعادة محاولة زاتكا",
       "retrying": "جاري الإعادة...",
+      "zatcaSubmitted": "تم الإرسال",
       "fulfill": "تنفيذ",
       "refund": "استرجاع",
       "saveChanges": "حفظ التغييرات",

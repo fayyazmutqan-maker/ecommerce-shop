@@ -479,6 +479,9 @@ export default function OrderDetailPage() {
     fulfillmentStatus !== order.fulfillmentStatus ||
     trackingNumber !== (order.trackingNumber || "") ||
     notes !== (order.notes || "");
+  const zatcaSubmitted = order.zatcaStatus === "REPORTED" || order.zatcaStatus === "CLEARED";
+  const canRetryZatca = order.zatcaStatus === "FAILED" || order.zatcaStatus === "PENDING";
+  const zatcaStatusLabel = zatcaSubmitted ? t("zatcaSubmitted") : order.zatcaStatus;
 
   return (
     <div className="space-y-6">
@@ -499,11 +502,11 @@ export default function OrderDetailPage() {
               )}
               {order.zatcaStatus && order.zatcaStatus !== "NOT_APPLICABLE" && (
                 <Badge variant={
-                  order.zatcaStatus === "REPORTED" || order.zatcaStatus === "CLEARED" ? "default"
+                  zatcaSubmitted ? "default"
                   : order.zatcaStatus === "FAILED" ? "destructive"
                   : "secondary"
                 }>
-                  ZATCA: {order.zatcaStatus}
+                  ZATCA: {zatcaStatusLabel}
                 </Badge>
               )}
             </div>
@@ -520,7 +523,12 @@ export default function OrderDetailPage() {
             <FileText className="mr-2 h-4 w-4" />
             {t("invoice")}
           </Button>
-          {(order.zatcaStatus === "FAILED" || order.zatcaStatus === "PENDING") && (
+          {zatcaSubmitted ? (
+            <Button variant="outline" size="sm" disabled>
+              <FileText className="mr-2 h-4 w-4" />
+              {t("zatcaSubmitted")}
+            </Button>
+          ) : canRetryZatca && (
             <Button
               variant="outline"
               size="sm"

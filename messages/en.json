@@ -641,6 +641,7 @@
       "invoice": "Invoice",
       "retryZatca": "Retry ZATCA",
       "retrying": "Retrying...",
+      "zatcaSubmitted": "Submitted",
       "fulfill": "Fulfill",
       "refund": "Refund",
       "saveChanges": "Save Changes",

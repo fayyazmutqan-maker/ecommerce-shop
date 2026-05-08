@@ -11,11 +11,38 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { reportOrderToZatca, reportCreditNoteToZatca } from "@/lib/zatca/service";
 import { zatcaRetryLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { db } from "@/lib/db";
 
 const retrySchema = z.object({
   orderId: z.string().min(1).optional(),
   refundId: z.string().min(1).optional(),
 }).refine((d) => d.orderId || d.refundId, { message: "orderId or refundId is required" });
+
+async function validateZatcaConfiguration() {
+  const settings = await db.query.storeSettings.findFirst({
+    columns: {
+      zatcaEnabled: true,
+      vatNumber: true,
+      zatcaCsid: true,
+      zatcaSecret: true,
+      zatcaPcsid: true,
+      zatcaPcsidSecret: true,
+    },
+  });
+
+  if (!settings?.zatcaEnabled) {
+    return "ZATCA is not enabled in tax settings";
+  }
+
+  const csid = settings.zatcaPcsid || settings.zatcaCsid;
+  const secret = settings.zatcaPcsidSecret || settings.zatcaSecret;
+
+  if (!settings.vatNumber || !csid || !secret) {
+    return "ZATCA is not fully configured. VAT number, CSID, and secret are required";
+  }
+
+  return null;
+}
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +60,14 @@ export async function POST(req: Request) {
     const parsed = retrySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const configurationError = await validateZatcaConfiguration();
+    if (configurationError) {
+      return NextResponse.json(
+        { success: false, status: "FAILED", error: configurationError, errors: [configurationError] },
+        { status: 400 },
+      );
     }
 
     const result = parsed.data.refundId
