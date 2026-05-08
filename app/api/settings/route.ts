@@ -7,40 +7,55 @@ import { audit, auditMeta } from "@/lib/audit";
 import { storeSettings } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
+const optionalString = (max: number) =>
+  z.string().max(max).optional().nullable();
+
+const optionalUrlString = z.string().url().max(500).or(z.literal("")).optional().nullable();
+
+const optionalEmail = z.string().email().max(200).or(z.literal("")).optional().nullable();
+
+const optionalNumber = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") return undefined;
+    return value;
+  },
+  z.coerce.number().min(0).optional(),
+);
+
 const settingsSchema = z.object({
   storeName: z.string().max(100).optional(),
-  storeDescription: z.string().max(500).optional(),
-  storeEmail: z.string().email().max(200).or(z.literal("")).optional(),
-  storePhone: z.string().max(30).optional(),
-  storeAddress: z.string().max(500).optional(),
-  contactEmail: z.string().email().max(200).optional(),
-  contactPhone: z.string().max(30).optional(),
+  storeDescription: optionalString(500),
+  storeEmail: optionalEmail,
+  storePhone: optionalString(30),
+  storeAddress: optionalString(500),
+  contactEmail: optionalEmail,
+  contactPhone: optionalString(30),
   currency: z.string().max(10).optional(),
   currencySymbol: z.string().max(20).optional(),
-  taxRate: z.number().min(0).max(100).optional(),
+  taxRate: optionalNumber,
   taxIncluded: z.boolean().optional(),
   shippingEnabled: z.boolean().optional(),
-  freeShippingMin: z.number().min(0).optional(),
-  flatShippingRate: z.number().min(0).optional(),
-  shippingFee: z.number().min(0).optional(),
-  freeShippingThreshold: z.number().min(0).optional(),
+  freeShippingMin: optionalNumber,
+  flatShippingRate: optionalNumber,
+  shippingFee: optionalNumber,
+  freeShippingThreshold: optionalNumber,
   timezone: z.string().max(100).optional(),
   weightUnit: z.string().max(10).optional(),
-  storeLogo: z.string().url().max(500).optional().or(z.literal("")).nullable(),
-  storeFavicon: z.string().url().max(500).optional().or(z.literal("")).nullable(),
-  logo: z.string().url().max(500).optional().nullable(),
-  favicon: z.string().url().max(500).optional().nullable(),
-  address: z.string().max(500).optional(),
-  socialFacebook: z.string().max(300).optional().nullable(),
-  socialTwitter: z.string().max(300).optional().nullable(),
-  socialInstagram: z.string().max(300).optional().nullable(),
-  socialYoutube: z.string().max(300).optional().nullable(),
-  socialTiktok: z.string().max(300).optional().nullable(),
-  metaTitle: z.string().max(200).optional().nullable(),
-  metaDescription: z.string().max(500).optional().nullable(),
-  googleAnalyticsId: z.string().max(100).optional().nullable(),
-  commercialRegNo: z.string().max(50).optional().nullable(),
-  vatNumber: z.string().max(50).optional().nullable(),
+  storeLogo: optionalUrlString,
+  storeFavicon: optionalUrlString,
+  logo: optionalUrlString,
+  favicon: optionalUrlString,
+  address: optionalString(500),
+  socialFacebook: optionalString(300),
+  socialTwitter: optionalString(300),
+  socialInstagram: optionalString(300),
+  socialYoutube: optionalString(300),
+  socialTiktok: optionalString(300),
+  metaTitle: optionalString(200),
+  metaDescription: optionalString(500),
+  googleAnalyticsId: optionalString(100),
+  commercialRegNo: optionalString(50),
+  vatNumber: optionalString(50),
   maintenanceMode: z.boolean().optional(),
   posEnabled: z.boolean().optional(),
   // Payment Gateway

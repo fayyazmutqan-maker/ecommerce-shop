@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Loader2, ExternalLink, CreditCard, Banknote } from "lucide-react";
+import { Save, Loader2, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -76,7 +76,7 @@ export default function SettingsPage() {
       .catch(() => {
         toast.error(t("loadFailed"));
       });
-  }, []);
+  }, [t]);
 
   async function handleSave() {
     setIsLoading(true);
@@ -87,9 +87,14 @@ export default function SettingsPage() {
         body: JSON.stringify(settings),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data && data.id) {
+          setSettings((prev) => ({ ...prev, ...data }));
+        }
         toast.success(t("saved"));
       } else {
-        toast.error(t("saveFailed"));
+        const error = await res.json().catch(() => null);
+        toast.error(error?.error || t("saveFailed"));
       }
     } catch {
       toast.error(t("saveFailed"));
