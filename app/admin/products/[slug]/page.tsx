@@ -156,6 +156,8 @@ interface CategoryItem {
   children?: CategoryItem[];
 }
 
+const NO_CUSTOM_BADGE = "__none__";
+
 export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
@@ -1134,14 +1136,16 @@ export default function EditProductPage() {
               <div className="space-y-2">
                 <Label>Custom Badge</Label>
                 <Select
-                  value={customBadge}
-                  onValueChange={setCustomBadge}
+                  value={customBadge || NO_CUSTOM_BADGE}
+                  onValueChange={(value) =>
+                    setCustomBadge(value === NO_CUSTOM_BADGE ? "" : value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="No badge" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value={NO_CUSTOM_BADGE}>None</SelectItem>
                     {[
                       "New",
                       "Sale",
