@@ -266,6 +266,15 @@ export default function NewsletterPage() {
     setShowTemplateDialog(true);
   }
 
+  function openBuiltInTemplateDialog(template: (typeof EMAIL_TEMPLATES)[number]) {
+    setEditingTemplate(null);
+    setTemplateName(t(`templates.${template.nameKey}`));
+    setTemplateSubject(template.subject);
+    setTemplatePreviewText("");
+    setTemplateContent(template.content);
+    setShowTemplateDialog(true);
+  }
+
   async function saveTemplate() {
     if (!templateName.trim() || !templateContent.trim()) {
       toast.error(t("toasts.templateRequired"));
@@ -570,11 +579,6 @@ export default function NewsletterPage() {
                     </div>
                   ))}
                 </div>
-              ) : !templates.length ? (
-                <div className="text-center py-20 text-muted-foreground">
-                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                  <p>{t("templateManager.noTemplates")}</p>
-                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -582,15 +586,50 @@ export default function NewsletterPage() {
                       <TableRow>
                         <TableHead>{t("templateManager.name")}</TableHead>
                         <TableHead>{t("templateManager.subject")}</TableHead>
+                        <TableHead>{t("templateManager.type")}</TableHead>
                         <TableHead>{t("templateManager.updatedAt")}</TableHead>
                         <TableHead className="text-right">{t("templateManager.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {EMAIL_TEMPLATES.map((template) => (
+                        <TableRow key={template.id}>
+                          <TableCell className="font-medium">{t(`templates.${template.nameKey}`)}</TableCell>
+                          <TableCell className="max-w-[320px] truncate">{template.subject || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{t("templateManager.builtIn")}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  applyTemplate(`${BUILTIN_TEMPLATE_PREFIX}${template.id}`);
+                                  setActiveTab("compose");
+                                }}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />{t("templateManager.use")}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openBuiltInTemplateDialog(template)}
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />{t("templateManager.editCopy")}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                       {templates.map((template) => (
                         <TableRow key={template.id}>
                           <TableCell className="font-medium">{template.name}</TableCell>
                           <TableCell className="max-w-[320px] truncate">{template.subject || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{t("templateManager.custom")}</Badge>
+                          </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {new Date(template.updatedAt).toLocaleDateString()}
                           </TableCell>

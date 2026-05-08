@@ -2399,9 +2399,13 @@
         "noTemplates": "No custom templates yet",
         "name": "Name",
         "subject": "Subject",
+        "type": "Type",
+        "builtIn": "Built-in",
+        "custom": "Custom",
         "updatedAt": "Updated",
         "actions": "Actions",
-        "use": "Use"
+        "use": "Use",
+        "editCopy": "Edit Copy"
       },
 
       "templateDialog": {

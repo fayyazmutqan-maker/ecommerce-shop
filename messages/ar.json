@@ -2399,9 +2399,13 @@
         "noTemplates": "لا توجد قوالب مخصصة بعد",
         "name": "الاسم",
         "subject": "الموضوع",
+        "type": "النوع",
+        "builtIn": "افتراضي",
+        "custom": "مخصص",
         "updatedAt": "آخر تحديث",
         "actions": "الإجراءات",
-        "use": "استخدام"
+        "use": "استخدام",
+        "editCopy": "تعديل نسخة"
       },
 
       "templateDialog": {
