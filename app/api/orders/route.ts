@@ -757,10 +757,12 @@ export async function GET(req: Request) {
       db.select({ value: count() }).from(ordersTable).where(where),
     ]);
 
-    const total = totalRows[0]?.value ?? 0;
     let ordersPayload = orderRows;
+    let total = totalRows[0]?.value ?? 0;
 
     if (isAdmin && refundableOnly && orderRows.length > 0) {
+      console.log(`[Refunds] Processing ${orderRows.length} orders for refundable check`);
+      
       const orderIds = orderRows.map((order) => order.id);
       const completedRefunds = await db.query.refunds.findMany({
         where: and(
@@ -797,6 +799,13 @@ export async function GET(req: Request) {
           ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus) &&
           order.items.some((item) => item.refundableQuantity > 0),
         );
+      
+      console.log(`[Refunds] After filtering: ${ordersPayload.length} orders with refundable items`);
+      
+      // Update total to reflect actual refundable orders count
+      total = ordersPayload.length;
+    } else if (refundableOnly) {
+      console.log(`[Refunds] refundableOnly=true but conditions: isAdmin=${isAdmin}, orderRows.length=${orderRows.length}`);
     }
 
     return NextResponse.json(serializeDecimal({

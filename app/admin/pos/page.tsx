@@ -1021,10 +1021,22 @@ export default function PosPage() {
     item.quantity > 0 ? Number(item.totalPrice) / item.quantity : Number(item.price)
   ), []);
 
-  const isRefundEligible = useCallback((order: RefundOrder) => (
-    ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus) &&
-    order.items.some((item) => getRefundableQuantity(item) > 0)
-  ), [getRefundableQuantity]);
+  const isRefundEligible = useCallback((order: RefundOrder) => {
+    const isPaymentValid = ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus);
+    const hasRefundableItems = order.items.some((item) => {
+      const refundableQty = getRefundableQuantity(item);
+      return refundableQty > 0;
+    });
+    
+    if (!isPaymentValid) {
+      console.debug(`Order ${order.orderNumber}: Invalid payment status ${order.paymentStatus}`);
+    }
+    if (!hasRefundableItems) {
+      console.debug(`Order ${order.orderNumber}: No refundable items`);
+    }
+    
+    return isPaymentValid && hasRefundableItems;
+  }, [getRefundableQuantity]);
 
   useEffect(() => {
     const query = refundOrderSearch.trim();
@@ -1042,21 +1054,26 @@ export default function PosPage() {
       return;
     }
 
+    setRefundSearchLoading(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
-      setRefundSearchLoading(true);
       try {
         const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10&refundable=true`, {
           signal: controller.signal,
+          credentials: "include",
         });
         if (res.ok) {
           const data = await res.json();
           const eligible = (data.orders || []).filter(isRefundEligible);
           refundSearchCacheRef.current.set(cacheKey, eligible);
           setRefundSearchResults(eligible);
+        } else {
+          console.error("Search API error:", res.status, res.statusText);
+          toast.error(t("toasts.failedSearchOrders"));
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Search error:", error);
         toast.error(t("toasts.failedSearchOrders"));
       } finally {
         if (!controller.signal.aborted) setRefundSearchLoading(false);
@@ -1072,12 +1089,21 @@ export default function PosPage() {
   async function fetchRecentRefundOrders() {
     setRecentRefundOrdersLoading(true);
     try {
-      const res = await fetch("/api/orders?limit=20&refundable=true");
+      const res = await fetch("/api/orders?limit=20&refundable=true", {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
-        setRecentRefundOrders((data.orders || []).filter(isRefundEligible).slice(0, 5));
+        console.log("Refundable orders response:", data);
+        const filtered = (data.orders || []).filter(isRefundEligible);
+        console.log("Filtered refundable orders:", filtered.length);
+        setRecentRefundOrders(filtered.slice(0, 5));
+      } else {
+        console.error("API error:", res.status, res.statusText);
+        toast.error(t("toasts.failedSearchOrders"));
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to fetch recent refund orders:", error);
       toast.error(t("toasts.failedSearchOrders"));
     } finally {
       setRecentRefundOrdersLoading(false);
