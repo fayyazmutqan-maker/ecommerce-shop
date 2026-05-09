@@ -243,6 +243,7 @@ export default function PosPage() {
 
   const searchRef = useRef<HTMLInputElement>(null);
   const audioInitialized = useRef(false);
+  const refundSearchCacheRef = useRef<Map<string, RefundOrder[]>>(new Map());
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Printer Hook
@@ -577,6 +578,12 @@ export default function PosPage() {
 
   useEffect(() => {
     function handleShortcut(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === "KeyR") {
+        e.preventDefault();
+        e.stopPropagation();
+        openRefundDialog();
+        return;
+      }
       if (e.key === "F1") { e.preventDefault(); searchRef.current?.focus(); }
       if (e.key === "F2" && cart.length > 0) { e.preventDefault(); setPaymentMethod("cash"); setPaymentOpen(true); }
       if (e.key === "F3" && cart.length > 0) { e.preventDefault(); setPaymentMethod("card"); setPaymentOpen(true); }
@@ -595,10 +602,9 @@ export default function PosPage() {
       if (e.key === "F11") { e.preventDefault(); toggleFullscreen(); }
       if (e.key === "F12" && receiptData) { e.preventDefault(); printer.printReceipt(receiptData); }
       if (e.key === "Escape" && search) { setSearch(""); }
-      if (e.key === "r" && e.ctrlKey && !e.shiftKey) { e.preventDefault(); openRefundDialog(); }
     }
-    window.addEventListener("keydown", handleShortcut);
-    return () => window.removeEventListener("keydown", handleShortcut);
+    window.addEventListener("keydown", handleShortcut, { capture: true });
+    return () => window.removeEventListener("keydown", handleShortcut, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.length, search, soundEnabled, receiptData]);
 
@@ -1002,9 +1008,52 @@ export default function PosPage() {
     fetchRecentRefundOrders();
   }
 
-  function isRefundEligible(order: RefundOrder) {
-    return ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus);
-  }
+  const isRefundEligible = useCallback((order: RefundOrder) => (
+    ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus)
+  ), []);
+
+  useEffect(() => {
+    const query = refundOrderSearch.trim();
+    if (!refundOpen || refundOrder || query.length < 2) {
+      setRefundSearchResults([]);
+      setRefundSearchLoading(false);
+      return;
+    }
+
+    const cacheKey = query.toLowerCase();
+    const cached = refundSearchCacheRef.current.get(cacheKey);
+    if (cached) {
+      setRefundSearchResults(cached);
+      setRefundSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setRefundSearchLoading(true);
+      try {
+        const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const eligible = (data.orders || []).filter(isRefundEligible);
+          refundSearchCacheRef.current.set(cacheKey, eligible);
+          setRefundSearchResults(eligible);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        toast.error(t("toasts.failedSearchOrders"));
+      } finally {
+        if (!controller.signal.aborted) setRefundSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [isRefundEligible, refundOpen, refundOrder, refundOrderSearch, t]);
 
   async function fetchRecentRefundOrders() {
     setRecentRefundOrdersLoading(true);
@@ -1021,22 +1070,8 @@ export default function PosPage() {
     }
   }
 
-  async function searchRefundOrders(query: string) {
+  function searchRefundOrders(query: string) {
     setRefundOrderSearch(query);
-    if (query.length < 2) { setRefundSearchResults([]); return; }
-    setRefundSearchLoading(true);
-    try {
-      const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10`);
-      if (res.ok) {
-        const data = await res.json();
-        const eligible = (data.orders || []).filter(isRefundEligible);
-        setRefundSearchResults(eligible);
-      }
-    } catch {
-      toast.error(t("toasts.failedSearchOrders"));
-    } finally {
-      setRefundSearchLoading(false);
-    }
   }
 
   function selectRefundOrder(order: RefundOrder) {
