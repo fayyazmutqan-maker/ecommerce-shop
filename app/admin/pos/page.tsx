@@ -1233,6 +1233,7 @@ export default function PosPage() {
 
       const payload = {
         orderId: refundOrder.id,
+        idempotencyKey: crypto.randomUUID(),
         type: freshIsFullRefund ? "FULL" : "PARTIAL",
         reason: refundReason || "POS Refund",
         notes: `POS Refund by ${posSession?.staffName || "Staff"}`,

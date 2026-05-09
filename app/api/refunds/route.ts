@@ -24,6 +24,7 @@ import { trackInvoiceEvent } from "@/lib/invoice-monitor";
 
 const createRefundSchema = z.object({
   orderId: z.string().min(1),
+  idempotencyKey: z.string().trim().min(8).max(128).optional(),
   type: z.enum(["FULL", "PARTIAL"]),
   reason: z.string().max(500).optional(),
   notes: z.string().max(1000).optional(),
@@ -105,7 +106,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = parsed.data;
+    const idempotencyHeader = req.headers.get("idempotency-key")?.trim();
+    const data = {
+      ...parsed.data,
+      idempotencyKey: parsed.data.idempotencyKey || idempotencyHeader || undefined,
+    };
+
+    if (data.idempotencyKey && (data.idempotencyKey.length < 8 || data.idempotencyKey.length > 128)) {
+      return NextResponse.json(
+        { error: "Idempotency key must be between 8 and 128 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (data.idempotencyKey) {
+      const existingRefund = await db.query.refunds.findFirst({
+        where: eq(refunds.idempotencyKey, data.idempotencyKey),
+        with: {
+          items: true,
+          order: { columns: { id: true, status: true, paymentStatus: true, refundReason: true } },
+        },
+      });
+
+      if (existingRefund) {
+        return NextResponse.json(serializeDecimal({
+          refund: existingRefund,
+          order: existingRefund.order,
+          idempotent: true,
+        }));
+      }
+    }
 
     // Fetch the order with items and transactions
     const order = await db.query.orders.findFirst({
@@ -181,7 +211,7 @@ export async function POST(req: Request) {
       }
 
       // Validate items belong to this order and check per-item quantity limits
-      const orderItemMap = new Map(order.items.map((i: { id: string; quantity: number }) => [i.id, i]));
+      const orderItemMap = new Map(order.items.map((i: { id: string; quantity: number; totalPrice: string | number }) => [i.id, i]));
       for (const item of data.items) {
         const orderItem = orderItemMap.get(item.orderItemId);
         if (!orderItem) {
@@ -198,10 +228,21 @@ export async function POST(req: Request) {
             { status: 400 }
           );
         }
+        const unitPrice = Number(orderItem.totalPrice) / orderItem.quantity;
+        const maxLineAmount = Math.round(unitPrice * item.quantity * 100) / 100;
+        if (item.amount > maxLineAmount + 0.01) {
+          return NextResponse.json(
+            { error: `Item "${item.orderItemId}" refund amount exceeds remaining refundable line amount (${maxLineAmount.toFixed(2)})` },
+            { status: 400 }
+          );
+        }
       }
 
-      refundAmount = data.items.reduce((sum, i) => sum + i.amount, 0);
-      refundItemsData = data.items;
+      refundAmount = Math.round(data.items.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+      refundItemsData = data.items.map((item) => ({
+        ...item,
+        amount: Math.round(item.amount * 100) / 100,
+      }));
     }
 
     if (refundAmount <= 0) {
@@ -227,26 +268,33 @@ export async function POST(req: Request) {
     let refundStatus = "COMPLETED";
 
     if (paymentTx?.reference) {
+      const tapSecretKey = process.env.TAP_SECRET_KEY;
+      if (!tapSecretKey) {
+        return NextResponse.json(
+          { error: "Original card payment cannot be refunded because Tap Payments is not configured. Re-enable Tap or process and record a manual refund outside this card charge." },
+          { status: 503 }
+        );
+      }
+
       try {
-        const tapSecretKey = process.env.TAP_SECRET_KEY;
-        if (tapSecretKey) {
-          const tapRefund = await createTapRefund(
-            tapSecretKey,
-            paymentTx.reference,
-            refundAmount,
-            order.currency,
-            data.reason || "Admin refund"
-          );
-          tapRefundId = tapRefund.id;
-          // If Tap returns a non-success status, mark as pending
-          if (tapRefund.status !== "REFUNDED" && tapRefund.status !== "refunded") {
-            refundStatus = "PENDING";
-          }
+        const tapRefund = await createTapRefund(
+          tapSecretKey,
+          paymentTx.reference,
+          refundAmount,
+          order.currency,
+          data.reason || "Admin refund"
+        );
+        tapRefundId = tapRefund.id;
+        // If Tap returns a non-success status, mark as pending.
+        if (tapRefund.status !== "REFUNDED" && tapRefund.status !== "refunded") {
+          refundStatus = "PENDING";
         }
       } catch (tapError) {
         console.error("Tap refund failed:", tapError);
-        // Still create the refund record but mark it as pending
-        refundStatus = "PENDING";
+        return NextResponse.json(
+          { error: "Tap payment refund failed. No local refund was recorded; retry after confirming the payment method is available." },
+          { status: 502 }
+        );
       }
     }
 
@@ -264,6 +312,7 @@ export async function POST(req: Request) {
           type: data.type,
           restockItems: data.restockItems,
           processedBy: session.user.id,
+          idempotencyKey: data.idempotencyKey || null,
         })
         .returning();
 
@@ -292,11 +341,14 @@ export async function POST(req: Request) {
       });
 
       // Update order payment status
-      const newTotalRefunded = alreadyRefunded + (refundStatus === "COMPLETED" ? refundAmount : 0);
+      const completedNow = refundStatus === "COMPLETED" || refundStatus === "APPROVED";
+      const newTotalRefunded = alreadyRefunded + (completedNow ? refundAmount : 0);
       const isFullyRefunded = Math.abs(newTotalRefunded - totalAmount) < 0.01;
 
-      const nextPaymentStatus = isFullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED";
-      const nextOrderStatus = isFullyRefunded ? "REFUNDED" : order.status;
+      const nextPaymentStatus = completedNow
+        ? isFullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED"
+        : order.paymentStatus;
+      const nextOrderStatus = completedNow && isFullyRefunded ? "REFUNDED" : order.status;
 
       await tx
         .update(orders)
@@ -348,18 +400,22 @@ export async function POST(req: Request) {
       };
     });
 
-    // Report credit note to ZATCA (non-blocking)
-    reportCreditNoteToZatca(result.refund.id).catch((err) =>
-      console.error("ZATCA credit note reporting failed:", err)
-    );
+    if (result.refund.status === "COMPLETED" || result.refund.status === "APPROVED") {
+      // Report credit note to ZATCA (non-blocking)
+      reportCreditNoteToZatca(result.refund.id).catch((err) =>
+        console.error("ZATCA credit note reporting failed:", err)
+      );
+    }
 
     // Track for anomaly detection (non-blocking)
     trackInvoiceEvent({ ip, type: "refund", userId: session.user.id, refundId: result.refund.id });
 
-    // Sync refund to Meta Commerce if this is a Meta order (non-blocking)
-    syncRefundToMeta(data.orderId, refundItemsData, order.items, data.reason || "BUYERS_REMORSE").catch((err) =>
-      console.error("Meta refund sync failed:", err)
-    );
+    if (result.refund.status === "COMPLETED" || result.refund.status === "APPROVED") {
+      // Sync refund to Meta Commerce if this is a Meta order (non-blocking)
+      syncRefundToMeta(data.orderId, refundItemsData, order.items, data.reason || "BUYERS_REMORSE").catch((err) =>
+        console.error("Meta refund sync failed:", err)
+      );
+    }
 
     return NextResponse.json(serializeDecimal(result), { status: 201 });
   } catch (error) {

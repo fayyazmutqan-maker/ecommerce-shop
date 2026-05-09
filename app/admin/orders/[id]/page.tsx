@@ -97,6 +97,8 @@ interface OrderItem {
   quantity: number;
   totalPrice: number;
   variantName: string | null;
+  refundedQuantity?: number;
+  refundableQuantity?: number;
   product: { id: string; slug: string } | null;
 }
 
@@ -189,7 +191,7 @@ export default function OrderDetailPage() {
   const [refundReason, setRefundReason] = useState("");
   const [refundRestock, setRefundRestock] = useState(true);
   const [refundProcessing, setRefundProcessing] = useState(false);
-  const [refundItems, setRefundItems] = useState<Record<string, { selected: boolean; quantity: number; amount: number }>>({});
+  const [refundItems, setRefundItems] = useState<Record<string, { selected: boolean; quantity: number; amount: number; max: number }>>({});
   const [orderRefunds, setOrderRefunds] = useState<Refund[]>([]);
 
   // Fulfillment state
@@ -218,10 +220,12 @@ export default function OrderDetailPage() {
       setTrackingNumber(data.trackingNumber || "");
       setNotes(data.notes || "");
 
+      let refundsData: Refund[] = [];
+
       // Fetch refunds for this order
       const refundsRes = await fetch(`/api/refunds?orderId=${orderId}`, { cache: "no-store" });
       if (refundsRes.ok) {
-        const refundsData = await refundsRes.json();
+        refundsData = await refundsRes.json();
         setOrderRefunds(refundsData);
       }
 
@@ -250,9 +254,26 @@ export default function OrderDetailPage() {
       }
 
       // Initialize refund items
-      const items: Record<string, { selected: boolean; quantity: number; amount: number }> = {};
+      const refundedQty = new Map<string, number>();
+      for (const refund of refundsData) {
+        if (refund.status !== "COMPLETED" && refund.status !== "APPROVED") continue;
+        for (const item of refund.items) {
+          refundedQty.set(item.orderItemId, (refundedQty.get(item.orderItemId) || 0) + item.quantity);
+        }
+      }
+
+      const items: Record<string, { selected: boolean; quantity: number; amount: number; max: number }> = {};
       for (const item of data.items) {
-        items[item.id] = { selected: false, quantity: item.quantity, amount: item.totalPrice };
+        const remainingQuantity = Math.max(0, item.quantity - (refundedQty.get(item.id) || 0));
+        const unitPrice = item.quantity > 0 ? item.totalPrice / item.quantity : 0;
+        if (remainingQuantity > 0) {
+          items[item.id] = {
+            selected: false,
+            quantity: remainingQuantity,
+            amount: parseFloat((unitPrice * remainingQuantity).toFixed(2)),
+            max: remainingQuantity,
+          };
+        }
       }
       setRefundItems(items);
     } catch {
@@ -303,7 +324,7 @@ export default function OrderDetailPage() {
   }
 
   async function handleRefund() {
-    if (!order) return;
+    if (!order || refundProcessing) return;
     setRefundProcessing(true);
     try {
       const selectedItems = refundType === "PARTIAL"
@@ -330,6 +351,7 @@ export default function OrderDetailPage() {
           type: refundType,
           reason: refundReason || undefined,
           restockItems: refundRestock,
+          idempotencyKey: crypto.randomUUID(),
           items: selectedItems,
         }),
       });
@@ -679,8 +701,9 @@ export default function OrderDetailPage() {
                     <div className="space-y-2">
                       <Label>{t("refundDialog.selectItems")}</Label>
                       <div className="border rounded-md divide-y max-h-60 overflow-y-auto">
-                        {order.items.map((item) => {
+                        {order.items.filter((item) => refundItems[item.id]?.max > 0).map((item) => {
                           const ri = refundItems[item.id];
+                          const maxQuantity = ri?.max ?? 0;
                           return (
                             <div key={item.id} className="flex items-center gap-3 p-3">
                               <Checkbox
@@ -703,10 +726,10 @@ export default function OrderDetailPage() {
                                   <Input
                                     type="number"
                                     min={1}
-                                    max={item.quantity}
+                                    max={maxQuantity}
                                     value={ri.quantity}
                                     onChange={(e) => {
-                                      const qty = Math.min(Math.max(1, parseInt(e.target.value) || 1), item.quantity);
+                                      const qty = Math.min(Math.max(1, parseInt(e.target.value) || 1), maxQuantity);
                                       const unitPrice = item.totalPrice / item.quantity;
                                       setRefundItems((prev) => ({
                                         ...prev,
@@ -722,7 +745,7 @@ export default function OrderDetailPage() {
                               )}
                               {!ri?.selected && (
                                 <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">
-                                  {item.quantity} × {formatCurrency(item.price)}
+                                  {maxQuantity} × {formatCurrency(item.price)}
                                 </span>
                               )}
                             </div>

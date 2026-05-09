@@ -533,6 +533,7 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
 export const refunds = pgTable("Refund", {
   id: cuid(),
   orderId: text("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  idempotencyKey: text("idempotencyKey"),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   reason: text("reason"),
   notes: text("notes"),
@@ -547,7 +548,9 @@ export const refunds = pgTable("Refund", {
   zatcaCreditNoteNumber: text("zatcaCreditNoteNumber"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  uniqueIndex("Refund_idempotencyKey_key").on(t.idempotencyKey),
+]);
 
 export const refundsRelations = relations(refunds, ({ one, many }) => ({
   order: one(orders, { fields: [refunds.orderId], references: [orders.id] }),
