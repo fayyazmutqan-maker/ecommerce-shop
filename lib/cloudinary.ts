@@ -18,6 +18,8 @@ export { cloudinary };
 
 /**
  * Upload a file buffer directly from the server.
+ * Validates file content against allowed image types via magic bytes before
+ * uploading to prevent disguised files from reaching Cloudinary.
  * Returns the secure URL of the uploaded image.
  */
 export async function uploadToCloudinary(
@@ -26,8 +28,24 @@ export async function uploadToCloudinary(
   contentType: string
 ): Promise<string> {
   const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
+
+  // Validate magic bytes — ensures the actual file content matches an allowed
+  // image type, regardless of the claimed contentType or file extension.
+  const detectedMime = validateImageMagicBytes(buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength,
+  ) as ArrayBuffer);
+
+  if (!detectedMime) {
+    throw new Error(
+      `Upload rejected: file content does not match any allowed image type. ` +
+      `Detected: unknown. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`
+    );
+  }
+
+  // Use detected MIME type for the data URI to prevent content-type spoofing
   const base64 = buffer.toString("base64");
-  const dataUri = `data:${contentType};base64,${base64}`;
+  const dataUri = `data:${detectedMime};base64,${base64}`;
 
   // Use the key (without extension) as the public_id, folder is derived from key
   const parts = key.split("/");
@@ -93,20 +111,11 @@ export const ALLOWED_IMAGE_TYPES = [
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 /**
- * Magic bytes for allowed image types.
- * Verifies the actual file content matches the claimed MIME type.
- */
-const IMAGE_MAGIC_BYTES: { mime: string; bytes: number[] }[] = [
-  { mime: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
-  { mime: "image/png", bytes: [0x89, 0x50, 0x4e, 0x47] },
-  { mime: "image/gif", bytes: [0x47, 0x49, 0x46, 0x38] },
-  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF header
-  { mime: "image/avif", bytes: [] }, // AVIF uses ftyp box — checked separately
-];
-
-/**
  * Validate file content matches an allowed image type by inspecting magic bytes.
  * Returns the detected MIME type, or null if the file doesn't match any allowed type.
+ *
+ * This is called automatically by uploadToCloudinary — API routes do not need
+ * to call it separately before uploading.
  */
 export function validateImageMagicBytes(buffer: ArrayBuffer): string | null {
   const bytes = new Uint8Array(buffer).slice(0, 16);

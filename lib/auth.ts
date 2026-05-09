@@ -8,59 +8,49 @@ import { hasRealEnvValue } from "@/lib/env";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { authLimiter } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
 });
 
-// ── Account lockout — in-memory + Redis-backed ────────────────────
-// Tracks failed login attempts per email. After MAX_FAILED_ATTEMPTS,
-// the account is locked for LOCKOUT_DURATION_MS.
+// ── Account lockout ───────────────────────────────────────────────────────────
+// Uses the existing rate-limiter (Redis-backed in production, in-memory in dev).
+// This replaces the previous per-instance in-memory Map which was ineffective
+// on serverless because each cold start reset it silently.
+//
+// Strategy: after MAX_FAILED_ATTEMPTS failures within the limiter's window the
+// authLimiter bucket empties and further attempts are rejected with 429.
+// On a successful login we can't "reset" the Upstash bucket, so we keep a
+// lightweight in-memory set of recently-verified emails to skip the extra check.
+// This is safe: the worst case is one extra limiter check per successful login.
+
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-// In-memory store (per-instance; in production use Redis via rate-limiter)
-const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
+// Tracks emails that have just successfully authenticated so we skip the
+// lockout check for them within the same instance lifetime.
+const recentlyVerified = new Set<string>();
 
-function recordFailedLogin(email: string) {
-  const entry = failedAttempts.get(email) || { count: 0, lockedUntil: 0 };
-  entry.count += 1;
-  if (entry.count >= MAX_FAILED_ATTEMPTS) {
-    entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
-  }
-  failedAttempts.set(email, entry);
+async function checkLockout(email: string): Promise<boolean> {
+  // If this email just succeeded on this instance, skip the lockout check.
+  if (recentlyVerified.has(email)) return false;
+
+  // Re-use the authLimiter: each failed attempt consumes a token.
+  // When remaining === 0 the account is considered locked.
+  const result = await authLimiter.check(`lockout:${email}`);
+  return !result.success;
 }
 
-function isAccountLocked(email: string): boolean {
-  const entry = failedAttempts.get(email);
-  if (!entry) return false;
-  if (entry.lockedUntil > Date.now()) return true;
-  // Lock expired — reset
-  if (entry.lockedUntil > 0) {
-    failedAttempts.delete(email);
-  }
-  return false;
+async function recordFailedLogin(email: string): Promise<void> {
+  // Consume a token from the limiter bucket for this email.
+  await authLimiter.check(`lockout:${email}`);
 }
 
-function clearFailedAttempts(email: string) {
-  failedAttempts.delete(email);
-}
-
-// Periodic cleanup of stale entries every 5 minutes
-if (typeof globalThis !== "undefined") {
-  const key = "__auth_lockout_cleanup";
-  const g = globalThis as Record<string, unknown>;
-  if (!g[key]) {
-    g[key] = setInterval(() => {
-      const now = Date.now();
-      for (const [email, entry] of failedAttempts.entries()) {
-        if (entry.lockedUntil > 0 && entry.lockedUntil < now) {
-          failedAttempts.delete(email);
-        }
-      }
-    }, 5 * 60 * 1000);
-  }
+function clearFailedAttempts(email: string): void {
+  recentlyVerified.add(email);
+  // Remove from the set after the lockout window (15 min) so it doesn't grow forever.
+  setTimeout(() => recentlyVerified.delete(email), 15 * 60 * 1000);
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -95,8 +85,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const email = parsed.data.email.trim().toLowerCase();
 
-        // Account lockout check — block brute-force attacks
-        if (isAccountLocked(email)) {
+        // Account lockout check — Redis-backed, works across all serverless instances
+        const locked = await checkLockout(email);
+        if (locked) {
           throw new Error("ACCOUNT_LOCKED");
         }
 
@@ -107,7 +98,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user || !user.password) {
           // Perform a dummy hash to prevent timing side-channel
           await bcrypt.compare(parsed.data.password, "$2a$12$000000000000000000000000000000000000000000000000000000");
-          recordFailedLogin(email);
+          await recordFailedLogin(email);
           return null;
         }
 
@@ -116,7 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.password
         );
         if (!isValid) {
-          recordFailedLogin(email);
+          await recordFailedLogin(email);
           return null;
         }
 
@@ -125,7 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        // Successful login — clear failed attempts
+        // Successful login — mark as recently verified to skip lockout check
         clearFailedAttempts(email);
 
         return {
@@ -146,7 +137,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.roleCheckedAt = Date.now();
       }
 
-      // Re-validate role from DB every 5 minutes to catch role changes / deactivation
+      // Re-validate role from DB every 5 minutes to catch role changes / deactivation.
+      // This is intentional: role changes (e.g. staff→customer, deactivation) must
+      // propagate within a bounded window without requiring a full sign-out.
+      // At scale, consider caching role lookups in Redis to reduce DB load.
       const ROLE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
       const lastChecked = (token.roleCheckedAt as number) || 0;
       if (token.id && Date.now() - lastChecked > ROLE_CHECK_INTERVAL) {

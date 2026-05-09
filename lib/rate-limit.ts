@@ -2,7 +2,11 @@
  * Production-ready rate limiter.
  *
  * Uses @upstash/ratelimit with Redis when UPSTASH_REDIS_REST_URL is configured.
- * Falls back to an in-memory sliding-window limiter for local development.
+ * Falls back to an in-memory sliding-window limiter for local development ONLY.
+ *
+ * In production, if Upstash is not configured the app will throw at startup
+ * rather than silently falling back to per-instance memory (which is ineffective
+ * on serverless where each cold start resets the counters).
  */
 
 import { Ratelimit } from "@upstash/ratelimit";
@@ -26,6 +30,20 @@ const hasUpstash = !!(
   process.env.UPSTASH_REDIS_REST_URL &&
   process.env.UPSTASH_REDIS_REST_TOKEN
 );
+
+const isProduction = process.env.NODE_ENV === "production";
+
+// Hard-fail at module load time in production without Redis.
+// This is intentional: silent in-memory fallback on serverless means rate
+// limiting simply doesn't work — requests that should be blocked aren't.
+if (isProduction && !hasUpstash) {
+  throw new Error(
+    "Rate limiting requires Upstash Redis in production. " +
+    "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, " +
+    "or configure a Redis instance. " +
+    "In-memory fallback is not safe for serverless environments."
+  );
+}
 
 // ── Factory ────────────────────────────────────────────────────────
 
@@ -55,7 +73,7 @@ function createRateLimiter(opts: {
     };
   }
 
-  // ── In-memory fallback for local development ──
+  // ── In-memory fallback for local development only ──
   const store = new Map<string, { tokens: number; lastRefill: number }>();
 
   // Periodic cleanup every 60 s
@@ -208,10 +226,6 @@ export const dailyRefundLimiter = createRateLimiter({
   prefix: "daily-refund",
 });
 
-/**
- * Extract a usable IP from the request for rate-limiting.
- * Falls back to a static key so the limiter always works.
- */
 /**
  * Extract client IP from request headers.
  * IMPORTANT: This relies on X-Forwarded-For being set by a trusted reverse proxy

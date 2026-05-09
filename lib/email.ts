@@ -14,6 +14,24 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Sanitize a URL for use in an href attribute.
+ * Allows only http: and https: schemes to block javascript: and data: URLs.
+ * Falls back to "#" for anything that doesn't parse or has a disallowed scheme.
+ */
+function safeHref(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return "#";
+    }
+    // escapeHtml on the full URL so quotes can't break out of the attribute
+    return escapeHtml(url);
+  } catch {
+    return "#";
+  }
+}
+
 // ============================================================
 // EMAIL SERVICE — Powered by Resend
 // Falls back to console logging when RESEND_API_KEY is not set
@@ -146,6 +164,8 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     ? `<p><strong>Shipping to:</strong><br>${escapeHtml(data.shippingAddress.firstName)} ${escapeHtml(data.shippingAddress.lastName)}<br>${escapeHtml(data.shippingAddress.address)}<br>${escapeHtml(data.shippingAddress.city)}, ${escapeHtml(data.shippingAddress.country)}</p>`
     : "";
 
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders`);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">Order Confirmed! 🎉</h2>
     <p>Hi ${escapeHtml(data.customerName || "there")},</p>
@@ -182,10 +202,10 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     </table>
 
     ${addressBlock}
-    <p><strong>Payment:</strong> ${data.paymentMethod === "COD" ? "Cash on Delivery" : data.paymentMethod}</p>
+    <p><strong>Payment:</strong> ${data.paymentMethod === "COD" ? "Cash on Delivery" : escapeHtml(data.paymentMethod)}</p>
     
     <p style="text-align:center;margin-top:24px">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders" class="btn">View Order</a>
+      <a href="${appUrl}" class="btn">View Order</a>
     </p>
   `);
 
@@ -219,7 +239,8 @@ export async function sendShippingUpdate(data: {
     CANCELLED: "Your order has been cancelled. If you have questions, please contact us.",
   };
 
-  const message = statusMessages[data.status] || `Your order status has been updated to: ${data.status}`;
+  const message = statusMessages[data.status] || `Your order status has been updated to: ${escapeHtml(data.status)}`;
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders`);
 
   const html = baseLayout(`
     <h2 style="margin-top:0">Order Update</h2>
@@ -229,7 +250,7 @@ export async function sendShippingUpdate(data: {
       <p style="margin:0;font-size:16px">${message}</p>
     </div>
     <p style="text-align:center;margin-top:24px">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders" class="btn">View Order</a>
+      <a href="${appUrl}" class="btn">View Order</a>
     </p>
   `);
 
@@ -253,6 +274,8 @@ export async function sendWelcomeEmail(data: {
   email: string;
   name: string;
 }) {
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/products`);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">Welcome to ShopFlow! 🛍️</h2>
     <p>Hi ${escapeHtml(data.name)},</p>
@@ -265,7 +288,7 @@ export async function sendWelcomeEmail(data: {
       <li>Get personalized recommendations</li>
     </ul>
     <p style="text-align:center;margin-top:24px">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/products" class="btn">Start Shopping</a>
+      <a href="${appUrl}" class="btn">Start Shopping</a>
     </p>
   `);
 
@@ -286,12 +309,15 @@ export async function sendEmailVerification(data: {
   name: string;
   verificationUrl: string;
 }) {
+  // safeHref validates scheme and escapes — prevents javascript: / data: injection
+  const href = safeHref(data.verificationUrl);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">Verify Your Email</h2>
     <p>Hi ${escapeHtml(data.name)},</p>
     <p>Thank you for creating an account! Please verify your email address by clicking the button below:</p>
     <p style="text-align:center;margin-top:24px">
-      <a href="${data.verificationUrl}" class="btn">Verify Email</a>
+      <a href="${href}" class="btn">Verify Email</a>
     </p>
     <p style="font-size:13px;color:#666;margin-top:24px">If you didn't create an account, you can safely ignore this email. This link will expire in 24 hours.</p>
   `);
@@ -345,12 +371,14 @@ export async function sendPasswordReset(data: {
   name: string;
   resetUrl: string;
 }) {
+  const href = safeHref(data.resetUrl);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">Reset Your Password</h2>
     <p>Hi ${escapeHtml(data.name)},</p>
     <p>We received a request to reset your password. Click the button below to set a new password:</p>
     <p style="text-align:center;margin-top:24px">
-      <a href="${data.resetUrl}" class="btn">Reset Password</a>
+      <a href="${href}" class="btn">Reset Password</a>
     </p>
     <p style="font-size:13px;color:#666;margin-top:24px">If you didn't request this, you can safely ignore this email. This link will expire in 1 hour.</p>
   `);
@@ -374,6 +402,8 @@ export async function sendRefundConfirmation(data: {
   refundAmount: number;
   reason?: string;
 }) {
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders`);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">Refund Processed</h2>
     <p>Hi ${escapeHtml(data.customerName || "there")},</p>
@@ -385,7 +415,7 @@ export async function sendRefundConfirmation(data: {
     ${data.reason ? `<p><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>` : ""}
     <p style="font-size:13px;color:#666">Refunds typically take 5–10 business days to appear on your statement.</p>
     <p style="text-align:center;margin-top:24px">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/account/orders" class="btn">View Orders</a>
+      <a href="${appUrl}" class="btn">View Orders</a>
     </p>
   `);
 
@@ -419,6 +449,8 @@ export async function sendLowStockAlert(data: {
     )
     .join("");
 
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/products`);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">⚠️ Low Stock Alert</h2>
     <p>The following products are running low on inventory:</p>
@@ -434,7 +466,7 @@ export async function sendLowStockAlert(data: {
       <tbody>${rows}</tbody>
     </table>
     <p style="text-align:center;margin-top:24px">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/products" class="btn">Manage Inventory</a>
+      <a href="${appUrl}" class="btn">Manage Inventory</a>
     </p>
   `);
 
@@ -462,7 +494,7 @@ export async function sendAbandonedCartEmail(data: {
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:12px">
-          ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" />` : ""}
+          ${item.image ? `<img src="${safeHref(item.image)}" alt="${escapeHtml(item.name)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" />` : ""}
           <span>${escapeHtml(item.name)}</span>
         </div>
       </td>
@@ -471,6 +503,8 @@ export async function sendAbandonedCartEmail(data: {
     </tr>`
     )
     .join("");
+
+  const recoveryHref = safeHref(data.recoveryUrl);
 
   const html = baseLayout(`
     <h2 style="margin-top:0">You left something behind! 🛒</h2>
@@ -495,7 +529,7 @@ export async function sendAbandonedCartEmail(data: {
     </table>
 
     <p style="text-align:center;margin-top:24px">
-      <a href="${data.recoveryUrl}" class="btn">Complete Your Order</a>
+      <a href="${recoveryHref}" class="btn">Complete Your Order</a>
     </p>
     
     <p style="font-size:13px;color:#666;margin-top:24px;text-align:center">
@@ -523,6 +557,8 @@ export async function sendContactFormNotification(data: {
   message: string;
   recipientEmail: string;
 }) {
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/activity-log`);
+
   const html = baseLayout(`
     <h2 style="margin-top:0">New Contact Form Submission</h2>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -559,7 +595,7 @@ export async function sendSecurityAlert(data: {
 }) {
   const severityColor = data.severity === "CRITICAL" ? "#dc2626" : "#f59e0b";
   const severityBg = data.severity === "CRITICAL" ? "#fef2f2" : "#fffbeb";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/activity-log`);
 
   const html = baseLayout(`
     <div style="background:${severityBg};border-left:4px solid ${severityColor};padding:16px;border-radius:6px;margin-bottom:20px">
@@ -575,7 +611,7 @@ export async function sendSecurityAlert(data: {
       <tr><td style="padding:8px 12px;font-weight:600;color:#666">Time</td><td style="padding:8px 12px">${new Date().toISOString()}</td></tr>
     </table>
     <p style="text-align:center;margin-top:24px">
-      <a href="${appUrl}/admin/activity-log" class="btn">View Activity Log</a>
+      <a href="${appUrl}" class="btn">View Activity Log</a>
     </p>
     <p style="font-size:13px;color:#666;margin-top:16px">This alert was triggered by the invoice generation monitoring system. If this is expected activity, no action is needed. Alerts are rate-limited to prevent flooding.</p>
   `);
@@ -600,7 +636,7 @@ export async function sendNewsletterEmail(data: {
   campaignId: string;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const unsubscribeUrl = `${appUrl}/api/newsletter?email=${encodeURIComponent(data.to)}`;
+  const unsubscribeUrl = safeHref(`${appUrl}/api/newsletter?email=${encodeURIComponent(data.to)}`);
 
   const html = `
 <!DOCTYPE html>
@@ -629,7 +665,7 @@ export async function sendNewsletterEmail(data: {
     <div class="footer">
       <p>ShopFlow — Kingdom of Saudi Arabia</p>
       <p>You received this because you subscribed to our newsletter.</p>
-      <p><a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>
+      <p><a href="${unsubscribeUrl}">Unsubscribe</a></p>
     </div>
   </div>
 </body>
