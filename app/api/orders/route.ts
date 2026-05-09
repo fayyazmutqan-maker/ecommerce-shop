@@ -9,7 +9,7 @@ import { audit, auditMeta } from "@/lib/audit";
 import { trackInvoiceEvent } from "@/lib/invoice-monitor";
 import { trackPurchase, extractTrackingContext } from "@/lib/conversions";
 import { toNumber, serializeDecimal } from "@/lib/decimal";
-import { eq, and, or, lte, gte, desc, count, sql, inArray } from "drizzle-orm";
+import { eq, and, or, lte, desc, count, sql, inArray } from "drizzle-orm";
 import {
   products as productsTable,
   productVariants,
@@ -22,8 +22,6 @@ import {
   coupons,
   couponUsages,
   autoDiscounts,
-  storeSettings,
-  users,
   abandonedCarts,
   refunds,
 } from "@/lib/schema";
@@ -733,6 +731,12 @@ export async function GET(req: Request) {
           sql`${ordersTable.orderNumber} ILIKE ${`%${searchQuery}%`}`,
           sql`${ordersTable.email} ILIKE ${`%${searchQuery}%`}`,
         )!,
+      );
+    }
+
+    if (isAdmin && refundableOnly) {
+      conditions.push(
+        inArray(ordersTable.paymentStatus, ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"]),
       );
     }
 
