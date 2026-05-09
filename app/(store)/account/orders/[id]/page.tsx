@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
-import { Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw } from "lucide-react";
+import { Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ interface DisplayRefund {
   amount: string | number;
   status: string;
   reason: string | null;
+  zatcaCreditNoteNumber?: string | null;
   createdAt: string | Date;
 }
 
@@ -85,6 +86,11 @@ export default async function OrderDetailPage({
   const data = serializeDecimal(order) as typeof order;
   const shippingAddress = data.shippingAddress as DisplayAddress | null;
   const refunds = data.refunds as DisplayRefund[] | undefined;
+  const completedRefunds = (refunds || []).filter((refund) =>
+    refund.status === "COMPLETED" || refund.status === "APPROVED"
+  );
+  const totalRefunded = completedRefunds.reduce((sum, refund) => sum + Number(refund.amount), 0);
+  const netAfterRefunds = Math.max(0, Number(data.totalAmount) - totalRefunded);
 
   return (
     <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
@@ -145,6 +151,12 @@ export default async function OrderDetailPage({
                 )}
                 <Separator />
                 <div className="flex justify-between font-bold text-base"><span>Total</span><span>SAR {Number(data.totalAmount).toFixed(2)}</span></div>
+                {totalRefunded > 0 && (
+                  <>
+                    <div className="flex justify-between text-destructive"><span>Refunded</span><span>-SAR {totalRefunded.toFixed(2)}</span></div>
+                    <div className="flex justify-between font-semibold"><span>Net after refunds</span><span>SAR {netAfterRefunds.toFixed(2)}</span></div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -244,11 +256,32 @@ export default async function OrderDetailPage({
                     </div>
                     <p className="font-semibold">SAR {Number(refund.amount).toFixed(2)}</p>
                     {refund.reason && <p className="text-muted-foreground">{refund.reason}</p>}
+                    {refund.zatcaCreditNoteNumber && (
+                      <p className="text-xs text-muted-foreground">Credit note: {refund.zatcaCreditNoteNumber}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(refund.createdAt).toLocaleDateString("en-SA", { year: "numeric", month: "long", day: "numeric" })}
                     </p>
+                    <Button variant="outline" size="sm" className="mt-2" asChild>
+                      <Link href={`/api/refunds/${refund.id}/credit-note`} target="_blank">
+                        <FileText className="mr-1.5 h-3.5 w-3.5" />
+                        Credit Note
+                      </Link>
+                    </Button>
                   </div>
                 ))}
+                {totalRefunded > 0 && (
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between font-medium">
+                      <span>Total refunded</span>
+                      <span>SAR {totalRefunded.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Net paid</span>
+                      <span>SAR {netAfterRefunds.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

@@ -924,9 +924,9 @@ async function main() {
       {
         orderNumber: "MH-2026-0007",
         email: "guest@yahoo.com",
-        status: "CONFIRMED",
+        status: "DELIVERED",
         paymentStatus: "PAID",
-        fulfillmentStatus: "UNFULFILLED",
+        fulfillmentStatus: "FULFILLED",
         paymentMethod: "COD",
         shippingMethod: "Standard Delivery",
         source: "POS",

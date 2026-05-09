@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { orders, storeSettings } from "@/lib/schema";
+import { orders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { serializeDecimal } from "@/lib/decimal";
 import { generateZatcaQR } from "@/lib/pos/zatca";
@@ -42,6 +42,17 @@ export async function GET(req: Request, { params }: RouteParams) {
         shippingAddress: true,
         billingAddress: true,
         user: { columns: { id: true, name: true, email: true } },
+        refunds: {
+          columns: {
+            id: true,
+            amount: true,
+            reason: true,
+            status: true,
+            type: true,
+            zatcaCreditNoteNumber: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -56,6 +67,14 @@ export async function GET(req: Request, { params }: RouteParams) {
     }
 
     const o = serializeDecimal(order);
+    const completedRefunds = (o.refunds || []).filter((refund: { status: string }) =>
+      refund.status === "COMPLETED" || refund.status === "APPROVED"
+    );
+    const totalRefunded = completedRefunds.reduce(
+      (sum: number, refund: { amount: string | number }) => sum + toNum(refund.amount),
+      0,
+    );
+    const netPaid = Math.max(0, toNum(o.totalAmount) - totalRefunded);
 
     // Load store settings
     const settings = await db.query.storeSettings.findFirst();
@@ -224,6 +243,41 @@ export async function GET(req: Request, { params }: RouteParams) {
     doc.text("Total", summaryX, y);
     doc.text(`${currency} ${toNum(o.totalAmount).toFixed(2)}`, summaryValX, y, { align: "right" });
     y += 10;
+
+    // Refund summary: original invoice totals remain unchanged; refunds are documented
+    // separately as credit notes and shown here only as financial history.
+    if (completedRefunds.length > 0) {
+      if (y + 28 > doc.internal.pageSize.getHeight() - 15) {
+        doc.addPage();
+        y = 15;
+      }
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text("Refund / Credit Note Summary", summaryX, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+
+      for (const refund of completedRefunds as { amount: string | number; type: string; zatcaCreditNoteNumber?: string | null; createdAt: string | Date }[]) {
+        const date = new Date(refund.createdAt).toLocaleDateString("en-SA");
+        const label = `${refund.type} refund${refund.zatcaCreditNoteNumber ? ` (${refund.zatcaCreditNoteNumber})` : ""}`;
+        doc.text(`${date}  ${label}`, summaryX, y);
+        doc.text(`- ${currency} ${toNum(refund.amount).toFixed(2)}`, summaryValX, y, { align: "right" });
+        y += 5;
+      }
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(summaryX, y, summaryValX, y);
+      y += 5;
+      doc.setFont("helvetica", "bold");
+      doc.text("Net After Refunds", summaryX, y);
+      doc.text(`${currency} ${netPaid.toFixed(2)}`, summaryValX, y, { align: "right" });
+      y += 8;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text("Original invoice totals above are unchanged. Refunds are issued as separate credit notes.", summaryX, y);
+      y += 8;
+    }
 
     // ─── ZATCA QR Code ───
     if (zatcaEnabled && vatNumber) {

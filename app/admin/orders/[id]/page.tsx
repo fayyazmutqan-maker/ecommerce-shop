@@ -396,7 +396,9 @@ export default function OrderDetailPage() {
 
   const isFullyRefunded = order?.status === "REFUNDED" || order?.paymentStatus === "REFUNDED";
   const maxRefundable = order ? order.totalAmount - totalRefunded : 0;
+  const netAfterRefunds = order ? Math.max(0, order.totalAmount - totalRefunded) : 0;
   const canRefund = order && !isFullyRefunded && maxRefundable > 0;
+  const isPosOrder = order?.source === "POS";
 
   const selectedRefundTotal = refundType === "FULL"
     ? maxRefundable
@@ -561,7 +563,7 @@ export default function OrderDetailPage() {
               )}
             </Button>
           )}
-          {(hasUnfulfilled || isFullyRefunded) && (
+          {!isPosOrder && (hasUnfulfilled || isFullyRefunded) && (
             <Dialog open={fulfillOpen} onOpenChange={setFulfillOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" disabled={isFullyRefunded}>
@@ -1110,6 +1112,7 @@ export default function OrderDetailPage() {
                       <TableHead>{t("refunds.type")}</TableHead>
                       <TableHead>{t("refunds.status")}</TableHead>
                       <TableHead>{t("refunds.zatca")}</TableHead>
+                      <TableHead>Document</TableHead>
                       <TableHead className="text-right">{t("refunds.amount")}</TableHead>
                       <TableHead>{t("refunds.reason")}</TableHead>
                       <TableHead>{t("refunds.date")}</TableHead>
@@ -1165,6 +1168,14 @@ export default function OrderDetailPage() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/api/refunds/${refund.id}/credit-note`} target="_blank">
+                              <FileText className="mr-1.5 h-3.5 w-3.5" />
+                              Credit Note
+                            </Link>
+                          </Button>
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(refund.amount)}
                         </TableCell>
@@ -1179,9 +1190,15 @@ export default function OrderDetailPage() {
                   </TableBody>
                 </Table>
                 {totalRefunded > 0 && (
-                  <div className="flex justify-between font-medium mt-4 pt-4 border-t text-sm">
-                    <span>{t("refunds.totalRefunded")}</span>
-                    <span className="text-destructive">{formatCurrency(totalRefunded)}</span>
+                  <div className="mt-4 space-y-2 border-t pt-4 text-sm">
+                    <div className="flex justify-between font-medium">
+                      <span>{t("refunds.totalRefunded")}</span>
+                      <span className="text-destructive">-{formatCurrency(totalRefunded)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Net after refunds</span>
+                      <span>{formatCurrency(netAfterRefunds)}</span>
+                    </div>
                   </div>
                 )}
               </CardContent>

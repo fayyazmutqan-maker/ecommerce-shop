@@ -131,7 +131,7 @@ async function main() {
     const ordersData = [
       { orderNumber: "ORD-2026-001", email: customer.email, userId: customer.id, status: "DELIVERED", paymentStatus: "PAID", fulfillmentStatus: "FULFILLED", subtotal: "449.98", taxAmount: "38.25", shippingAmount: "9.99", totalAmount: "498.22", source: "ONLINE" },
       { orderNumber: "ORD-2026-002", email: "jane@example.com", status: "PROCESSING", paymentStatus: "PAID", fulfillmentStatus: "UNFULFILLED", subtotal: "149.99", taxAmount: "12.75", shippingAmount: "0", totalAmount: "162.74", source: "ONLINE" },
-      { orderNumber: "ORD-2026-003", email: customer.email, userId: customer.id, status: "PENDING", paymentStatus: "PENDING", fulfillmentStatus: "UNFULFILLED", subtotal: "299.99", taxAmount: "25.50", totalAmount: "325.49", source: "POS" },
+      { orderNumber: "ORD-2026-003", email: customer.email, userId: customer.id, status: "DELIVERED", paymentStatus: "PAID", fulfillmentStatus: "FULFILLED", subtotal: "299.99", taxAmount: "25.50", totalAmount: "325.49", source: "POS" },
     ];
 
     for (const orderData of ordersData) {
