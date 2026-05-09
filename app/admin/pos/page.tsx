@@ -38,6 +38,7 @@ import { useReceiptPrinter } from "@/hooks/use-receipt-printer";
 import { playSound, initAudio } from "@/lib/pos/sounds";
 import { generateZatcaQR } from "@/lib/pos/zatca";
 import { savePendingOrder, syncPendingOrders, getPendingCount } from "@/lib/pos/offline-sync";
+import { PosPageSkeleton } from "@/components/admin/pos-skeleton";
 import type { ReceiptData } from "@/lib/pos/receipt-printer";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -124,6 +125,8 @@ interface RefundOrderItem {
   name: string;
   sku: string | null;
   quantity: number;
+  refundedQuantity?: number;
+  refundableQuantity?: number;
   price: number | string;
   totalPrice: number | string;
   variant?: { id: string; name: string } | null;
@@ -1008,9 +1011,18 @@ export default function PosPage() {
     fetchRecentRefundOrders();
   }
 
-  const isRefundEligible = useCallback((order: RefundOrder) => (
-    ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus)
+  const getRefundableQuantity = useCallback((item: RefundOrderItem) => (
+    Math.max(0, item.refundableQuantity ?? item.quantity)
   ), []);
+
+  const getRefundUnitPrice = useCallback((item: RefundOrderItem) => (
+    item.quantity > 0 ? Number(item.totalPrice) / item.quantity : Number(item.price)
+  ), []);
+
+  const isRefundEligible = useCallback((order: RefundOrder) => (
+    ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus) &&
+    order.items.some((item) => getRefundableQuantity(item) > 0)
+  ), [getRefundableQuantity]);
 
   useEffect(() => {
     const query = refundOrderSearch.trim();
@@ -1032,7 +1044,7 @@ export default function PosPage() {
     const timeout = window.setTimeout(async () => {
       setRefundSearchLoading(true);
       try {
-        const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10`, {
+        const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10&refundable=true`, {
           signal: controller.signal,
         });
         if (res.ok) {
@@ -1058,7 +1070,7 @@ export default function PosPage() {
   async function fetchRecentRefundOrders() {
     setRecentRefundOrdersLoading(true);
     try {
-      const res = await fetch("/api/orders?limit=20");
+      const res = await fetch("/api/orders?limit=20&refundable=true");
       if (res.ok) {
         const data = await res.json();
         setRecentRefundOrders((data.orders || []).filter(isRefundEligible).slice(0, 5));
@@ -1083,14 +1095,16 @@ export default function PosPage() {
 
   function toggleRefundItem(item: RefundOrderItem, checked: boolean) {
     if (checked) {
-      const unitPrice = Number(item.totalPrice) / item.quantity;
+      const maxQuantity = getRefundableQuantity(item);
+      if (maxQuantity <= 0) return;
+      const unitPrice = getRefundUnitPrice(item);
       setRefundSelections((prev) => [
-        ...prev,
+        ...prev.filter((s) => s.orderItemId !== item.id),
         {
           orderItemId: item.id,
-          quantity: item.quantity,
-          maxQuantity: item.quantity,
-          amount: Number(item.totalPrice),
+          quantity: maxQuantity,
+          maxQuantity,
+          amount: unitPrice * maxQuantity,
           unitPrice,
           name: item.name,
         },
@@ -1098,6 +1112,10 @@ export default function PosPage() {
     } else {
       setRefundSelections((prev) => prev.filter((s) => s.orderItemId !== item.id));
     }
+  }
+
+  function getRefundableItems(order: RefundOrder) {
+    return order.items.filter((item) => getRefundableQuantity(item) > 0);
   }
 
   function updateRefundItemQty(orderItemId: string, qty: number) {
@@ -1112,17 +1130,19 @@ export default function PosPage() {
 
   function selectAllRefundItems() {
     if (!refundOrder) return;
-    if (refundSelections.length === refundOrder.items.length) {
+    const refundableItems = getRefundableItems(refundOrder);
+    if (refundSelections.length === refundableItems.length) {
       setRefundSelections([]);
     } else {
       setRefundSelections(
-        refundOrder.items.map((item) => {
-          const unitPrice = Number(item.totalPrice) / item.quantity;
+        refundableItems.map((item) => {
+          const maxQuantity = getRefundableQuantity(item);
+          const unitPrice = getRefundUnitPrice(item);
           return {
             orderItemId: item.id,
-            quantity: item.quantity,
-            maxQuantity: item.quantity,
-            amount: Number(item.totalPrice),
+            quantity: maxQuantity,
+            maxQuantity,
+            amount: unitPrice * maxQuantity,
             unitPrice,
             name: item.name,
           };
@@ -1133,7 +1153,7 @@ export default function PosPage() {
 
   const refundTotal = refundSelections.reduce((sum, s) => sum + s.amount, 0);
   const isFullRefund = refundOrder
-    ? refundSelections.length === refundOrder.items.length &&
+    ? refundSelections.length === getRefundableItems(refundOrder).length &&
       refundSelections.every((s) => s.quantity === s.maxQuantity)
     : false;
 
@@ -1224,6 +1244,7 @@ export default function PosPage() {
       });
 
       setRefundOpen(false);
+      refundSearchCacheRef.current.clear();
       fetchRecentRefundOrders();
     } catch (error) {
       if (soundEnabled) playSound("error");
@@ -1238,14 +1259,7 @@ export default function PosPage() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   if (sessionLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">{t("loadingPos")}</p>
-        </div>
-      </div>
-    );
+    return <PosPageSkeleton />;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2188,15 +2202,16 @@ export default function PosPage() {
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">{t("selectItemsToRefund")}</Label>
                   <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectAllRefundItems}>
-                    {refundSelections.length === refundOrder.items.length ? t("deselectAll") : t("selectAll")}
+                    {refundSelections.length === getRefundableItems(refundOrder).length ? t("deselectAll") : t("selectAll")}
                   </Button>
                 </div>
 
                 {/* Item list */}
                 <div className="space-y-2 max-h-48 overflow-auto">
-                  {refundOrder.items.map((item) => {
+                  {getRefundableItems(refundOrder).map((item) => {
                     const selected = refundSelections.find((s) => s.orderItemId === item.id);
-                    const unitPrice = Number(item.totalPrice) / item.quantity;
+                    const unitPrice = getRefundUnitPrice(item);
+                    const refundableQuantity = getRefundableQuantity(item);
                     return (
                       <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-lg border bg-background">
                         <Checkbox
@@ -2210,7 +2225,10 @@ export default function PosPage() {
                             <p className="text-[10px] text-muted-foreground">{item.variant.name}</p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {curr} {unitPrice.toFixed(2)} × {item.quantity}
+                            {curr} {unitPrice.toFixed(2)} × {refundableQuantity}
+                            {(item.refundedQuantity ?? 0) > 0 && (
+                              <span className="ml-1">({item.refundedQuantity} already refunded)</span>
+                            )}
                           </p>
                         </div>
                         {selected && (

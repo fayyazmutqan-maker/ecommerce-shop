@@ -25,6 +25,7 @@ import {
   storeSettings,
   users,
   abandonedCarts,
+  refunds,
 } from "@/lib/schema";
 
 const orderItemSchema = z.object({
@@ -722,6 +723,7 @@ export async function GET(req: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
     const searchQuery = searchParams.get("search")?.trim();
+    const refundableOnly = searchParams.get("refundable") === "true";
 
     const conditions = isAdmin ? [] : [eq(ordersTable.userId, session.user.id)];
 
@@ -752,9 +754,49 @@ export async function GET(req: Request) {
     ]);
 
     const total = totalRows[0]?.value ?? 0;
+    let ordersPayload = orderRows;
+
+    if (isAdmin && refundableOnly && orderRows.length > 0) {
+      const orderIds = orderRows.map((order) => order.id);
+      const completedRefunds = await db.query.refunds.findMany({
+        where: and(
+          inArray(refunds.orderId, orderIds),
+          inArray(refunds.status, ["COMPLETED", "APPROVED"]),
+        ),
+        with: { items: true },
+      });
+
+      const refundedQtyByItem = new Map<string, number>();
+      for (const refund of completedRefunds) {
+        for (const item of refund.items) {
+          refundedQtyByItem.set(
+            item.orderItemId,
+            (refundedQtyByItem.get(item.orderItemId) || 0) + item.quantity,
+          );
+        }
+      }
+
+      ordersPayload = orderRows
+        .map((order) => ({
+          ...order,
+          items: order.items.map((item) => {
+            const refundedQuantity = refundedQtyByItem.get(item.id) || 0;
+            const refundableQuantity = Math.max(0, item.quantity - refundedQuantity);
+            return {
+              ...item,
+              refundedQuantity,
+              refundableQuantity,
+            };
+          }),
+        }))
+        .filter((order) =>
+          ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus) &&
+          order.items.some((item) => item.refundableQuantity > 0),
+        );
+    }
 
     return NextResponse.json(serializeDecimal({
-      orders: orderRows,
+      orders: ordersPayload,
       pagination: {
         page,
         limit,
