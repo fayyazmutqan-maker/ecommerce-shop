@@ -111,14 +111,15 @@ export function AdminTableSkeleton({
 export function AdminOrderDetailSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-4">
           <Skeleton className="h-9 w-9 rounded-md" />
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-56" />
-              <Skeleton className="h-6 w-20 rounded-full" />
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Skeleton className="h-8 w-44 sm:w-56" />
+              <Skeleton className="h-6 w-24 rounded-full" />
               <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
             </div>
             <Skeleton className="h-4 w-36" />
           </div>
@@ -135,33 +136,49 @@ export function AdminOrderDetailSkeleton() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <Skeleton className="h-6 w-28" />
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-[1fr_72px_120px_120px] gap-4">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-10" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-16" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-6 w-28" />
               </div>
-              {Array.from({ length: 2 }).map((_, index) => (
-                <div key={index} className="grid grid-cols-[1fr_72px_120px_120px] gap-4 border-t pt-4">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-56" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-4 w-8" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="hidden grid-cols-[minmax(0,1fr)_64px_96px_96px] gap-4 border-b pb-3 md:grid">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-10 justify-self-center" />
+                  <Skeleton className="h-4 w-16 justify-self-end" />
+                  <Skeleton className="h-4 w-16 justify-self-end" />
                 </div>
-              ))}
-              <div className="border-t pt-4 space-y-3">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="flex justify-between">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-24" />
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[minmax(0,1fr)_72px] gap-3 border-b pb-4 last:border-0 md:grid-cols-[minmax(0,1fr)_64px_96px_96px] md:items-center"
+                  >
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full max-w-64" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                    <Skeleton className="h-4 w-8 justify-self-end md:justify-self-center" />
+                    <Skeleton className="hidden h-4 w-20 justify-self-end md:block" />
+                    <Skeleton className="h-4 w-20 justify-self-end" />
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 border-t pt-4">
+                <div className="ml-auto max-w-sm space-y-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="flex justify-between gap-4">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ))}
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between gap-4">
+                      <Skeleton className="h-5 w-16" />
+                      <Skeleton className="h-5 w-28" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -189,13 +206,38 @@ export function AdminOrderDetailSkeleton() {
               </div>
             </CardContent>
           </Card>
+
+          {Array.from({ length: 2 }).map((_, cardIndex) => (
+            <Card key={cardIndex}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <Skeleton className="mt-1 h-2 w-2 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-44" />
+                      <Skeleton className="h-3 w-full max-w-sm" />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <div className="space-y-6">
-          {Array.from({ length: 2 }).map((_, index) => (
+          {Array.from({ length: 4 }).map((_, index) => (
             <Card key={index}>
               <CardHeader>
-                <Skeleton className="h-6 w-36" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-6 w-36" />
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Skeleton className="h-5 w-44" />
