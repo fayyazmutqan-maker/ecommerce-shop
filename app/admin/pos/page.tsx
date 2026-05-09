@@ -204,6 +204,7 @@ export default function PosPage() {
   const [recentRefundOrdersLoading, setRecentRefundOrdersLoading] = useState(false);
   const [refundSearchResults, setRefundSearchResults] = useState<RefundOrder[]>([]);
   const [refundSearchLoading, setRefundSearchLoading] = useState(false);
+  const [refundOrderLoading, setRefundOrderLoading] = useState(false);
   const [refundOrder, setRefundOrder] = useState<RefundOrder | null>(null);
   const [refundSelections, setRefundSelections] = useState<RefundSelection[]>([]);
   const [refundReason, setRefundReason] = useState("");
@@ -1001,6 +1002,7 @@ export default function PosPage() {
 
   function openRefundDialog() {
     setRefundOpen(true);
+    refundSearchCacheRef.current.clear();
     setRefundOrderSearch("");
     setRefundSearchResults([]);
     setRefundOrder(null);
@@ -1086,11 +1088,34 @@ export default function PosPage() {
     setRefundOrderSearch(query);
   }
 
-  function selectRefundOrder(order: RefundOrder) {
-    setRefundOrder(order);
-    setRefundOrderSearch(order.orderNumber);
+  async function fetchRefundableOrder(orderId: string) {
+    const res = await fetch(`/api/orders/${orderId}?refundable=true`, { cache: "no-store" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Failed to refresh order refund data" }));
+      throw new Error(err.error || "Failed to refresh order refund data");
+    }
+    return (await res.json()) as RefundOrder;
+  }
+
+  async function selectRefundOrder(order: RefundOrder) {
+    setRefundOrderLoading(true);
     setRefundSearchResults([]);
     setRefundSelections([]);
+    try {
+      const freshOrder = await fetchRefundableOrder(order.id);
+      if (!isRefundEligible(freshOrder)) {
+        refundSearchCacheRef.current.clear();
+        await fetchRecentRefundOrders();
+        toast.error("This order has no refundable items remaining");
+        return;
+      }
+      setRefundOrder(freshOrder);
+      setRefundOrderSearch(freshOrder.orderNumber);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("toasts.failedSearchOrders"));
+    } finally {
+      setRefundOrderLoading(false);
+    }
   }
 
   function toggleRefundItem(item: RefundOrderItem, checked: boolean) {
@@ -1161,13 +1186,58 @@ export default function PosPage() {
     if (!refundOrder || refundSelections.length === 0) return;
     setRefundProcessing(true);
     try {
+      const freshOrder = await fetchRefundableOrder(refundOrder.id);
+      const freshItemById = new Map(freshOrder.items.map((item) => [item.id, item]));
+      const currentSelections = refundSelections.map((selection) => {
+        const freshItem = freshItemById.get(selection.orderItemId);
+        const maxQuantity = freshItem ? getRefundableQuantity(freshItem) : 0;
+        if (!freshItem || maxQuantity <= 0) return null;
+        const quantity = Math.min(selection.quantity, maxQuantity);
+        const unitPrice = getRefundUnitPrice(freshItem);
+        return {
+          ...selection,
+          quantity,
+          maxQuantity,
+          unitPrice,
+          amount: quantity * unitPrice,
+          name: freshItem.name,
+        };
+      }).filter((selection): selection is RefundSelection => selection !== null);
+
+      setRefundOrder(freshOrder);
+
+      if (currentSelections.length === 0) {
+        setRefundSelections([]);
+        refundSearchCacheRef.current.clear();
+        await fetchRecentRefundOrders();
+        throw new Error("Selected items are no longer refundable. Search the order again to see remaining refundable items.");
+      }
+
+      const changedSelections = currentSelections.length !== refundSelections.length ||
+        currentSelections.some((selection, index) =>
+          selection.quantity !== refundSelections[index]?.quantity ||
+          selection.maxQuantity !== refundSelections[index]?.maxQuantity ||
+          selection.amount !== refundSelections[index]?.amount,
+        );
+
+      if (changedSelections) {
+        setRefundSelections(currentSelections);
+        throw new Error("Refundable quantities changed. Review the updated item quantities and submit again.");
+      }
+
+      const freshRefundableItems = getRefundableItems(freshOrder);
+      const freshIsFullRefund =
+        currentSelections.length === freshRefundableItems.length &&
+        currentSelections.every((selection) => selection.quantity === selection.maxQuantity);
+      const currentRefundTotal = currentSelections.reduce((sum, selection) => sum + selection.amount, 0);
+
       const payload = {
         orderId: refundOrder.id,
-        type: isFullRefund ? "FULL" : "PARTIAL",
+        type: freshIsFullRefund ? "FULL" : "PARTIAL",
         reason: refundReason || "POS Refund",
         notes: `POS Refund by ${posSession?.staffName || "Staff"}`,
         restockItems: refundRestock,
-        items: refundSelections.map((s) => ({
+        items: currentSelections.map((s) => ({
           orderItemId: s.orderItemId,
           quantity: s.quantity,
           amount: s.amount,
@@ -1190,13 +1260,13 @@ export default function PosPage() {
       if (soundEnabled) playSound("success");
 
       // Generate ZATCA QR for refund receipt (credit note compliance)
-      const refundTax = refundTotal * storeConfig.taxRate / (1 + storeConfig.taxRate);
+      const refundTax = currentRefundTotal * storeConfig.taxRate / (1 + storeConfig.taxRate);
       const refundZatcaQr = storeConfig.zatcaEnabled && storeConfig.vatNumber
         ? generateZatcaQR({
             sellerName: storeConfig.storeName,
             vatNumber: storeConfig.vatNumber,
             timestamp: new Date(),
-            totalWithVat: refundTotal,
+            totalWithVat: currentRefundTotal,
             vatAmount: refundTax,
           })
         : undefined;
@@ -1210,17 +1280,17 @@ export default function PosPage() {
         orderNumber: `REFUND — ${refundOrder.orderNumber}`,
         date: new Date(),
         cashier: posSession?.staffName || "Staff",
-        items: refundSelections.map((s) => ({
+        items: currentSelections.map((s) => ({
           name: s.name,
           quantity: s.quantity,
           unitPrice: -s.unitPrice,
           lineTotal: -s.amount,
         })),
-        subtotal: -refundTotal,
+        subtotal: -currentRefundTotal,
         discount: 0,
         taxRate: storeConfig.taxRate,
         taxAmount: -refundTax,
-        total: -refundTotal,
+        total: -currentRefundTotal,
         paymentMethod: `Refund (${result.refund?.status || "Completed"})`,
         currency: curr,
         zatcaQrData: refundZatcaQr,
@@ -1240,7 +1310,7 @@ export default function PosPage() {
       }
 
       toast.success(t("toasts.refundProcessed"), {
-        description: t("toasts.refundProcessedDesc", { curr, amount: refundTotal.toFixed(2), orderNumber: refundOrder.orderNumber }),
+        description: t("toasts.refundProcessedDesc", { curr, amount: currentRefundTotal.toFixed(2), orderNumber: refundOrder.orderNumber }),
       });
 
       setRefundOpen(false);
@@ -2124,6 +2194,7 @@ export default function PosPage() {
                           <button
                             key={order.id}
                             className="w-full text-left p-3 rounded-lg border bg-background hover:bg-muted transition-colors"
+                            disabled={refundOrderLoading}
                             onClick={() => selectRefundOrder(order)}
                           >
                             <div className="flex items-center justify-between">
@@ -2153,6 +2224,7 @@ export default function PosPage() {
                       <button
                         key={order.id}
                         className="w-full text-left p-3 rounded-lg border bg-background hover:bg-muted transition-colors"
+                        disabled={refundOrderLoading}
                         onClick={() => selectRefundOrder(order)}
                       >
                         <div className="flex items-center justify-between">
@@ -2175,6 +2247,13 @@ export default function PosPage() {
 
                 {refundOrderSearch.length >= 2 && !refundSearchLoading && refundSearchResults.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">{t("noEligibleOrders")}</p>
+                )}
+
+                {refundOrderLoading && (
+                  <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    Refreshing refundable quantities...
+                  </div>
                 )}
               </div>
             )}

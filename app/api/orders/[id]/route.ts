@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { eq, desc, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { orders, orderItems, orderTimeline, productVariants, products, channelOrders, salesChannels, refunds, refundItems } from "@/lib/schema";
 import { sendShippingUpdate } from "@/lib/email";
 import { cancelOrder as metaCancelOrder } from "@/lib/meta";
@@ -36,6 +36,8 @@ export async function GET(req: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const refundableOnly = searchParams.get("refundable") === "true";
     const order = await db.query.orders.findFirst({
       where: eq(orders.id, id),
       with: {
@@ -64,6 +66,39 @@ export async function GET(req: Request, { params }: RouteParams) {
     const isAdmin = session.user.role === "ADMIN" || session.user.role === "STAFF";
     if (!isAdmin && (!order.userId || order.userId !== session.user.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (isAdmin && refundableOnly) {
+      const completedRefunds = await db.query.refunds.findMany({
+        where: and(
+          eq(refunds.orderId, id),
+          inArray(refunds.status, ["COMPLETED", "APPROVED"]),
+        ),
+        with: { items: true },
+      });
+
+      const refundedQtyByItem = new Map<string, number>();
+      for (const refund of completedRefunds) {
+        for (const item of refund.items) {
+          refundedQtyByItem.set(
+            item.orderItemId,
+            (refundedQtyByItem.get(item.orderItemId) || 0) + item.quantity,
+          );
+        }
+      }
+
+      return NextResponse.json(serializeDecimal({
+        ...order,
+        items: order.items.map((item) => {
+          const refundedQuantity = refundedQtyByItem.get(item.id) || 0;
+          const refundableQuantity = Math.max(0, item.quantity - refundedQuantity);
+          return {
+            ...item,
+            refundedQuantity,
+            refundableQuantity,
+          };
+        }),
+      }));
     }
 
     return NextResponse.json(serializeDecimal(order));
