@@ -197,6 +197,8 @@ export default function PosPage() {
   // ── Refund ──
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrderSearch, setRefundOrderSearch] = useState("");
+  const [recentRefundOrders, setRecentRefundOrders] = useState<RefundOrder[]>([]);
+  const [recentRefundOrdersLoading, setRecentRefundOrdersLoading] = useState(false);
   const [refundSearchResults, setRefundSearchResults] = useState<RefundOrder[]>([]);
   const [refundSearchLoading, setRefundSearchLoading] = useState(false);
   const [refundOrder, setRefundOrder] = useState<RefundOrder | null>(null);
@@ -997,6 +999,26 @@ export default function PosPage() {
     setRefundReason("");
     setRefundRestock(true);
     setRefundProcessing(false);
+    fetchRecentRefundOrders();
+  }
+
+  function isRefundEligible(order: RefundOrder) {
+    return ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus);
+  }
+
+  async function fetchRecentRefundOrders() {
+    setRecentRefundOrdersLoading(true);
+    try {
+      const res = await fetch("/api/orders?limit=20");
+      if (res.ok) {
+        const data = await res.json();
+        setRecentRefundOrders((data.orders || []).filter(isRefundEligible).slice(0, 5));
+      }
+    } catch {
+      toast.error(t("toasts.failedSearchOrders"));
+    } finally {
+      setRecentRefundOrdersLoading(false);
+    }
   }
 
   async function searchRefundOrders(query: string) {
@@ -1007,9 +1029,7 @@ export default function PosPage() {
       const res = await fetch(`/api/orders?search=${encodeURIComponent(query)}&limit=10`);
       if (res.ok) {
         const data = await res.json();
-        const eligible = (data.orders || []).filter(
-          (o: RefundOrder) => o.paymentStatus === "PAID" || o.paymentStatus === "PARTIALLY_PAID"
-        );
+        const eligible = (data.orders || []).filter(isRefundEligible);
         setRefundSearchResults(eligible);
       }
     } catch {
@@ -1021,6 +1041,7 @@ export default function PosPage() {
 
   function selectRefundOrder(order: RefundOrder) {
     setRefundOrder(order);
+    setRefundOrderSearch(order.orderNumber);
     setRefundSearchResults([]);
     setRefundSelections([]);
   }
@@ -1168,6 +1189,7 @@ export default function PosPage() {
       });
 
       setRefundOpen(false);
+      fetchRecentRefundOrders();
     } catch (error) {
       if (soundEnabled) playSound("error");
       toast.error(error instanceof Error ? error.message : t("toasts.refundFailed"));
@@ -2027,6 +2049,7 @@ export default function PosPage() {
                     onChange={(e) => searchRefundOrders(e.target.value)}
                     autoFocus
                   />
+                  <p className="text-[11px] text-muted-foreground">{t("refundSearchHint")}</p>
                 </div>
 
                 {refundSearchLoading && (
@@ -2035,8 +2058,48 @@ export default function PosPage() {
                   </div>
                 )}
 
-                {refundSearchResults.length > 0 && (
+                {refundOrderSearch.length < 2 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">{t("recentRefundOrders")}</Label>
+                      {recentRefundOrdersLoading && (
+                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    {!recentRefundOrdersLoading && recentRefundOrders.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("noRecentRefundOrders")}</p>
+                    )}
+                    {recentRefundOrders.length > 0 && (
+                      <div className="space-y-1.5 max-h-64 overflow-auto">
+                        {recentRefundOrders.map((order) => (
+                          <button
+                            key={order.id}
+                            className="w-full text-left p-3 rounded-lg border bg-background hover:bg-muted transition-colors"
+                            onClick={() => selectRefundOrder(order)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">{order.orderNumber}</span>
+                              <Badge variant={order.source === "POS" ? "default" : "secondary"} className="text-[10px]">
+                                {order.source}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-xs text-muted-foreground">{order.email}</span>
+                              <span className="text-sm font-medium">{curr} {Number(order.totalAmount).toFixed(2)}</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {new Date(order.createdAt).toLocaleDateString()} — {t("itemCount", { count: order.items.length })}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {refundSearchResults.length > 0 && refundOrderSearch.length >= 2 && (
                   <div className="space-y-1.5 max-h-64 overflow-auto">
+                    <Label className="text-sm font-medium">{t("refundSearchResults")}</Label>
                     {refundSearchResults.map((order) => (
                       <button
                         key={order.id}
