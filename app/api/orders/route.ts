@@ -742,27 +742,22 @@ export async function GET(req: Request) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [orderRows, totalRows] = await Promise.all([
-      db.query.orders.findMany({
-        where,
-        with: {
-          items: true,
-          shippingAddress: true,
-          user: { columns: { id: true, name: true, email: true } },
-        },
-        orderBy: desc(ordersTable.createdAt),
-        offset: (page - 1) * limit,
-        limit,
-      }),
-      db.select({ value: count() }).from(ordersTable).where(where),
-    ]);
+    const orderRows = await db.query.orders.findMany({
+      where,
+      with: {
+        items: true,
+        shippingAddress: true,
+        user: { columns: { id: true, name: true, email: true } },
+      },
+      orderBy: desc(ordersTable.createdAt),
+      offset: (page - 1) * limit,
+      limit,
+    });
 
     let ordersPayload = orderRows;
-    let total = totalRows[0]?.value ?? 0;
+    let total = 0;
 
     if (isAdmin && refundableOnly && orderRows.length > 0) {
-      console.log(`[Refunds] Processing ${orderRows.length} orders for refundable check`);
-      
       const orderIds = orderRows.map((order) => order.id);
       const completedRefunds = await db.query.refunds.findMany({
         where: and(
@@ -799,13 +794,14 @@ export async function GET(req: Request) {
           ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED"].includes(order.paymentStatus) &&
           order.items.some((item) => item.refundableQuantity > 0),
         );
-      
-      console.log(`[Refunds] After filtering: ${ordersPayload.length} orders with refundable items`);
-      
-      // Update total to reflect actual refundable orders count
+
       total = ordersPayload.length;
-    } else if (refundableOnly) {
-      console.log(`[Refunds] refundableOnly=true but conditions: isAdmin=${isAdmin}, orderRows.length=${orderRows.length}`);
+    } else if (isAdmin && refundableOnly) {
+      ordersPayload = [];
+      total = 0;
+    } else {
+      const totalRows = await db.select({ value: count() }).from(ordersTable).where(where);
+      total = totalRows[0]?.value ?? 0;
     }
 
     return NextResponse.json(serializeDecimal({

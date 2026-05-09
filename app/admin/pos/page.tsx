@@ -1094,12 +1094,11 @@ export default function PosPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        console.log("Refundable orders response:", data);
         const filtered = (data.orders || []).filter(isRefundEligible);
-        console.log("Filtered refundable orders:", filtered.length);
         setRecentRefundOrders(filtered.slice(0, 5));
       } else {
-        console.error("API error:", res.status, res.statusText);
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        console.error("Refund orders API error:", res.status, err.error || res.statusText);
         toast.error(t("toasts.failedSearchOrders"));
       }
     } catch (error) {
