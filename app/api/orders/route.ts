@@ -760,11 +760,23 @@ export async function GET(req: Request) {
     if (isAdmin && refundableOnly && orderRows.length > 0) {
       const orderIds = orderRows.map((order) => order.id);
       const completedRefunds = await db.query.refunds.findMany({
+        columns: {
+          id: true,
+          orderId: true,
+          status: true,
+        },
         where: and(
           inArray(refunds.orderId, orderIds),
           inArray(refunds.status, ["COMPLETED", "APPROVED"]),
         ),
-        with: { items: true },
+        with: {
+          items: {
+            columns: {
+              orderItemId: true,
+              quantity: true,
+            },
+          },
+        },
       });
 
       const refundedQtyByItem = new Map<string, number>();
