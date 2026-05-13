@@ -32,11 +32,14 @@ const hasUpstash = !!(
 );
 
 const isProduction = process.env.NODE_ENV === "production";
+const isNextProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
 
 // Hard-fail at module load time in production without Redis.
 // This is intentional: silent in-memory fallback on serverless means rate
 // limiting simply doesn't work — requests that should be blocked aren't.
-if (isProduction && !hasUpstash) {
+// Next.js also evaluates route modules during `next build`; allow that compile
+// phase to finish so deployment systems can inject runtime env separately.
+if (isProduction && !isNextProductionBuild && !hasUpstash) {
   throw new Error(
     "Rate limiting requires Upstash Redis in production. " +
     "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, " +

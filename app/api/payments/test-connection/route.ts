@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { assertTapKeyMatchesMode, getTapSecretKeyMode } from "@/lib/tap";
 
 /**
  * POST /api/payments/test-connection
@@ -21,6 +23,9 @@ export async function POST() {
       );
     }
 
+    const settings = await db.query.storeSettings.findFirst();
+    assertTapKeyMatchesMode(tapSecretKey, settings?.tapTestMode ?? true);
+
     // Use the Tap /v2/charges/list endpoint with a minimal request to verify the key
     const res = await fetch("https://api.tap.company/v2/charges/list", {
       method: "POST",
@@ -36,10 +41,20 @@ export async function POST() {
     });
 
     if (res.ok || res.status === 200) {
-      return NextResponse.json({ status: "connected" });
+      return NextResponse.json({ status: "connected", mode: getTapSecretKeyMode(tapSecretKey) });
     }
 
     const error = await res.json().catch(() => ({}));
+    const tapErrorCode = error?.errors?.[0]?.code;
+
+    if (tapErrorCode === "1249") {
+      return NextResponse.json({
+        status: "connected",
+        mode: getTapSecretKeyMode(tapSecretKey),
+        message: "Connected. No Tap charges found for the test period.",
+      });
+    }
+
     return NextResponse.json(
       {
         status: "failed",

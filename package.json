@@ -12,7 +12,8 @@
     "db:generate": "npx drizzle-kit generate",
     "db:seed": "npx tsx scripts/seed.ts",
     "db:seed-attributes": "npx tsx scripts/seed-attributes.ts",
-    "db:seed-mobile": "npx tsx scripts/seed-mobile-shop.ts"
+    "db:seed-mobile": "npx tsx scripts/seed-mobile-shop.ts",
+    "tap:test": "npx tsx scripts/test-tap-payments.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",

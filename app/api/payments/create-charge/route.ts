@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { createTapCharge, parseSaudiPhone } from "@/lib/tap";
+import { assertTapKeyMatchesMode, createTapCharge, parseSaudiPhone } from "@/lib/tap";
 import { z } from "zod";
-import { orders, storeSettings, transactions, orderTimeline } from "@/lib/schema";
+import { orders, transactions, orderTimeline } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { paymentLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit, auditMeta } from "@/lib/audit";
@@ -94,6 +94,7 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+    assertTapKeyMatchesMode(tapSecretKey, settings.tapTestMode);
 
     // Build the base URL for redirects
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
@@ -104,7 +105,9 @@ export async function POST(req: Request) {
       currency: order.currency || "SAR",
       description: `Order ${order.orderNumber}`,
       reference: {
+        transaction: `txn_${order.id}`,
         order: order.orderNumber,
+        idempotent: `charge_${order.id}`,
       },
       receipt: {
         email: true,

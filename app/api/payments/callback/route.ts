@@ -39,10 +39,10 @@ export async function GET(req: Request) {
           const charge = await retrieveTapCharge(tapSecretKey, tapId);
           const paymentStatus = mapTapStatus(charge.status);
 
-          // Cross-check: verify the charge's metadata order_id matches the URL param
-          if (charge.metadata?.order_id && charge.metadata.order_id !== orderId) {
+          // Cross-check: every charge created by this app must be bound to this order.
+          if (charge.metadata?.order_id !== orderId) {
             console.error("Callback: order_id in metadata doesn't match URL param", {
-              metadataOrderId: charge.metadata.order_id,
+              metadataOrderId: charge.metadata?.order_id,
               urlOrderId: orderId,
             });
             return NextResponse.redirect(`${baseUrl}/checkout?error=payment_mismatch`);

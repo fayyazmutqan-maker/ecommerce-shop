@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
@@ -14,7 +15,7 @@ import {
   channelOrders,
   salesChannels,
 } from "@/lib/schema";
-import { createTapRefund } from "@/lib/tap";
+import { assertTapKeyMatchesMode, createTapRefund } from "@/lib/tap";
 import { refundOrder as metaRefundOrder } from "@/lib/meta";
 import type { MetaCredentials } from "@/lib/meta";
 import { serializeDecimal } from "@/lib/decimal";
@@ -41,6 +42,35 @@ const createRefundSchema = z.object({
     .optional(),
   // For full refunds, items can be omitted — we'll refund the full totalAmount
 });
+
+function createRefundIdempotencyKey(input: {
+  orderId: string;
+  type: "FULL" | "PARTIAL";
+  amount: number;
+  items: { orderItemId: string; quantity: number; amount: number }[];
+}) {
+  const hash = createHash("sha256")
+    .update(JSON.stringify({
+      orderId: input.orderId,
+      type: input.type,
+      amount: input.amount.toFixed(2),
+      items: input.items
+        .map((item) => ({
+          orderItemId: item.orderItemId,
+          quantity: item.quantity,
+          amount: item.amount.toFixed(2),
+        }))
+        .sort((a, b) => a.orderItemId.localeCompare(b.orderItemId)),
+    }))
+    .digest("hex")
+    .slice(0, 32);
+
+  return `refund_${input.orderId}_${hash}`.slice(0, 128);
+}
+
+function isTapRefundCompleted(status: string): boolean {
+  return ["REFUNDED", "COMPLETED", "SUCCESS", "SUCCEEDED"].includes(status.toUpperCase());
+}
 
 /**
  * GET /api/refunds — List refunds for an order (admin) or all refunds
@@ -256,6 +286,31 @@ export async function POST(req: Request) {
       );
     }
 
+    const effectiveIdempotencyKey = data.idempotencyKey || createRefundIdempotencyKey({
+      orderId: data.orderId,
+      type: data.type,
+      amount: refundAmount,
+      items: refundItemsData,
+    });
+
+    if (!data.idempotencyKey) {
+      const existingRefund = await db.query.refunds.findFirst({
+        where: eq(refunds.idempotencyKey, effectiveIdempotencyKey),
+        with: {
+          items: true,
+          order: { columns: { id: true, status: true, paymentStatus: true, refundReason: true } },
+        },
+      });
+
+      if (existingRefund) {
+        return NextResponse.json(serializeDecimal({
+          refund: existingRefund,
+          order: existingRefund.order,
+          idempotent: true,
+        }));
+      }
+    }
+
     // Find the Tap charge ID from the successful payment transaction
     // Webhook sets status to "PAID" (mapped from Tap "CAPTURED"), so match that
     const paymentTx = order.transactions.find(
@@ -275,6 +330,8 @@ export async function POST(req: Request) {
           { status: 503 }
         );
       }
+      const settings = await db.query.storeSettings.findFirst();
+      assertTapKeyMatchesMode(tapSecretKey, settings?.tapTestMode ?? true);
 
       try {
         const tapRefund = await createTapRefund(
@@ -282,11 +339,22 @@ export async function POST(req: Request) {
           paymentTx.reference,
           refundAmount,
           order.currency,
-          data.reason || "Admin refund"
+          data.reason || "Admin refund",
+          {
+            idempotent: effectiveIdempotencyKey,
+            postUrl: `${process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin}/api/payments/webhook`,
+            metadata: {
+              order_id: data.orderId,
+              refund_key: effectiveIdempotencyKey,
+            },
+            reference: {
+              order: order.orderNumber,
+            },
+          },
         );
         tapRefundId = tapRefund.id;
         // If Tap returns a non-success status, mark as pending.
-        if (tapRefund.status !== "REFUNDED" && tapRefund.status !== "refunded") {
+        if (!isTapRefundCompleted(tapRefund.status)) {
           refundStatus = "PENDING";
         }
       } catch (tapError) {
@@ -312,7 +380,7 @@ export async function POST(req: Request) {
           type: data.type,
           restockItems: data.restockItems,
           processedBy: session.user.id,
-          idempotencyKey: data.idempotencyKey || null,
+          idempotencyKey: effectiveIdempotencyKey,
         })
         .returning();
 

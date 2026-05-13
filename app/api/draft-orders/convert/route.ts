@@ -11,10 +11,9 @@ import {
   orderTimeline,
   products,
   productVariants,
-  storeSettings,
   transactions,
 } from "@/lib/schema";
-import { createTapCharge, parseSaudiPhone } from "@/lib/tap";
+import { assertTapKeyMatchesMode, createTapCharge, parseSaudiPhone } from "@/lib/tap";
 
 /**
  * POST /api/draft-orders/convert — Convert a draft order into a real order
@@ -218,12 +217,17 @@ export async function POST(req: Request) {
         const settings = await db.query.storeSettings.findFirst();
         const tapSecretKey = process.env.TAP_SECRET_KEY;
         if (settings?.tapEnabled && tapSecretKey) {
+          assertTapKeyMatchesMode(tapSecretKey, settings.tapTestMode);
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
           const charge = await createTapCharge(tapSecretKey, {
             amount: Number(order.totalAmount),
             currency: "SAR",
             description: `Order ${order.orderNumber}`,
-            reference: { order: order.orderNumber },
+            reference: {
+              transaction: `txn_${order.id}`,
+              order: order.orderNumber,
+              idempotent: `charge_${order.id}`,
+            },
             receipt: { email: true, sms: false },
             customer: {
               first_name: draft.customerName?.split(" ")[0] || "Customer",

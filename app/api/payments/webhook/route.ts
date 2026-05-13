@@ -1,10 +1,31 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { retrieveTapCharge, mapTapStatus, verifyTapWebhookSignature } from "@/lib/tap";
-import { orders, transactions, orderTimeline } from "@/lib/schema";
+import { orders, transactions, orderTimeline, refunds } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { webhookLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { audit } from "@/lib/audit";
+
+function mapTapRefundStatus(status: string): string {
+  switch (status.toUpperCase()) {
+    case "REFUNDED":
+    case "COMPLETED":
+    case "SUCCESS":
+    case "SUCCEEDED":
+      return "COMPLETED";
+    case "FAILED":
+    case "DECLINED":
+    case "REJECTED":
+      return "REJECTED";
+    default:
+      return "PENDING";
+  }
+}
+
+function getRecordString(record: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = record?.[key];
+  return typeof value === "string" && value ? value : undefined;
+}
 
 /**
  * POST /api/payments/webhook
@@ -57,7 +78,7 @@ export async function POST(req: Request) {
     // Verify webhook HMAC signature if provided by Tap
     // Log a warning if missing but still proceed (re-fetch provides secondary verification)
     if (hashString) {
-      const isValid = verifyTapWebhookSignature(tapSecretKey, rawBody, hashString);
+      const isValid = verifyTapWebhookSignature(tapSecretKey, body, hashString);
       if (!isValid) {
         console.error("Webhook: HMAC signature verification failed for charge", chargeId);
         return NextResponse.json(
@@ -71,6 +92,101 @@ export async function POST(req: Request) {
         { error: "Missing webhook signature" },
         { status: 403 }
       );
+    }
+
+    const objectType = typeof body.object === "string" ? body.object.toLowerCase() : "";
+    if (objectType === "refund" || chargeId.startsWith("ref_")) {
+      const metadata = typeof body.metadata === "object" && body.metadata !== null
+        ? body.metadata as Record<string, unknown>
+        : undefined;
+      const refundKey = getRecordString(metadata, "refund_key");
+      const orderId = getRecordString(metadata, "order_id");
+      const refundStatus = mapTapRefundStatus(typeof body.status === "string" ? body.status : "");
+
+      if (!refundKey) {
+        console.error("Webhook: No refund_key in refund metadata", chargeId);
+        return NextResponse.json({ error: "No refund_key in metadata" }, { status: 400 });
+      }
+
+      const refund = await db.query.refunds.findFirst({
+        where: eq(refunds.idempotencyKey, refundKey),
+        with: {
+          order: {
+            with: {
+              refunds: true,
+            },
+          },
+        },
+      });
+
+      if (!refund) {
+        console.error("Webhook: Refund not found for key", refundKey);
+        return NextResponse.json({ error: "Refund not found" }, { status: 404 });
+      }
+
+      if (orderId && refund.orderId !== orderId) {
+        console.error("Webhook: refund order_id mismatch", { refundKey, metadataOrderId: orderId, refundOrderId: refund.orderId });
+        return NextResponse.json({ error: "Refund order mismatch" }, { status: 400 });
+      }
+
+      if (refund.status === refundStatus) {
+        return NextResponse.json({ status: "ok", message: "Refund already processed" });
+      }
+
+      const refundAmount = Number(refund.amount);
+      const completedBefore = refund.order.refunds
+        .filter((r) => r.id !== refund.id && (r.status === "COMPLETED" || r.status === "APPROVED"))
+        .reduce((sum, r) => sum + Number(r.amount), 0);
+      const totalAmount = Number(refund.order.totalAmount);
+      const completedNow = refundStatus === "COMPLETED" || refundStatus === "APPROVED";
+      const newTotalRefunded = completedBefore + (completedNow ? refundAmount : 0);
+      const isFullyRefunded = Math.abs(newTotalRefunded - totalAmount) < 0.01;
+
+      await db.transaction(async (tx) => {
+        await tx.update(refunds).set({ status: refundStatus }).where(eq(refunds.id, refund.id));
+
+        await tx.update(transactions).set({
+          status: refundStatus === "COMPLETED" ? "COMPLETED" : refundStatus,
+          metadata: JSON.stringify({
+            refundId: refund.id,
+            tap_refund_id: chargeId,
+            tap_status: body.status,
+            verified_via: "webhook",
+          }),
+        }).where(and(eq(transactions.orderId, refund.orderId), eq(transactions.reference, chargeId)));
+
+        if (completedNow) {
+          await tx.update(orders).set({
+            paymentStatus: isFullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED",
+            status: isFullyRefunded ? "REFUNDED" : refund.order.status,
+          }).where(eq(orders.id, refund.orderId));
+
+          await tx.insert(orderTimeline).values({
+            orderId: refund.orderId,
+            title: `Refund Completed — ${refund.amount} ${refund.order.currency}`,
+            message: `Tap refund ${chargeId} completed`,
+            type: "REFUND",
+          });
+        } else if (refundStatus === "REJECTED") {
+          await tx.insert(orderTimeline).values({
+            orderId: refund.orderId,
+            title: "Refund Failed",
+            message: `Tap refund ${chargeId} failed`,
+            type: "ERROR",
+          });
+        }
+      });
+
+      audit({
+        action: "PAYMENT_WEBHOOK",
+        ip,
+        resource: "refund",
+        resourceId: chargeId,
+        details: { orderId: refund.orderId, refundId: refund.id, refundStatus },
+        success: true,
+      });
+
+      return NextResponse.json({ status: "ok" });
     }
 
     // Always re-fetch the charge from Tap API to verify authenticity

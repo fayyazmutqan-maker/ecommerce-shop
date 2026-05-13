@@ -12,12 +12,33 @@ const TAP_API_BASE = "https://api.tap.company/v2";
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
 
+export function getTapSecretKeyMode(secretKey: string): "test" | "live" | "unknown" {
+  if (secretKey.startsWith("sk_test_")) return "test";
+  if (secretKey.startsWith("sk_live_")) return "live";
+  return "unknown";
+}
+
+export function assertTapKeyMatchesMode(secretKey: string, testMode: boolean): void {
+  const keyMode = getTapSecretKeyMode(secretKey);
+  if (keyMode === "unknown") {
+    throw new Error("TAP_SECRET_KEY must start with sk_test_ or sk_live_");
+  }
+  if (testMode && keyMode !== "test") {
+    throw new Error("Tap test mode is enabled, but TAP_SECRET_KEY is not a test key");
+  }
+  if (!testMode && keyMode !== "live") {
+    throw new Error("Tap live mode is enabled, but TAP_SECRET_KEY is not a live key");
+  }
+}
+
 export interface TapChargeRequest {
   amount: number;
   currency: string;
   description: string;
   reference: {
     order: string;
+    transaction?: string;
+    idempotent?: string;
   };
   receipt: {
     email: boolean;
@@ -98,6 +119,30 @@ export interface TapChargeRetrieveResponse extends TapChargeResponse {
       message: string;
     };
   };
+}
+
+type TapWebhookPayload = {
+  id?: unknown;
+  amount?: unknown;
+  currency?: unknown;
+  status?: unknown;
+  created?: unknown;
+  transaction?: {
+    created?: unknown;
+  };
+  reference?: {
+    gateway?: unknown;
+    payment?: unknown;
+  };
+};
+
+export interface TapRefundResponse {
+  id: string;
+  status: string;
+  amount?: number;
+  currency?: string;
+  charge_id?: string;
+  metadata?: Record<string, string>;
 }
 
 // ─── Retry Helper ─────────────────────────────────────────────
@@ -243,8 +288,14 @@ export async function createTapRefund(
   chargeId: string,
   amount: number,
   currency: string,
-  reason: string
-): Promise<{ id: string; status: string }> {
+  reason: string,
+  options?: {
+    idempotent?: string;
+    postUrl?: string;
+    metadata?: Record<string, string>;
+    reference?: Record<string, string>;
+  },
+): Promise<TapRefundResponse> {
   if (!validateTapId(chargeId)) {
     throw new Error("Invalid charge ID format");
   }
@@ -264,6 +315,16 @@ export async function createTapRefund(
         currency,
         description: reason,
         reason: "requested_by_customer",
+        ...(options?.postUrl ? { post: { url: options.postUrl } } : {}),
+        ...(options?.metadata ? { metadata: options.metadata } : {}),
+        ...(options?.idempotent || options?.reference
+          ? {
+              reference: {
+                ...options.reference,
+                ...(options.idempotent ? { idempotent: options.idempotent } : {}),
+              },
+            }
+          : {}),
       }),
     },
   );
@@ -292,6 +353,8 @@ export function mapTapStatus(tapStatus: string): string {
     case "RESTRICTED":
     case "VOID":
     case "TIMEDOUT":
+    case "ABANDONED":
+    case "UNKNOWN":
       return "FAILED";
     case "CANCELLED":
       return "CANCELLED";
@@ -353,10 +416,52 @@ export function parseSaudiPhone(phone?: string): ParsedPhone | undefined {
 
 // ─── Webhook Verification ─────────────────────────────────────
 
+const THREE_DECIMAL_CURRENCIES = new Set(["BHD", "JOD", "KWD", "OMR"]);
+
+function getCurrencyDecimalPlaces(currency: string): number {
+  return THREE_DECIMAL_CURRENCIES.has(currency.toUpperCase()) ? 3 : 2;
+}
+
+function stringValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function formatTapAmount(amount: unknown, currency: unknown): string {
+  const numericAmount = Number(amount);
+  const currencyCode = stringValue(currency);
+
+  if (!Number.isFinite(numericAmount) || !currencyCode) {
+    return stringValue(amount);
+  }
+
+  return numericAmount.toFixed(getCurrencyDecimalPlaces(currencyCode));
+}
+
+export function buildTapWebhookHashString(payload: TapWebhookPayload): string {
+  const id = stringValue(payload.id);
+  const amount = formatTapAmount(payload.amount, payload.currency);
+  const currency = stringValue(payload.currency);
+  const gatewayReference = stringValue(payload.reference?.gateway);
+  const paymentReference = stringValue(payload.reference?.payment);
+  const status = stringValue(payload.status);
+  const created = stringValue(payload.transaction?.created ?? payload.created);
+
+  return (
+    `x_id${id}` +
+    `x_amount${amount}` +
+    `x_currency${currency}` +
+    `x_gateway_reference${gatewayReference}` +
+    `x_payment_reference${paymentReference}` +
+    `x_status${status}` +
+    `x_created${created}`
+  );
+}
+
 /**
  * Verify a Tap webhook HMAC signature.
- * Tap sends a `hashstring` header containing an HMAC-SHA256 of the payload
- * signed with the secret API key.
+ * Tap sends a `hashstring` header containing an HMAC-SHA256 of selected
+ * response fields, signed with the secret API key.
  *
  * Uses Node's built-in crypto.timingSafeEqual for constant-time comparison,
  * consistent with the rest of the codebase (meta.ts, snapchat.ts).
@@ -366,13 +471,14 @@ export function parseSaudiPhone(phone?: string): ParsedPhone | undefined {
  */
 export function verifyTapWebhookSignature(
   secretKey: string,
-  rawBody: string,
+  payload: TapWebhookPayload,
   hashString: string | null
 ): boolean {
   if (!hashString) return false;
   try {
+    const hashInput = buildTapWebhookHashString(payload);
     const computed = createHmac("sha256", secretKey)
-      .update(rawBody)
+      .update(hashInput)
       .digest("hex");
 
     // Use timingSafeEqual (consistent with meta.ts / snapchat.ts)
