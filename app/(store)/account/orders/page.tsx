@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, FileText } from "lucide-react";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { AccountSidebar } from "@/components/store/account-sidebar";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -54,32 +55,36 @@ export default async function OrdersPage() {
         { label: t("orders") },
       ]} />
 
-      <div className="flex items-center gap-4 mb-10">
-        <Button variant="outline" size="icon" asChild className="h-10 w-10">
-          <Link href="/account">
-            <ArrowLeft className="h-[18px] w-[18px]" />
-          </Link>
-        </Button>
-        <div>
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">{t("title")}</p>
-          <h1 className="text-3xl font-bold">{t("myOrders")}</h1>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebar active="orders" user={session.user} />
 
-      {orderList.length === 0 ? (
-        <Card className="shadow-none border">
-          <CardContent className="py-20 text-center">
-            <p className="text-muted-foreground mb-5 font-medium">
-              {t("noOrdersYet")}
-            </p>
-            <Button asChild className="h-11 px-6 font-semibold">
-              <Link href="/products">{t("startShopping")}</Link>
+        <div className="lg:col-span-3 space-y-8">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" asChild className="h-10 w-10">
+              <Link href="/account">
+                <ArrowLeft className="h-[18px] w-[18px]" />
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-5">
-          {orderList.map((order) => (
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-1">{t("title")}</p>
+              <h1 className="text-3xl font-bold">{t("myOrders")}</h1>
+            </div>
+          </div>
+
+          {orderList.length === 0 ? (
+            <Card className="shadow-none border">
+              <CardContent className="py-20 text-center">
+                <p className="text-muted-foreground mb-5 font-medium">
+                  {t("noOrdersYet")}
+                </p>
+                <Button asChild className="h-11 px-6 font-semibold">
+                  <Link href="/products">{t("startShopping")}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-5">
+              {orderList.map((order) => (
             <Card key={order.id} className="shadow-none border">
               <CardHeader className="pb-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -179,9 +184,11 @@ export default async function OrdersPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -299,8 +299,8 @@ export async function POST(req: Request) {
     // Add timeline entry
     const timelineMessages: Record<string, { title: string; message: string; type: string }> = {
       PAID: {
-        title: "Payment Captured",
-        message: `Payment of ${charge.currency} ${charge.amount} captured successfully via ${charge.source?.payment_method || "Tap"}`,
+        title: "Payment Successful",
+        message: `Payment of ${charge.currency} ${charge.amount} was completed successfully via ${charge.source?.payment_method || "Tap"}`,
         type: "SUCCESS",
       },
       FAILED: {

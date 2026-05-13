@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { AccountSidebar } from "@/components/store/account-sidebar";
 import { CreditCard, Download, Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -94,13 +95,17 @@ export default async function OrderDetailPage({
   const netAfterRefunds = Math.max(0, Number(data.totalAmount) - totalRefunded);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
         { label: "Account", href: "/account" },
         { label: "Orders", href: "/account/orders" },
         { label: data.orderNumber },
       ]} />
 
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebar active="orders" user={session.user} />
+
+        <div className="lg:col-span-3">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" asChild>
@@ -321,6 +326,8 @@ export default async function OrderDetailPage({
               </CardContent>
             </Card>
           )}
+        </div>
+      </div>
         </div>
       </div>
     </div>
