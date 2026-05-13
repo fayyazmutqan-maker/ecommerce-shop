@@ -101,6 +101,17 @@ const CHECKOUT_COUNTRIES = [
 type CheckoutCountryCode = (typeof CHECKOUT_COUNTRIES)[number]["code"];
 const CHECKOUT_PHONE_COUNTRIES: CheckoutCountryCode[] = ["SA", "AE"];
 
+async function readCheckoutResponse(res: Response) {
+  const text = await res.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { error: text };
+  }
+}
+
 export default function CheckoutPage() {
   const t = useTranslations("checkoutPage");
   const tCommon = useTranslations("common");
@@ -462,10 +473,10 @@ export default function CheckoutPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await readCheckoutResponse(res);
 
       if (!res.ok) {
-        toast.error(data.error || t("failedPlaceOrder"));
+        toast.error(typeof data.error === "string" ? data.error : t("failedPlaceOrder"));
         setLoading(false);
         return;
       }
@@ -478,13 +489,20 @@ export default function CheckoutPage() {
           body: JSON.stringify({ orderId: data.orderId, email: form.email.trim() }),
         });
 
-        const chargeData = await chargeRes.json();
+        const chargeData = await readCheckoutResponse(chargeRes);
 
         if (!chargeRes.ok) {
           // Charge creation failed but order exists — tell user to retry
           toast.error(
-            chargeData.error || t("failedPayment")
+            typeof chargeData.error === "string" ? chargeData.error : t("failedPayment")
           );
+          clearCart();
+          router.push(`/order-confirmation?order=${data.orderNumber}&status=failed`);
+          return;
+        }
+
+        if (typeof chargeData.paymentUrl !== "string") {
+          toast.error(t("failedPayment"));
           clearCart();
           router.push(`/order-confirmation?order=${data.orderNumber}&status=failed`);
           return;
@@ -498,7 +516,7 @@ export default function CheckoutPage() {
 
       // COD flow — go directly to confirmation
       clearCart();
-      toast.success(t("orderPlaced", { orderNumber: data.orderNumber }));
+      toast.success(t("orderPlaced", { orderNumber: String(data.orderNumber) }));
       router.push(`/order-confirmation?order=${data.orderNumber}`);
     } catch {
       toast.error(tCommon("error"));
