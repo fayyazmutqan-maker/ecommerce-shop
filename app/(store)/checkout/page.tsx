@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CreditCard, ShieldCheck, Lock, Banknote, Loader2, Tag } from "lucide-react";
+import { ArrowLeft, CreditCard, ShieldCheck, Lock, Banknote, Loader2, Tag, Mail, MapPin, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -536,13 +536,32 @@ export default function CheckoutPage() {
         <h1 className="text-3xl font-bold tracking-tight">{tCheckout("title")}</h1>
       </div>
 
+      <div className="mb-8 grid grid-cols-1 gap-3 border-y py-4 sm:grid-cols-3">
+        {[
+          { icon: Mail, label: tCheckout("contactInfo"), active: true },
+          { icon: MapPin, label: tCheckout("shippingAddress"), active: true },
+          { icon: CreditCard, label: tCheckout("paymentMethod"), active: true },
+        ].map((step, index) => (
+          <div key={step.label} className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full border ${step.active ? "bg-foreground text-background" : "bg-background"}`}>
+              <step.icon className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Step {index + 1}</p>
+              <p className="text-sm font-semibold">{step.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
         {/* Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Contact */}
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-bold">
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <Mail className="h-4 w-4" />
                 {tCheckout("contactInfo")}
               </CardTitle>
             </CardHeader>
@@ -593,7 +612,8 @@ export default function CheckoutPage() {
           {/* Shipping Address */}
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-bold">
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <MapPin className="h-4 w-4" />
                 {tCheckout("shippingAddress")}
               </CardTitle>
             </CardHeader>
@@ -812,7 +832,8 @@ export default function CheckoutPage() {
           {/* Shipping Method */}
           <Card className="shadow-none border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-bold">
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <Truck className="h-4 w-4" />
                 {t("shippingMethod")}
               </CardTitle>
             </CardHeader>
@@ -887,7 +908,7 @@ export default function CheckoutPage() {
                 <CreditCard className="h-4 w-4" /> {tCheckout("paymentMethod")}
               </CardTitle>
               <CardDescription className="flex items-center gap-1.5 text-xs">
-                <Lock className="h-3 w-3" /> {t("sslEncryption")}
+                <Lock className="h-3 w-3" /> {t("secureHostedPayment")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -955,11 +976,12 @@ export default function CheckoutPage() {
 
               {/* If Tap is selected, show what will happen */}
               {paymentMethod === "tap" && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
-                  <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    {t("securePaymentRedirect")}
-                  </p>
+                <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <p className="font-medium">{t("securePaymentRedirect")}</p>
+                  </div>
+                  <p className="pl-6 leading-relaxed">{t("paymentDataNotice")}</p>
                 </div>
               )}
 
