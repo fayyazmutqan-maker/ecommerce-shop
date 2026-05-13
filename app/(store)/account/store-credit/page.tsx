@@ -7,9 +7,9 @@ import { eq, desc } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { AccountSidebar } from "@/components/store/account-sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +27,17 @@ export default async function StoreCreditPage() {
   }, 0);
 
   return (
-    <div className="max-w-3xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
         { label: "Account", href: "/account" },
         { label: "Store Credit" },
       ]} />
 
-      <div className="flex items-center gap-4 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebar active="storeCredit" user={session.user} />
+
+        <div className="lg:col-span-3 space-y-8">
+      <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/account"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
@@ -43,7 +47,7 @@ export default async function StoreCreditPage() {
         </div>
       </div>
 
-      <Card className="mb-8">
+      <Card>
         <CardContent className="flex items-center gap-4 p-6">
           <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
             <Wallet className="h-7 w-7 text-primary" />
@@ -86,6 +90,8 @@ export default async function StoreCreditPage() {
           )}
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }

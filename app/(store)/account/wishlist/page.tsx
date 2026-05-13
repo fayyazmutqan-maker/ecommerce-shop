@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/helpers";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
+import { AccountSidebar } from "@/components/store/account-sidebar";
 import { getTranslations } from "next-intl/server";
 import { shouldUseUnoptimizedImage } from "@/lib/image";
 
@@ -55,7 +56,11 @@ export default async function WishlistPage() {
         { label: t("wishlist") },
       ]} />
 
-      <div className="flex items-center gap-4 mb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebar active="wishlist" user={session.user} />
+
+        <div className="lg:col-span-3 space-y-8">
+      <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild className="h-10 w-10">
           <Link href="/account">
             <ArrowLeft className="h-[18px] w-[18px]" />
@@ -82,7 +87,7 @@ export default async function WishlistPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {items.map((item) => (
             <Card key={item.id} className="overflow-hidden shadow-none border">
               <Link href={`/products/${item.product.slug}`}>
@@ -124,6 +129,8 @@ export default async function WishlistPage() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

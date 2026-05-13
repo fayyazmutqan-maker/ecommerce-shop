@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { AccountSidebarClient } from "@/components/store/account-sidebar-client";
 
 interface Review {
   id: string;
@@ -104,7 +105,11 @@ export default function ReviewsPage() {
         { label: "Reviews" },
       ]} />
 
-      <div className="flex items-center gap-4 mb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebarClient active="reviews" />
+
+        <div className="lg:col-span-3 space-y-8">
+      <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild className="h-10 w-10">
           <Link href="/account">
             <ArrowLeft className="h-[18px] w-[18px]" />
@@ -175,6 +180,8 @@ export default function ReviewsPage() {
           ))}
         </div>
       )}
+        </div>
+      </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">

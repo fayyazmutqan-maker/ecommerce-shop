@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { AccountSidebarClient } from "@/components/store/account-sidebar-client";
 
 interface Address {
   id: string;
@@ -209,7 +210,11 @@ export default function AddressesPage() {
         { label: "Addresses" },
       ]} />
 
-      <div className="flex items-center justify-between mb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebarClient active="addresses" />
+
+        <div className="lg:col-span-3 space-y-8">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" asChild className="h-10 w-10">
             <Link href="/account">
@@ -243,7 +248,7 @@ export default function AddressesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {addresses.map((address) => (
             <Card key={address.id} className="shadow-none border">
               <CardContent className="p-5 space-y-3">
@@ -288,6 +293,8 @@ export default function AddressesPage() {
           ))}
         </div>
       )}
+        </div>
+      </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

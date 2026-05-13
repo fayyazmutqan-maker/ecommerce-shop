@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, RotateCcw, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { formatCurrency, formatDateTime } from "@/lib/helpers";
+import { AccountSidebarClient } from "@/components/store/account-sidebar-client";
 
 interface OrderItem {
   id: string;
@@ -52,7 +53,6 @@ interface ReturnRequest {
 }
 
 export default function ReturnsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
@@ -72,6 +72,7 @@ export default function ReturnsPage() {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchData() {
@@ -193,13 +194,17 @@ export default function ReturnsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
+    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
         { label: "Account", href: "/account" },
         { label: "Returns" },
       ]} />
 
-      <div className="flex items-center gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <AccountSidebarClient active="returns" />
+
+        <div className="lg:col-span-3 space-y-8">
+      <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/account">
             <ArrowLeft className="h-4 w-4" />
@@ -210,7 +215,7 @@ export default function ReturnsPage() {
 
       {/* Existing Returns */}
       {returns.length > 0 && !showForm && (
-        <Card className="mb-6">
+        <Card>
           <CardHeader>
             <CardTitle>Your Returns</CardTitle>
           </CardHeader>
@@ -440,6 +445,8 @@ export default function ReturnsPage() {
           </Card>
         </form>
       )}
+        </div>
+      </div>
     </div>
   );
 }
