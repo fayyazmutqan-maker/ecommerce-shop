@@ -13,6 +13,7 @@
     "db:seed": "npx tsx scripts/seed.ts",
     "db:seed-attributes": "npx tsx scripts/seed-attributes.ts",
     "db:seed-mobile": "npx tsx scripts/seed-mobile-shop.ts",
+    "db:seed-shipping": "npx tsx scripts/seed-shipping.ts",
     "tap:test": "npx tsx scripts/test-tap-payments.ts"
   },
   "dependencies": {
