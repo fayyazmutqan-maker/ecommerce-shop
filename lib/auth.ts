@@ -8,7 +8,6 @@ import { hasRealEnvValue } from "@/lib/env";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { authLimiter } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -26,8 +25,6 @@ const loginSchema = z.object({
 // lightweight in-memory set of recently-verified emails to skip the extra check.
 // This is safe: the worst case is one extra limiter check per successful login.
 
-const MAX_FAILED_ATTEMPTS = 5;
-
 // Tracks emails that have just successfully authenticated so we skip the
 // lockout check for them within the same instance lifetime.
 const recentlyVerified = new Set<string>();
@@ -36,6 +33,8 @@ async function checkLockout(email: string): Promise<boolean> {
   // If this email just succeeded on this instance, skip the lockout check.
   if (recentlyVerified.has(email)) return false;
 
+  const { authLimiter } = await import("@/lib/rate-limit");
+
   // Re-use the authLimiter: each failed attempt consumes a token.
   // When remaining === 0 the account is considered locked.
   const result = await authLimiter.check(`lockout:${email}`);
@@ -43,6 +42,8 @@ async function checkLockout(email: string): Promise<boolean> {
 }
 
 async function recordFailedLogin(email: string): Promise<void> {
+  const { authLimiter } = await import("@/lib/rate-limit");
+
   // Consume a token from the limiter bucket for this email.
   await authLimiter.check(`lockout:${email}`);
 }
