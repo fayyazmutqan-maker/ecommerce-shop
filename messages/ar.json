@@ -125,6 +125,7 @@
     "title": "إتمام الطلب",
     "contactInfo": "معلومات الاتصال",
     "shippingAddress": "عنوان الشحن",
+    "billingAddress": "عنوان الفاتورة",
     "paymentMethod": "طريقة الدفع",
     "orderSummary": "ملخص الطلب",
     "placeOrder": "تأكيد الطلب",

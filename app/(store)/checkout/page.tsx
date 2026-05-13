@@ -64,19 +64,19 @@ const CHECKOUT_COUNTRIES = [
     cityPlaceholder: "Riyadh",
     postalCodePlaceholder: "12345",
     regions: [
-      "Riyadh",
-      "Makkah",
-      "Madinah",
-      "Eastern Province",
-      "Asir",
-      "Tabuk",
-      "Hail",
-      "Northern Borders",
-      "Jazan",
-      "Najran",
-      "Al Baha",
-      "Al Jawf",
-      "Qassim",
+      { name: "Riyadh", cities: ["Riyadh", "Al Kharj", "Diriyah", "Dawadmi", "Majmaah", "Wadi ad-Dawasir"] },
+      { name: "Makkah", cities: ["Makkah", "Jeddah", "Taif", "Rabigh", "Al Qunfudhah", "Al Lith"] },
+      { name: "Madinah", cities: ["Madinah", "Yanbu", "Al Ula", "Badr", "Khaybar"] },
+      { name: "Eastern Province", cities: ["Dammam", "Khobar", "Dhahran", "Al Ahsa", "Jubail", "Qatif", "Hafar Al Batin"] },
+      { name: "Asir", cities: ["Abha", "Khamis Mushait", "Bisha", "Muhayil", "Sarat Abidah"] },
+      { name: "Tabuk", cities: ["Tabuk", "Tayma", "Duba", "Umluj", "Al Wajh"] },
+      { name: "Hail", cities: ["Hail", "Baqaa", "Al Ghazalah", "Shinan"] },
+      { name: "Northern Borders", cities: ["Arar", "Rafha", "Turaif", "Al Uwayqilah"] },
+      { name: "Jazan", cities: ["Jazan", "Sabya", "Abu Arish", "Samtah", "Farasan"] },
+      { name: "Najran", cities: ["Najran", "Sharurah", "Hubuna", "Badr Al Janub"] },
+      { name: "Al Baha", cities: ["Al Baha", "Baljurashi", "Al Mandaq", "Al Makhwah"] },
+      { name: "Al Jawf", cities: ["Sakaka", "Qurayyat", "Dumat Al Jandal", "Tabarjal"] },
+      { name: "Qassim", cities: ["Buraydah", "Unaizah", "Ar Rass", "Al Mithnab", "Al Bukayriyah"] },
     ],
   },
   {
@@ -87,13 +87,13 @@ const CHECKOUT_COUNTRIES = [
     cityPlaceholder: "Dubai",
     postalCodePlaceholder: "00000",
     regions: [
-      "Abu Dhabi",
-      "Dubai",
-      "Sharjah",
-      "Ajman",
-      "Umm Al Quwain",
-      "Ras Al Khaimah",
-      "Fujairah",
+      { name: "Abu Dhabi", cities: ["Abu Dhabi", "Al Ain", "Madinat Zayed", "Ruwais", "Liwa"] },
+      { name: "Dubai", cities: ["Dubai", "Jebel Ali", "Hatta"] },
+      { name: "Sharjah", cities: ["Sharjah", "Khor Fakkan", "Kalba", "Dibba Al Hisn", "Al Dhaid"] },
+      { name: "Ajman", cities: ["Ajman", "Masfout", "Manama"] },
+      { name: "Umm Al Quwain", cities: ["Umm Al Quwain", "Falaj Al Mualla"] },
+      { name: "Ras Al Khaimah", cities: ["Ras Al Khaimah", "Al Rams", "Digdaga", "Khatt"] },
+      { name: "Fujairah", cities: ["Fujairah", "Dibba Al Fujairah", "Masafi", "Mirbah"] },
     ],
   },
 ] as const;
@@ -116,6 +116,9 @@ export default function CheckoutPage() {
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [country, setCountry] = useState<CheckoutCountryCode>("SA");
   const [region, setRegion] = useState("");
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [billingCountry, setBillingCountry] = useState<CheckoutCountryCode>("SA");
+  const [billingRegion, setBillingRegion] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [autoDiscounts, setAutoDiscounts] = useState<AutoDiscountApplied[]>([]);
   const [autoDiscountTotal, setAutoDiscountTotal] = useState(0);
@@ -135,16 +138,42 @@ export default function CheckoutPage() {
     city: "",
     postalCode: "",
   });
+  const [billingForm, setBillingForm] = useState({
+    firstName: "",
+    lastName: "",
+    address1: "",
+    address2: "",
+    city: "",
+    postalCode: "",
+  });
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
     tapEnabled: false,
     codEnabled: true,
   });
 
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const updateForm = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    clearError(field);
+  };
+
+  const updateBillingForm = (field: string, value: string) => {
+    setBillingForm((prev) => ({ ...prev, [field]: value }));
+    clearError(`billing.${field}`);
   };
 
   const selectedCountry = CHECKOUT_COUNTRIES.find((option) => option.code === country) ?? CHECKOUT_COUNTRIES[0];
+  const selectedBillingCountry = CHECKOUT_COUNTRIES.find((option) => option.code === billingCountry) ?? CHECKOUT_COUNTRIES[0];
+  const selectedRegion = selectedCountry.regions.find((option) => option.name === region);
+  const selectedBillingRegion = selectedBillingCountry.regions.find((option) => option.name === billingRegion);
   const checkoutCurrency = selectedCountry.currency;
   const formatCheckoutCurrency = (amount: number) => `${checkoutCurrency} ${amount.toFixed(2)}`;
 
@@ -153,6 +182,7 @@ export default function CheckoutPage() {
     if (!nextCountry) return;
     setCountry(nextCountry.code);
     setRegion("");
+    setForm((prev) => ({ ...prev, city: "" }));
     setShippingRates([]);
     setSelectedShippingRate("");
     if (options.clearPhone) setPhone(undefined);
@@ -160,12 +190,37 @@ export default function CheckoutPage() {
 
   const handleCountryChange = (value: string) => {
     syncCheckoutCountry(value, { clearPhone: true });
+    clearError("country");
   };
 
   const handlePhoneCountryChange = (value?: Country) => {
     if (!value || !CHECKOUT_PHONE_COUNTRIES.includes(value as CheckoutCountryCode)) return;
     if (value === country) return;
     syncCheckoutCountry(value, { clearPhone: false });
+  };
+
+  const handleRegionChange = (value: string) => {
+    setRegion(value);
+    setForm((prev) => ({ ...prev, city: "" }));
+    clearError("region");
+    clearError("city");
+    clearError("shipping");
+  };
+
+  const handleBillingCountryChange = (value: string) => {
+    const nextCountry = CHECKOUT_COUNTRIES.find((option) => option.code === value);
+    if (!nextCountry) return;
+    setBillingCountry(nextCountry.code);
+    setBillingRegion("");
+    setBillingForm((prev) => ({ ...prev, city: "" }));
+    clearError("billing.country");
+  };
+
+  const handleBillingRegionChange = (value: string) => {
+    setBillingRegion(value);
+    setBillingForm((prev) => ({ ...prev, city: "" }));
+    clearError("billing.region");
+    clearError("billing.city");
   };
 
   // Fetch payment settings to know which methods are available
@@ -314,20 +369,48 @@ export default function CheckoutPage() {
     setErrors({});
     
     const { email, firstName, lastName, address1, address2, city, postalCode } = form;
+    const trimmedForm = {
+      email: email.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      address1: address1.trim(),
+      address2: address2.trim(),
+      city: city.trim(),
+      postalCode: postalCode.trim(),
+    };
+    const trimmedBillingForm = {
+      firstName: billingForm.firstName.trim(),
+      lastName: billingForm.lastName.trim(),
+      address1: billingForm.address1.trim(),
+      address2: billingForm.address2.trim(),
+      city: billingForm.city.trim(),
+      postalCode: billingForm.postalCode.trim(),
+    };
 
     // Client-side validation
     const newErrors: Record<string, string> = {};
-    if (!email) newErrors.email = t("emailRequired");
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = t("invalidEmail");
+    if (!trimmedForm.email) newErrors.email = t("emailRequired");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedForm.email)) newErrors.email = t("invalidEmail");
     if (!phone || !isValidPhoneNumber(phone)) newErrors.phone = t("phoneRequired");
-    if (!firstName) newErrors.firstName = t("firstNameRequired");
-    if (!lastName) newErrors.lastName = t("lastNameRequired");
-    if (!address1) newErrors.address1 = t("addressRequired");
-    if (!city) newErrors.city = t("cityRequired");
+    if (!trimmedForm.firstName) newErrors.firstName = t("firstNameRequired");
+    if (!trimmedForm.lastName) newErrors.lastName = t("lastNameRequired");
+    if (!trimmedForm.address1) newErrors.address1 = t("addressRequired");
+    if (!trimmedForm.city) newErrors.city = t("cityRequired");
+    else if (!selectedRegion?.cities.some((cityOption) => cityOption === trimmedForm.city)) newErrors.city = t("cityRequired");
     if (!country) newErrors.country = t("countryRequired");
     if (!region) newErrors.region = t("regionRequired");
     if (shippingSelectionRequired && !hasAvailableShipping) newErrors.shipping = t("shippingRequired");
-    if (!postalCode) newErrors.postalCode = t("postalCodeRequired");
+    if (!trimmedForm.postalCode) newErrors.postalCode = t("postalCodeRequired");
+    if (!billingSameAsShipping) {
+      if (!trimmedBillingForm.firstName) newErrors["billing.firstName"] = t("firstNameRequired");
+      if (!trimmedBillingForm.lastName) newErrors["billing.lastName"] = t("lastNameRequired");
+      if (!trimmedBillingForm.address1) newErrors["billing.address1"] = t("addressRequired");
+      if (!trimmedBillingForm.city) newErrors["billing.city"] = t("cityRequired");
+      else if (!selectedBillingRegion?.cities.some((cityOption) => cityOption === trimmedBillingForm.city)) newErrors["billing.city"] = t("cityRequired");
+      if (!billingCountry) newErrors["billing.country"] = t("countryRequired");
+      if (!billingRegion) newErrors["billing.region"] = t("regionRequired");
+      if (!trimmedBillingForm.postalCode) newErrors["billing.postalCode"] = t("postalCodeRequired");
+    }
     if (!agreeTerms) newErrors.terms = t("agreeTermsRequired");
 
     if (Object.keys(newErrors).length > 0) {
@@ -342,7 +425,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
+          email: trimmedForm.email,
           phone: phone || undefined,
           items: items.map((item) => ({
             productId: item.productId || item.id,
@@ -350,14 +433,25 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           shippingAddress: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            address1: address1.trim(),
-            address2: address2?.trim() || undefined,
-            city: city.trim(),
+            firstName: trimmedForm.firstName,
+            lastName: trimmedForm.lastName,
+            address1: trimmedForm.address1,
+            address2: trimmedForm.address2 || undefined,
+            city: trimmedForm.city,
             state: region,
-            postalCode: postalCode.trim(),
+            postalCode: trimmedForm.postalCode,
             country: selectedCountry.name,
+            phone: phone || undefined,
+          },
+          billingAddress: billingSameAsShipping ? undefined : {
+            firstName: trimmedBillingForm.firstName,
+            lastName: trimmedBillingForm.lastName,
+            address1: trimmedBillingForm.address1,
+            address2: trimmedBillingForm.address2 || undefined,
+            city: trimmedBillingForm.city,
+            state: billingRegion,
+            postalCode: trimmedBillingForm.postalCode,
+            country: selectedBillingCountry.name,
             phone: phone || undefined,
           },
           shippingMethod: selectedRate?.name || "Standard",
@@ -462,7 +556,10 @@ export default function CheckoutPage() {
                   <PhoneInputField
                     key={country}
                     value={phone}
-                    onChange={setPhone}
+                    onChange={(value) => {
+                      setPhone(value);
+                      clearError("phone");
+                    }}
                     defaultCountry={country}
                     countries={CHECKOUT_PHONE_COUNTRIES}
                     onCountryChange={handlePhoneCountryChange}
@@ -540,27 +637,40 @@ export default function CheckoutPage() {
                   {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm font-medium">
-                    {tCheckout("city")}
-                  </Label>
-                  <Input id="city" name="address-level2" autoComplete="address-level2" placeholder={selectedCountry.cityPlaceholder} className="h-11" value={form.city} onChange={(e) => updateForm("city", e.target.value)} aria-invalid={Boolean(errors.city)} required />
-                  {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="region" className="text-sm font-medium">
                     {t("region")}
                   </Label>
-                  <Select value={region} onValueChange={setRegion}>
-                    <SelectTrigger size="lg" className="w-full">
+                  <Select value={region} onValueChange={handleRegionChange}>
+                    <SelectTrigger id="region" size="lg" className="w-full">
                       <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       {selectedCountry.regions.map((option) => (
-                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                        <SelectItem key={option.name} value={option.name}>{option.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {errors.region && <p className="text-xs text-destructive">{errors.region}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm font-medium">
+                    {tCheckout("city")}
+                  </Label>
+                  <Select
+                    value={form.city}
+                    onValueChange={(value) => updateForm("city", value)}
+                    disabled={!selectedRegion}
+                  >
+                    <SelectTrigger id="city" size="lg" className="w-full" aria-invalid={Boolean(errors.city)}>
+                      <SelectValue placeholder={selectedRegion ? t("select") : t("region")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(selectedRegion?.cities ?? []).map((option) => (
+                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="postalCode" className="text-sm font-medium">
@@ -571,7 +681,11 @@ export default function CheckoutPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <Checkbox id="sameAsBilling" defaultChecked />
+                <Checkbox
+                  id="sameAsBilling"
+                  checked={billingSameAsShipping}
+                  onCheckedChange={(value) => setBillingSameAsShipping(value === true)}
+                />
                 <Label
                   htmlFor="sameAsBilling"
                   className="text-sm text-muted-foreground"
@@ -579,6 +693,101 @@ export default function CheckoutPage() {
                   {t("billingShippingSame")}
                 </Label>
               </div>
+              {!billingSameAsShipping && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="text-sm font-semibold">{tCheckout("billingAddress")}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="billingFirstName" className="text-sm font-medium">
+                        {tCheckout("firstName")}
+                      </Label>
+                      <Input id="billingFirstName" autoComplete="billing given-name" placeholder="Mohammed" className="h-11" value={billingForm.firstName} onChange={(e) => updateBillingForm("firstName", e.target.value)} aria-invalid={Boolean(errors["billing.firstName"])} required />
+                      {errors["billing.firstName"] && <p className="text-xs text-destructive">{errors["billing.firstName"]}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingLastName" className="text-sm font-medium">
+                        {tCheckout("lastName")}
+                      </Label>
+                      <Input id="billingLastName" autoComplete="billing family-name" placeholder="Al-Salem" className="h-11" value={billingForm.lastName} onChange={(e) => updateBillingForm("lastName", e.target.value)} aria-invalid={Boolean(errors["billing.lastName"])} required />
+                      {errors["billing.lastName"] && <p className="text-xs text-destructive">{errors["billing.lastName"]}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="billingAddress1" className="text-sm font-medium">
+                      {tCheckout("address")}
+                    </Label>
+                    <Input id="billingAddress1" autoComplete="billing address-line1" placeholder="King Fahd Road, Building 12" className="h-11" value={billingForm.address1} onChange={(e) => updateBillingForm("address1", e.target.value)} aria-invalid={Boolean(errors["billing.address1"])} required />
+                    {errors["billing.address1"] && <p className="text-xs text-destructive">{errors["billing.address1"]}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="billingAddress2" className="text-sm font-medium">
+                      {t("apartment")}
+                    </Label>
+                    <Input id="billingAddress2" autoComplete="billing address-line2" placeholder="Floor 3, Office 301" className="h-11" value={billingForm.address2} onChange={(e) => updateBillingForm("address2", e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="space-y-2 min-w-0">
+                      <Label htmlFor="billingCountry" className="text-sm font-medium">{tCheckout("country")}</Label>
+                      <Select value={billingCountry} onValueChange={handleBillingCountryChange}>
+                        <SelectTrigger id="billingCountry" size="lg" className="w-full">
+                          <SelectValue placeholder={t("select")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CHECKOUT_COUNTRIES.map((option) => (
+                            <SelectItem key={option.code} value={option.code}>
+                              {t(option.labelKey)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors["billing.country"] && <p className="text-xs text-destructive">{errors["billing.country"]}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingRegion" className="text-sm font-medium">
+                        {t("region")}
+                      </Label>
+                      <Select value={billingRegion} onValueChange={handleBillingRegionChange}>
+                        <SelectTrigger id="billingRegion" size="lg" className="w-full">
+                          <SelectValue placeholder={t("select")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedBillingCountry.regions.map((option) => (
+                            <SelectItem key={option.name} value={option.name}>{option.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors["billing.region"] && <p className="text-xs text-destructive">{errors["billing.region"]}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingCity" className="text-sm font-medium">
+                        {tCheckout("city")}
+                      </Label>
+                      <Select
+                        value={billingForm.city}
+                        onValueChange={(value) => updateBillingForm("city", value)}
+                        disabled={!selectedBillingRegion}
+                      >
+                        <SelectTrigger id="billingCity" size="lg" className="w-full" aria-invalid={Boolean(errors["billing.city"])}>
+                          <SelectValue placeholder={selectedBillingRegion ? t("select") : t("region")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(selectedBillingRegion?.cities ?? []).map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors["billing.city"] && <p className="text-xs text-destructive">{errors["billing.city"]}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="billingPostalCode" className="text-sm font-medium">
+                        {tCheckout("postalCode")}
+                      </Label>
+                      <Input id="billingPostalCode" autoComplete="billing postal-code" inputMode="numeric" placeholder={selectedBillingCountry.postalCodePlaceholder} className="h-11" value={billingForm.postalCode} onChange={(e) => updateBillingForm("postalCode", e.target.value)} aria-invalid={Boolean(errors["billing.postalCode"])} required />
+                      {errors["billing.postalCode"] && <p className="text-xs text-destructive">{errors["billing.postalCode"]}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

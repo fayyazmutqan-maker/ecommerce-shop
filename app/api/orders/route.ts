@@ -50,6 +50,7 @@ const checkoutSchema = z.object({
   phone: z.string().max(30).optional(),
   items: z.array(orderItemSchema).min(1).max(50),
   shippingAddress: addressSchema,
+  billingAddress: addressSchema.optional(),
   notes: z.string().max(500).optional(),
   paymentMethod: z.enum(["tap", "cod", "pos_card"]).optional().default("cod"),
   currency: z.enum(["SAR", "AED"]).optional().default("SAR"),
@@ -535,11 +536,34 @@ export async function POST(req: Request) {
         })
         .returning();
 
+      const [billingAddr] = data.billingAddress
+        ? await tx
+            .insert(orderAddresses)
+            .values({
+              orderId: newOrder.id,
+              type: "BILLING",
+              firstName: data.billingAddress.firstName,
+              lastName: data.billingAddress.lastName,
+              company: data.billingAddress.company || null,
+              address1: data.billingAddress.address1,
+              address2: data.billingAddress.address2 || null,
+              city: data.billingAddress.city,
+              state: data.billingAddress.state || null,
+              postalCode: data.billingAddress.postalCode,
+              country: data.billingAddress.country,
+              phone: data.billingAddress.phone || null,
+            })
+            .returning()
+        : [];
+
       // Connect shipping address to order
       if (shippingAddr) {
         await tx
           .update(ordersTable)
-          .set({ shippingAddressId: shippingAddr.id })
+          .set({
+            shippingAddressId: shippingAddr.id,
+            billingAddressId: billingAddr?.id ?? shippingAddr.id,
+          })
           .where(eq(ordersTable.id, newOrder.id));
       }
 

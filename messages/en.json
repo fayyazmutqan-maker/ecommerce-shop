@@ -125,6 +125,7 @@
     "title": "Checkout",
     "contactInfo": "Contact Information",
     "shippingAddress": "Shipping Address",
+    "billingAddress": "Billing Address",
     "paymentMethod": "Payment Method",
     "orderSummary": "Order Summary",
     "placeOrder": "Place Order",
