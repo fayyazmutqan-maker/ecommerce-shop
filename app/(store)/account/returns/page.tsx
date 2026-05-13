@@ -177,7 +177,7 @@ export default function ReturnsPage() {
             <CheckCircle className="h-12 w-12 mx-auto text-green-500" />
             <h2 className="text-xl font-semibold">Return Request Submitted</h2>
             <p className="text-sm text-muted-foreground">
-              Your return request has been submitted. We&apos;ll review it and get back to you shortly.
+              Your return request has been submitted for review. Approval, item receipt, inspection, and any refund or exchange are handled as separate steps.
             </p>
             <div className="flex gap-3 justify-center pt-4">
               <Button variant="outline" asChild>
@@ -255,7 +255,9 @@ export default function ReturnsPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">Select an order to return:</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select an order to start a return request. Submitting a request does not approve the return or process a refund.
+                </p>
                 {orders.map((order) => (
                   <button
                     key={order.id}

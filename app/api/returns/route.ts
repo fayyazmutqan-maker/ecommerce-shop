@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { returns, returnItems, orders, orderItems, orderTimeline } from "@/lib/schema";
+import { returns, returnItems, orders, orderTimeline } from "@/lib/schema";
 import { serializeDecimal } from "@/lib/decimal";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -30,12 +30,6 @@ const createReturnSchema = z.object({
       })
     )
     .min(1),
-});
-
-const updateReturnSchema = z.object({
-  status: z.enum(["REQUESTED", "APPROVED", "RECEIVED", "COMPLETED", "REJECTED"]).optional(),
-  adminNotes: z.string().max(1000).optional(),
-  trackingNumber: z.string().max(200).optional(),
 });
 
 /**
@@ -187,7 +181,7 @@ export async function POST(req: Request) {
           reason: data.reason,
           customerNotes: data.customerNotes || null,
           action: data.action,
-          status: isAdmin ? "APPROVED" : "REQUESTED",
+          status: "REQUESTED",
         })
         .returning();
 

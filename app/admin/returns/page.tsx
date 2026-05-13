@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  ExternalLink,
   Loader2,
   RotateCcw,
   Search,
@@ -10,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -67,6 +68,14 @@ interface ReturnRequest {
   }[];
 }
 
+const RETURN_TRANSITIONS: Record<string, string[]> = {
+  REQUESTED: ["APPROVED", "REJECTED"],
+  APPROVED: ["RECEIVED", "REJECTED"],
+  RECEIVED: ["COMPLETED", "REJECTED"],
+  COMPLETED: [],
+  REJECTED: [],
+};
+
 export default function AdminReturnsPage() {
   const t = useTranslations("admin.returns");
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
@@ -79,11 +88,7 @@ export default function AdminReturnsPage() {
   const [adminNotes, setAdminNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchReturns();
-  }, []);
-
-  async function fetchReturns() {
+  const fetchReturns = useCallback(async () => {
     try {
       const res = await fetch("/api/returns");
       if (!res.ok) throw new Error();
@@ -94,7 +99,11 @@ export default function AdminReturnsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
+
+  useEffect(() => {
+    fetchReturns();
+  }, [fetchReturns]);
 
   function openDetail(r: ReturnRequest) {
     setSelected(r);
@@ -143,6 +152,22 @@ export default function AdminReturnsPage() {
     }
     return true;
   });
+
+  function statusLabel(status: string) {
+    const labels: Record<string, string> = {
+      REQUESTED: t("statusRequested"),
+      APPROVED: t("statusApproved"),
+      RECEIVED: t("statusReceived"),
+      COMPLETED: t("statusCompleted"),
+      REJECTED: t("statusRejected"),
+    };
+
+    return labels[status] || status;
+  }
+
+  function getStatusOptions(status: string) {
+    return [status, ...(RETURN_TRANSITIONS[status] || [])];
+  }
 
   if (loading) {
     return (
@@ -294,13 +319,20 @@ export default function AdminReturnsPage() {
 
               <div className="space-y-2">
                 <Label>{t("status")}</Label>
+                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">{t("workflowTitle")}</p>
+                  <p className="mt-1">{t("workflowDescription")}</p>
+                  {selected.action === "REFUND" && (
+                    <p className="mt-2">{t("refundWorkflowNote")}</p>
+                  )}
+                </div>
                 <Select value={newStatus} onValueChange={setNewStatus}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["REQUESTED", "APPROVED", "RECEIVED", "COMPLETED", "REJECTED"].map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {getStatusOptions(selected.status).map((s) => (
+                      <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -318,6 +350,14 @@ export default function AdminReturnsPage() {
             </div>
           )}
           <DialogFooter>
+            {selected && (
+              <Button variant="outline" asChild>
+                <Link href={`/admin/orders/${selected.orderId}`}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {selected.action === "REFUND" ? t("openOrderRefund") : t("openOrder")}
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               {t("cancel")}
             </Button>
