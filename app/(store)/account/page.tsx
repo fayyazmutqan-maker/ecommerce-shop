@@ -9,17 +9,17 @@ import {
   Heart,
   MapPin,
   User,
-  LogOut,
   ChevronRight,
   Wallet,
   RotateCcw,
   MessageSquare,
+  FileText,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { getTranslations } from "next-intl/server";
 
@@ -158,7 +158,7 @@ export default async function AccountPage() {
                           {order.items.length !== 1 ? "s" : ""}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant={
                             order.status === "DELIVERED"
@@ -174,6 +174,16 @@ export default async function AccountPage() {
                         <span className="text-sm font-bold">
                           {tCommon("sar")} {Number(order.totalAmount).toFixed(2)}
                         </span>
+                        <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                          <Link href={`/account/orders/${order.id}`} aria-label={`View order ${order.orderNumber}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                          <Link href={`/api/orders/${order.id}/invoice`} target="_blank" aria-label={`Download invoice ${order.orderNumber}`}>
+                            <FileText className="h-4 w-4" />
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                   ))}

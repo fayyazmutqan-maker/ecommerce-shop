@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
-import { Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw, FileText } from "lucide-react";
+import { CreditCard, Download, Package, Truck, MapPin, ArrowLeft, Clock, RotateCcw, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +85,7 @@ export default async function OrderDetailPage({
 
   const data = serializeDecimal(order) as typeof order;
   const shippingAddress = data.shippingAddress as DisplayAddress | null;
+  const billingAddress = data.billingAddress as DisplayAddress | null;
   const refunds = data.refunds as DisplayRefund[] | undefined;
   const completedRefunds = (refunds || []).filter((refund) =>
     refund.status === "COMPLETED" || refund.status === "APPROVED"
@@ -93,25 +94,33 @@ export default async function OrderDetailPage({
   const netAfterRefunds = Math.max(0, Number(data.totalAmount) - totalRefunded);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
+    <div className="max-w-6xl mx-auto px-6 lg:px-8 py-10 lg:py-14">
       <Breadcrumbs items={[
         { label: "Account", href: "/account" },
         { label: "Orders", href: "/account/orders" },
         { label: data.orderNumber },
       ]} />
 
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/account/orders">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/account/orders">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
         <div>
           <h1 className="text-2xl font-bold">Order {data.orderNumber}</h1>
           <p className="text-sm text-muted-foreground">
             Placed on {new Date(data.createdAt).toLocaleDateString("en-SA", { year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
+        </div>
+        <Button asChild>
+          <Link href={`/api/orders/${data.id}/invoice`} target="_blank">
+            <Download className="mr-2 h-4 w-4" />
+            Download Invoice
+          </Link>
+        </Button>
       </div>
 
       {/* Status badges */}
@@ -232,14 +241,41 @@ export default async function OrderDetailPage({
           {/* Payment Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Payment</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4" /> Payment</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm space-y-1">
-              <p>Method: <span className="font-medium">{data.paymentMethod || "N/A"}</span></p>
-              <p>Status: <Badge className={getStatusColor(data.paymentStatus)}>{data.paymentStatus}</Badge></p>
+            <CardContent className="text-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Method</span>
+                <span className="font-medium">{data.paymentMethod || "N/A"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <Badge className={getStatusColor(data.paymentStatus)}>{data.paymentStatus}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-semibold">SAR {Number(data.totalAmount).toFixed(2)}</span>
+              </div>
               {data.couponCode && <p className="text-muted-foreground">Coupon: {data.couponCode}</p>}
             </CardContent>
           </Card>
+
+          {/* Billing Address */}
+          {billingAddress && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base"><MapPin className="h-4 w-4" /> Billing Address</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p className="font-medium">{billingAddress.firstName} {billingAddress.lastName}</p>
+                <p className="text-muted-foreground">{billingAddress.address1}</p>
+                {billingAddress.address2 && <p className="text-muted-foreground">{billingAddress.address2}</p>}
+                <p className="text-muted-foreground">{billingAddress.city}, {billingAddress.state} {billingAddress.postalCode}</p>
+                <p className="text-muted-foreground">{billingAddress.country}</p>
+                {billingAddress.phone && <p className="text-muted-foreground">{billingAddress.phone}</p>}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Refunds */}
           {refunds && refunds.length > 0 && (

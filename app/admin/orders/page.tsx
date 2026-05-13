@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { orders, users } from "@/lib/schema";
+import { orders } from "@/lib/schema";
 import { desc, or, ilike, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,10 +12,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/helpers";
 import { getTranslations } from "next-intl/server";
+import { Eye, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +110,7 @@ export default async function OrdersPage({
                 <TableHead>{t("items")}</TableHead>
                 <TableHead>{t("total")}</TableHead>
                 <TableHead>{t("date")}</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -158,11 +161,25 @@ export default async function OrdersPage({
                   <TableCell className="text-muted-foreground">
                     {formatDate(order.createdAt)}
                   </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/admin/orders/${order.id}`} aria-label={`View order ${order.orderNumber}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/api/orders/${order.id}/invoice`} target="_blank" aria-label={`Download invoice ${order.orderNumber}`}>
+                          <FileText className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
               {allOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <p className="text-muted-foreground">{t("noOrders")}</p>
                   </TableCell>
                 </TableRow>

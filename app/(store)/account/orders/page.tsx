@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, FileText } from "lucide-react";
 import { Breadcrumbs } from "@/components/store/breadcrumbs";
 import { getTranslations } from "next-intl/server";
 
@@ -42,6 +42,8 @@ export default async function OrdersPage() {
       items: {
         with: { product: { columns: { name: true, slug: true } } },
       },
+      shippingAddress: true,
+      billingAddress: true,
     },
   });
 
@@ -80,7 +82,7 @@ export default async function OrdersPage() {
           {orderList.map((order) => (
             <Card key={order.id} className="shadow-none border">
               <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <CardTitle className="text-base font-bold">
                       {t("orderNumber", { number: order.orderNumber })}
@@ -94,21 +96,27 @@ export default async function OrdersPage() {
                         }),
                       })}
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span>{order.items.length} item{order.items.length !== 1 ? "s" : ""}</span>
+                      {order.shippingMethod && <span>Shipping: {order.shippingMethod}</span>}
+                      {order.paymentMethod && <span>Payment: {order.paymentMethod}</span>}
+                      {order.shippingAddress && (
+                        <span>
+                          Deliver to {order.shippingAddress.city}
+                          {order.shippingAddress.state ? `, ${order.shippingAddress.state}` : ""}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant={
-                        order.status === "DELIVERED"
-                          ? "default"
-                          : order.status === "CANCELLED"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
+                  <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                    <Badge variant={order.status === "DELIVERED" ? "default" : order.status === "CANCELLED" ? "destructive" : "secondary"}>
                       {order.status}
                     </Badge>
-                    <span className="font-bold text-[15px]">
-                      {tCommon("sar")} {Number(order.totalAmount).toFixed(2)}
+                    <Badge variant={order.paymentStatus === "PAID" ? "default" : order.paymentStatus === "FAILED" ? "destructive" : "secondary"}>
+                      {order.paymentStatus}
+                    </Badge>
+                    <span className="min-w-24 text-right font-bold text-[15px]">
+                      {order.currency} {Number(order.totalAmount).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -143,6 +151,32 @@ export default async function OrdersPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-4">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{order.currency} {Number(order.subtotal).toFixed(2)}</span>
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span className="font-medium">{order.currency} {Number(order.shippingAmount).toFixed(2)}</span>
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="font-medium">{order.currency} {Number(order.taxAmount).toFixed(2)}</span>
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-medium">{order.currency} {Number(order.discountAmount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/account/orders/${order.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t("viewOrder")}
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/api/orders/${order.id}/invoice`} target="_blank">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Invoice
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
