@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   Users,
   Settings,
-  Tag,
   Percent,
   FileText,
   Monitor,
@@ -33,6 +32,7 @@ import {
   FolderKanban,
   Star,
   Mail,
+  MailCheck,
   Navigation,
   Wallet,
   Globe,
@@ -182,6 +182,11 @@ const settingsNav = [
     key: "newsletter",
     href: "/admin/newsletter",
     icon: Mail,
+  },
+  {
+    key: "emailPreviews",
+    href: "/admin/email-previews",
+    icon: MailCheck,
   },
   {
     key: "storeCredit",

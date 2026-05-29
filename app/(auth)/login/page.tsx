@@ -52,6 +52,10 @@ function LoginForm() {
   const verified = searchParams.get("verified");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [otp, setOtp] = useState("");
 
   useEffect(() => {
     if (verified && verificationMessages[verified]) {
@@ -69,13 +73,14 @@ function LoginForm() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const email = twoFactorRequired ? loginEmail : (formData.get("email") as string);
+    const password = twoFactorRequired ? loginPassword : (formData.get("password") as string);
 
     try {
       const result = await signIn("credentials", {
         email,
         password,
+        otp: twoFactorRequired ? otp : undefined,
         redirect: false,
       });
 
@@ -84,6 +89,14 @@ function LoginForm() {
           toast.error(t("accountLocked"));
         } else if (result.error.includes("EMAIL_NOT_VERIFIED")) {
           toast.error(t("verifyEmailFirst"));
+        } else if (result.error.includes("TWO_FACTOR_REQUIRED")) {
+          setLoginEmail(email.trim().toLowerCase());
+          setLoginPassword(password);
+          setTwoFactorRequired(true);
+          setOtp("");
+          toast.success(t("twoFactorCodeSent"));
+        } else if (result.error.includes("INVALID_TWO_FACTOR_CODE")) {
+          toast.error(t("invalidTwoFactorCode"));
         } else {
           toast.error(t("invalidCredentials"));
         }
@@ -117,6 +130,13 @@ function LoginForm() {
       toast.error(t("failedGoogleSignIn"));
       setIsGoogleLoading(false);
     }
+  }
+
+  function resetTwoFactor() {
+    setTwoFactorRequired(false);
+    setLoginEmail("");
+    setLoginPassword("");
+    setOtp("");
   }
 
   return (
@@ -190,35 +210,72 @@ function LoginForm() {
           </div>
 
           <form onSubmit={onSubmit} method="post" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">{t("email")}</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="admin@store.com"
-                required
-                disabled={isLoading}
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-semibold">{t("password")}</Label>
-                <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  {t("forgotPassword")}
-                </Link>
+            {twoFactorRequired ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">{t("twoFactorTitle")}</p>
+                  <p className="mt-1">{t("twoFactorDesc", { email: loginEmail })}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-sm font-semibold">{t("twoFactorCode")}</Label>
+                  <Input
+                    id="otp"
+                    name="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    pattern="\\d{6}"
+                    placeholder="123456"
+                    required
+                    value={otp}
+                    onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    disabled={isLoading}
+                    className="h-11 text-center text-lg tracking-[0.45em]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={resetTwoFactor}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  {t("useDifferentEmail")}
+                </button>
               </div>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                disabled={isLoading}
-                className="h-11"
-              />
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-semibold">{t("email")}</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="admin@store.com"
+                    required
+                    disabled={isLoading}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-semibold">{t("password")}</Label>
+                    <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {t("forgotPassword")}
+                    </Link>
+                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                    className="h-11"
+                  />
+                </div>
+              </>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Button
                 type="button"
@@ -238,7 +295,7 @@ function LoginForm() {
               </Button>
               <Button type="submit" className="h-12 text-[15px] font-semibold" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("signIn") || "Sign In"}
+                {twoFactorRequired ? t("verifyAndSignIn") : t("signIn") || "Sign In"}
               </Button>
             </div>
           </form>

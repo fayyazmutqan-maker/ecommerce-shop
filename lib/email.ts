@@ -363,6 +363,41 @@ export async function sendEmailVerificationOTP(data: {
 }
 
 // ============================================================
+// LOGIN TWO-FACTOR CODE
+// ============================================================
+
+export async function sendLoginOTP(data: {
+  email: string;
+  name: string;
+  otp: string;
+}) {
+  const html = baseLayout(`
+    <h2 style="margin-top:0">Your Sign-In Code</h2>
+    <p>Hi ${escapeHtml(data.name || "there")},</p>
+    <p>Use the code below to finish signing in to your account:</p>
+    <div style="text-align:center;margin:32px 0">
+      <div style="display:inline-block;background:#f8f8f8;border:2px dashed #ddd;border-radius:12px;padding:20px 40px">
+        <span style="font-size:36px;font-weight:800;letter-spacing:12px;color:#000;font-family:'Courier New',monospace">${escapeHtml(data.otp)}</span>
+      </div>
+    </div>
+    <div style="background:#f0f9ff;border-radius:8px;padding:16px;margin:24px 0;border:1px solid #bae6fd">
+      <p style="margin:0;font-size:13px;color:#0369a1">
+        <strong>This code expires in 10 minutes.</strong><br>
+        If you did not try to sign in, change your password immediately and contact support.
+      </p>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#999;margin-top:24px">ShopFlow staff will never ask for this code.</p>
+  `);
+
+  return sendEmail({
+    to: data.email,
+    subject: "Your ShopFlow Sign-In Code",
+    html,
+    tags: [{ name: "type", value: "login-otp" }],
+  });
+}
+
+// ============================================================
 // PASSWORD RESET
 // ============================================================
 
@@ -557,8 +592,6 @@ export async function sendContactFormNotification(data: {
   message: string;
   recipientEmail: string;
 }) {
-  const appUrl = safeHref(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/activity-log`);
-
   const html = baseLayout(`
     <h2 style="margin-top:0">New Contact Form Submission</h2>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">

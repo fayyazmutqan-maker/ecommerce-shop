@@ -19,6 +19,7 @@ import { assertTapKeyMatchesMode, createTapRefund } from "@/lib/tap";
 import { refundOrder as metaRefundOrder } from "@/lib/meta";
 import type { MetaCredentials } from "@/lib/meta";
 import { serializeDecimal } from "@/lib/decimal";
+import { sendRefundConfirmation } from "@/lib/email";
 import { refundLimiter, dailyRefundLimiter, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { reportCreditNoteToZatca } from "@/lib/zatca/service";
 import { trackInvoiceEvent } from "@/lib/invoice-monitor";
@@ -177,6 +178,9 @@ export async function POST(req: Request) {
         },
         refunds: {
           with: { items: true },
+        },
+        user: {
+          columns: { name: true },
         },
       },
     });
@@ -473,6 +477,14 @@ export async function POST(req: Request) {
       reportCreditNoteToZatca(result.refund.id).catch((err) =>
         console.error("ZATCA credit note reporting failed:", err)
       );
+
+      sendRefundConfirmation({
+        email: order.email,
+        customerName: order.user?.name || "Customer",
+        orderNumber: order.orderNumber,
+        refundAmount,
+        reason: data.reason,
+      }).catch((err) => console.error("Refund confirmation email failed:", err));
     }
 
     // Track for anomaly detection (non-blocking)

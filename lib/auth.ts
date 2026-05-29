@@ -3,16 +3,33 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/lib/db";
-import { users } from "@/lib/schema";
+import { users, verificationTokens } from "@/lib/schema";
 import { hasRealEnvValue } from "@/lib/env";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import crypto from "crypto";
+import { sendLoginOTP } from "@/lib/email";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
+  otp: z.string().length(6).regex(/^\d{6}$/).optional().or(z.literal("")),
 });
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function generateOTP(): string {
+  const bytes = crypto.randomBytes(4);
+  const num = bytes.readUInt32BE(0) % 1000000;
+  return num.toString().padStart(6, "0");
+}
+
+function loginOtpIdentifier(email: string): string {
+  return `login-2fa:${email}`;
+}
 
 // ── Account lockout ───────────────────────────────────────────────────────────
 // Uses the existing rate-limiter (Redis-backed in production, in-memory in dev).
@@ -48,6 +65,52 @@ async function recordFailedLogin(email: string): Promise<void> {
   await authLimiter.check(`lockout:${email}`);
 }
 
+async function issueLoginOtp(email: string, name: string | null): Promise<void> {
+  const otp = generateOTP();
+  const hashedOTP = hashToken(otp);
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
+  const identifier = loginOtpIdentifier(email);
+
+  await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier));
+  await db.insert(verificationTokens).values({
+    identifier,
+    token: hashedOTP,
+    expires,
+  });
+
+  await sendLoginOTP({
+    email,
+    name: name || "Customer",
+    otp,
+  });
+}
+
+async function verifyLoginOtp(email: string, otp: string): Promise<boolean> {
+  const identifier = loginOtpIdentifier(email);
+  const hashedOTP = hashToken(otp);
+
+  const verToken = await db.query.verificationTokens.findFirst({
+    where: eq(verificationTokens.identifier, identifier),
+  });
+
+  if (!verToken || new Date() > verToken.expires) {
+    if (verToken) {
+      await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier));
+    }
+    return false;
+  }
+
+  const expected = Buffer.from(verToken.token, "hex");
+  const supplied = Buffer.from(hashedOTP, "hex");
+  const valid = expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
+
+  if (valid) {
+    await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier));
+  }
+
+  return valid;
+}
+
 function clearFailedAttempts(email: string): void {
   recentlyVerified.add(email);
   // Remove from the set after the lockout window (15 min) so it doesn't grow forever.
@@ -79,6 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "One-time code", type: "text" },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
@@ -115,6 +179,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Block unverified email accounts
         if (!user.emailVerified) {
           throw new Error("EMAIL_NOT_VERIFIED");
+        }
+
+        const otp = parsed.data.otp?.trim();
+        if (!otp) {
+          await issueLoginOtp(email, user.name);
+          throw new Error("TWO_FACTOR_REQUIRED");
+        }
+
+        const otpValid = await verifyLoginOtp(email, otp);
+        if (!otpValid) {
+          await recordFailedLogin(email);
+          throw new Error("INVALID_TWO_FACTOR_CODE");
         }
 
         // Successful login — mark as recently verified to skip lockout check
