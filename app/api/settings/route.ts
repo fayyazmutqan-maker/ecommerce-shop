@@ -70,6 +70,15 @@ const settingsSchema = z.object({
 /** Fields that must NEVER be returned to non-admin callers */
 const SENSITIVE_FIELDS = ["zatcaCsid", "zatcaSecret", "zatcaPcsid", "zatcaPcsidSecret"] as const;
 
+function maskSensitiveSettings(settings: Record<string, unknown>) {
+  const safeSettings = { ...settings };
+  // For ZATCA certs and secrets, expose only whether they exist.
+  for (const field of SENSITIVE_FIELDS) {
+    safeSettings[field] = !!safeSettings[field];
+  }
+  return safeSettings;
+}
+
 export async function GET() {
   try {
     let settings = await db.query.storeSettings.findFirst();
@@ -91,14 +100,7 @@ export async function GET() {
       return NextResponse.json(serializeDecimal(sanitized));
     }
 
-    // Admin gets settings with secret keys masked (last 4 chars only)
-    const adminSafe = { ...settings } as Record<string, unknown>;
-    // For ZATCA certs, expose only whether they exist (not the actual values)
-    adminSafe.zatcaCsid = !!adminSafe.zatcaCsid;
-    adminSafe.zatcaSecret = !!adminSafe.zatcaSecret;
-    adminSafe.zatcaPcsid = !!adminSafe.zatcaPcsid;
-    adminSafe.zatcaPcsidSecret = !!adminSafe.zatcaPcsidSecret;
-    return NextResponse.json(serializeDecimal(adminSafe));
+    return NextResponse.json(serializeDecimal(maskSensitiveSettings(settings as Record<string, unknown>)));
   } catch (error) {
     console.error("Settings GET error:", error);
     return NextResponse.json(
@@ -171,9 +173,7 @@ export async function PUT(req: Request) {
       success: true,
     });
 
-    // Mask sensitive fields before returning
-    const safeSettings = { ...settings } as Record<string, unknown>;
-    return NextResponse.json(serializeDecimal(safeSettings));
+    return NextResponse.json(serializeDecimal(maskSensitiveSettings(settings as Record<string, unknown>)));
   } catch (error) {
     console.error("Settings PUT error:", error);
     return NextResponse.json(
